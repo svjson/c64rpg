@@ -30,15 +30,35 @@
      lda #$00
      sta $fb            ; raster counter
      
-     lda #$01          ; Set player sprite pointer
+     lda #$81          ; Set player sprite pointers
      sta $07f8
-     lda #$01           ; Enable player sprite
+     lda #$80          ; Set player sprite pointers
+     sta $07f9
+     
+     lda #$03           ; Enable player sprites
      sta $d015
      lda #$10
      sta $d027
-     lda #$33           ; Set player sprite coords
+     
+     lda #$08           ; Set up sprite colors
+     sta $d028
+     
+     lda #$0e      
+     sta $d025
+
+     lda #$0f     
+     sta $d026
+     
+     lda #$64           ; Set player sprite coords
      sta $d000
+     sta $d002
+
+     lda #$7f
      sta $d001
+     sta $d003
+     
+     lda #$02           ; Set sprite 2 to multicolor
+     sta $d01c
      
      sei                 ;enable interrupts
 
@@ -325,7 +345,9 @@ iconcols
 num1        .byte $00                ; Math input #1
 num2        .byte $00                ; Math input #2
 
-multiply         lda #$00            ; Multiply with carry
+;--------
+
+multiply         lda #$00            ; Multiply with carry 
                  beq mply_enterLoop
 
 mply_doAdd       clc
@@ -340,7 +362,7 @@ mply_enterLoop   lsr num2
 
 
 *=$2000
-.binary "spritedata.prg"
+.binary "spritedata.raw"
 
 *=$3800
 .binary "gamechars-charset.bin" 
