@@ -30,12 +30,13 @@
      lda #$00
      sta $fb            ; raster counter
      
-     lda #$01           ; Enable player sprite
+     lda #$01          ; Set player sprite pointer
      sta $07f8
-     lda #$01
+     lda #$01           ; Enable player sprite
      sta $d015
+     lda #$10
      sta $d027
-     lda #$33
+     lda #$33           ; Set player sprite coords
      sta $d000
      sta $d001
      
@@ -68,6 +69,8 @@ mainloop            lda #$00     ; wait for raster retrace
 
                     lda #$00     ; reset anim/delay counter
                     sta $fb
+                    
+
 
                     jsr drawlevel
                     jsr animatechars
@@ -336,10 +339,10 @@ mply_enterLoop   lsr num2
 
 
 
+*=$2000
+.binary "spritedata.prg"
+
 *=$3800
 .binary "gamechars-charset.bin" 
-
-*=$2000
-.binary "spritedata.raw"
 
 ; 15 bytes
