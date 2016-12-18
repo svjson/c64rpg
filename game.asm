@@ -3,11 +3,9 @@
 .byte $34, $30, $39, $36, $00, $00
 .byte $00
 
-
-;;
+;; ------------
 ;; INIT ROUTINE
-;;
-
+;; ------------
 *=$1000
 
      lda #$00           ; Set screen color
@@ -24,18 +22,18 @@
      ora #$0e
      sta $d018
      
-     jsr clear          ; Clear screen
+     jsr clearscreen
      
-     lda #$18           ; Go into Multicolour Mode
+     lda #$18           ; Char multicolour mode on 
      sta $d016    
 
      lda #$00
      sta $fb            ; raster counter
      
-     lda #$fc          ; Enable player sprite
+     lda #$01           ; Enable player sprite
      sta $07f8
      lda #$01
-;     sta $d015
+     sta $d015
      sta $d027
      lda #$33
      sta $d000
@@ -46,52 +44,53 @@
      
      jmp mainloop
 
-    
-charactersettest     
+*=6000    
+charactersettest
      tax    
      sta $0400, x
      adc #$01
      cmp #$ff
      bne charactersettest
      rts
-     
+
+;; ------------
+;; MAIN LOOP
+;; ------------
          
-mainloop
-    lda #$00     ; wait for raster retrace
-    cmp $d012  
-    bne mainloop
+mainloop            lda #$00     ; wait for raster retrace
+                    cmp $d012  
+                    bne mainloop
 
+                    inc $fb      ; wait for anim/delay counter to loop
+                    lda #$40
+                    cmp $fb
+                    bne mainloop 
 
+                    lda #$00     ; reset anim/delay counter
+                    sta $fb
 
-    inc $fb      ; wait for anim counter to loop
-    lda #$10
-    cmp $fb
-    bne mainloop 
+                    jsr drawlevel
+                    jsr animatechars
 
-    lda #$00     ; reset anim counter
-    sta $fb
+                    jmp mainloop
     
 
-    jsr drawlevel
-    jsr animatechars
+;; ----------------------
+;; LEVEL DRAWING ROUTINES
+;; ----------------------
 
-    jmp mainloop
-
-drawlevel     
-; Screen offset     
-     lda #$04
+drawlevel          
+     lda #$04 ; Screen offset
      sta $21
      lda #$00
-     sta $20
-  
-; Color offset
-     lda #$d8
+     sta $20  
+
+     lda #$d8 ; Color offset
      sta $25
      lda #$00
      sta $24
      
-; Level area offset
-     lda #$20
+     lda #$80 ; Level area offset    ; Data at $2000
      sta $23
      lda #$00
      sta $22
@@ -136,7 +135,6 @@ incleveloffset
 levelnocarry
      sta $22
      rts
-
      
 drawline
      lda #$00
@@ -184,11 +182,10 @@ drawlineloop
      
      cpy #$14
      bne drawlineloop
-     rts         
+     rts
 
 drawchar
      lda icons, x
-;     and #$3f
      sta ($20), y
      lda iconcols, x         
      sta ($24), y
@@ -199,22 +196,15 @@ iter
 
 drawat
     .byte $00
+
 crsr
     .byte $00
 
-animcounter
-    .byte $00
+;; ----------------------
+;; ANIMATE LEVEL CHARS
+;; ----------------------
 
 animatechars
-;    ldx animcounter
-;    cpx #$04
-;    bne doanim
-;    ldx #$00
-;doanim
-;    txa
-;    lda $3500, x    
-;    sta $3a31
-    
     ; anim water
     lda #$3a
     sta $21
@@ -238,37 +228,36 @@ animatechars
     sta $20
     jsr rightshift_20
     jsr rightshift_20
-
     
-;    inx
-;    stx animcounter
     rts
     
-leftshift_20
-    ldy #$00
-    lda ($20),y
-    asl    
-    bcc leftshift_20_nocarry        
-    ora #$01
-leftshift_20_nocarry
-    sta ($20),y
-    rts
+;; ----------------------
+;; UTILITIES
+;; ----------------------
 
-rightshift_20
-    ldy #$00
-    lda ($20),y
-    lsr
-    bcc rightshift_20_nocarry        
-    ora #$80
+leftshift_20            ldy #$00                    ; Rotate Left/Bit-shift with wrap
+                        lda ($20),y                 ; Operates on the value in zero-page adress $20 
+                        asl    
+                        bcc leftshift_20_nocarry        
+                        ora #$01
+leftshift_20_nocarry    sta ($20),y
+                        rts
+
+
+rightshift_20           ldy #$00                    ; Rotate Right/Bit-shift with wrap
+                        lda ($20),y                 ; Operates on the value in zero-page adress $20
+                        lsr
+                        bcc rightshift_20_nocarry        
+                        ora #$80
 rightshift_20_nocarry
-    sta ($20),y
-    rts
+                        sta ($20),y
+                        rts
     
 
     
 
-clear            lda #$20     ; #$20 is the spacebar Screen Code
-                 sta $0400,x  ; fill four areas with 256 spacebar characters
+clearscreen      lda #$20     ; #$20 is the spacebar Screen Code
+                 sta $0400,x  
                  sta $0500,x 
                  sta $0600,x 
                  sta $06e8,x 
@@ -277,14 +266,15 @@ clear            lda #$20     ; #$20 is the spacebar Screen Code
                  sta $d900,x
                  sta $da00,x
                  sta $dae8,x
-                 inx           ; increment X
-                 bne clear     ; did X turn to zero yet?
-                               ; if not, continue with the loop
-                 rts           ; return from this subroutine
-     
+                 inx         
+                 bne clearscreen
+                 rts
 
+;; ----------------------
+;; LEVEL DATA
+;; ----------------------
 
-*=$2000
+*=$8000
 testarea
      .byte $05, $04, $03, $04, $05, $05, $04, $04, $04, $02, $02, $04, $04, $04, $05, $05, $05, $05, $04, $05
      .byte $05, $05, $03, $04, $04, $04, $05, $04, $04, $02, $02, $04, $04, $04, $04, $04, $04, $01, $05, $05
@@ -299,29 +289,20 @@ testarea
      .byte $05, $05, $04, $04, $05, $04, $05, $04, $01, $02, $02, $04, $04, $04, $03, $03, $03, $03, $03, $03
      .byte $05, $04, $05, $04, $05, $04, $04, $04, $05, $02, $02, $05, $05, $04, $05, $05, $04, $05, $04, $04
 
-zreg     
-     .byte $00         
-num1  
-     .byte $00
-num2     
-     .byte $00
 
-linestart
-     .byte $04, $00
-
+;; ----------------------
+;; TILE DATA
+;; ----------------------
 
 *=$3000
 icons
-     .byte $40, $00, $00, $00
-     
-     .byte $47, $20, $20, $47
-     
-     .byte $46, $46, $46, $46
-     .byte $44, $45, $45, $44
-     .text "    "
-     .byte $43, $42, $40, $41
-
-     .byte $00, $00, $00, $00
+     .byte $40, $00, $00, $00 ;; Unused
+     .byte $47, $20, $20, $47 ;; Rocks
+     .byte $46, $46, $46, $46 ;; Water
+     .byte $44, $45, $45, $44 ;; Road
+     .text "    "             ;; Background
+     .byte $43, $42, $40, $41 ;; Tree
+     .byte $00, $00, $00, $00 ;; Unused
      
 iconcols 
      .byte $1d, $1d, $1d, $1d
@@ -332,51 +313,33 @@ iconcols
      .byte $1d, $1d, $1d, $1d
      .byte $1d, $1d, $1d, $1d
      .byte $1d, $1d, $1d, $1d
-     
-;*=$3500
-;    .byte $fe
-;    .byte $f9
-;    .byte $ef
-;    .byte $bf
- 
-    
-; General 8bit * 8bit = 8bit multiply
-; Multiplies "num1" by "num2" and returns result in .A
 
-; by White Flame (aka David Holz) 20030207
 
-; Input variables:
-;   num1 (multiplicand)
-;   num2 (multiplier), should be small for speed
-;   Signedness should not matter
+;; ----------------------
+;; MATH
+;; ----------------------
 
-; .X and .Y are preserved
-; num1 and num2 get clobbered
+num1        .byte $00                ; Math input #1
+num2        .byte $00                ; Math input #2
 
-; Instead of using a bit counter, this routine ends when num2 reaches zero, thus saving iterations.
+multiply         lda #$00            ; Multiply with carry
+                 beq mply_enterLoop
 
-multiply
- lda #$00
- beq enterLoop
+mply_doAdd       clc
+                 adc num1
 
-doAdd
- clc
- adc num1
+mply_loop        asl num1
+mply_enterLoop   lsr num2
+                 bcs mply_doAdd
+                 bne mply_loop
+                 rts
 
-loop
- asl num1
-enterLoop ;For an accumulating multiply (.A = .A + num1*num2), set up num1 and num2, then enter here
- lsr num2
- bcs doAdd
- bne loop
- rts
 
-end
 
 *=$3800
 .binary "gamechars-charset.bin" 
 
-*=$5000
+*=$2000
 .binary "spritedata.raw"
 
 ; 15 bytes
