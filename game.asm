@@ -388,7 +388,7 @@ lineEnd
     .byte $14
 
 ;; ----------------------
-;; ANIMATE LEVEL CHARS
+;; STATUS AREA ROUTINES
 ;; ----------------------
 
 initStatusArea  lda #$00
@@ -473,27 +473,27 @@ colloop         sta $db20, x
 animatechars
     ; anim water
     lda #$3a
-    sta $21
+    sta $2e
     
     lda #$31
-    sta $20
-    jsr leftshift_20
-    jsr leftshift_20
+    sta $2d
+    jsr leftshift_2d
+    jsr leftshift_2d
     
     lda #$32
-    sta $20
-    jsr leftshift_20
-    jsr leftshift_20
+    sta $2d
+    jsr leftshift_2d
+    jsr leftshift_2d
 
     lda #$35
-    sta $20
-    jsr rightshift_20
-    jsr rightshift_20
+    sta $2d
+    jsr rightshift_2d
+    jsr rightshift_2d
     
     lda #$36
-    sta $20
-    jsr rightshift_20
-    jsr rightshift_20
+    sta $2d
+    jsr rightshift_2d
+    jsr rightshift_2d
     
     rts
     
@@ -514,22 +514,22 @@ print_string_loop       lda ($fb), y
                         bne print_string_loop
                         rts
 
-leftshift_20            ldy #$00                    ; Rotate Left/Bit-shift with wrap
-                        lda ($20),y                 ; Operates on the value in zero-page adress $20 
+leftshift_2d            ldy #$00                    ; Rotate Left/Bit-shift with wrap
+                        lda ($2d),y                 ; Operates on the value in zero-page adress $2d
                         asl    
-                        bcc leftshift_20_nocarry        
+                        bcc leftshift_2d_nocarry        
                         ora #$01
-leftshift_20_nocarry    sta ($20),y
+leftshift_2d_nocarry    sta ($2d),y
                         rts
 
 
-rightshift_20           ldy #$00                    ; Rotate Right/Bit-shift with wrap
-                        lda ($20),y                 ; Operates on the value in zero-page adress $20
+rightshift_2d           ldy #$00                    ; Rotate Right/Bit-shift with wrap
+                        lda ($2d),y                 ; Operates on the value in zero-page adress $2d
                         lsr
-                        bcc rightshift_20_nocarry        
+                        bcc rightshift_2d_nocarry        
                         ora #$80
-rightshift_20_nocarry
-                        sta ($20),y
+rightshift_2d_nocarry
+                        sta ($2d),y
                         rts
     
 
@@ -552,8 +552,8 @@ clearscreen      lda #$20     ; #$20 is the spacebar Screen Code
 ;; ----------------------
 ;; SCENE STATE
 ;; ----------------------
-currentAreaOffsetX  .byte $02
-currentAreaOffsetY  .byte $00
+currentAreaOffsetX  .byte $00
+currentAreaOffsetY  .byte $03
 
 screenDirty .byte $00
 
