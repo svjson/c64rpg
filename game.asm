@@ -143,19 +143,18 @@ leavestatusirq   lda #$05
 mainloop            
                     jsr readKey
 
-mlcont              lda #$00     ; wait for raster retrace
+mlcont              lda #$15     ; wait for raster retrace
                     cmp $d012  
                     bne mlcont
 
-;                    inc $fb      ; wait for anim/delay counter to loop
-;                    lda #$40
-;                    cmp $fb
-;                    bne mlcont 
-
-;                    lda #$00     ; reset anim/delay counter
-;                    sta $fb
-
-                    ;jsr animatechars
+                    lda screenDirty
+                    cmp #$00
+                    beq mainloop
+                    
+                    lda #$00
+                    sta screenDirty
+                    
+                    jsr drawlevel
                     
                     jmp mainloop
     
@@ -188,30 +187,36 @@ readKey
 
                     jmp endReadKey
                     
-move_up             lda $d001
-                    sbc #$10
-                    sta $d001                  
-                    sta $d003
-                    jmp endReadKey
+move_up             ;lda $d001
+                    ;sbc #$10
+                    ;sta $d001                  
+                    ;sta $d003
+                    dec currentAreaOffsetY
+                    jmp movePerformed                   
                     
-move_left           lda $d000
-                    sbc #$10      
-                    sta $d000
-                    sta $d002
-                    jmp endReadKey
+move_left           ;lda $d000
+                    ;sbc #$10      
+                    ;sta $d000
+                    ;sta $d002
+                    dec currentAreaOffsetX
+                    jmp movePerformed                   
                     
-move_down           lda $d001
-                    adc #$0f
-                    sta $d001                  
-                    sta $d003
-                    jmp endReadKey
+move_down           ;lda $d001
+                    ;adc #$0f
+                    ;sta $d001                  
+                    ;sta $d003
+                    inc currentAreaOffsetY
+                    jmp movePerformed                   
                     
-move_right          lda $d000      
-                    adc #$0f  
-                    sta $d000
-                    sta $d002
-                    jmp endReadKey                    
-                  
+move_right          ;lda $d000      
+                    ;adc #$0f  
+                    ;sta $d000
+                    ;sta $d002
+                    inc currentAreaOffsetX
+                    jmp movePerformed                   
+                    
+movePerformed                    
+                    inc screenDirty     
 endReadKey                   
                     rts
 
@@ -227,29 +232,50 @@ drawlevel
      lda #$00
      sta $20  
 
-     lda #$d8 ; Color offset
+     lda #$d8 ; Color RAM offset
      sta $25
      lda #$00
      sta $24
      
-     lda #$80 ; Level area offset    ; Data at $2000
+     lda #>currentArea ; Level area offset in memory
      sta $23
-     lda #$00
+     lda #<currentArea
      sta $22
      
-     lda #$00     
+     lda currentAreaOffsetY         ; Set up counter for area row to be drawn
+     sta areaRow
+     
+     ldy #$00         
+dlOffsetLoop
+     cpy currentAreaOffsetY         ; Move level area offset pointers in $22, $23 according 
+     beq dlOffsetContinue           ; currentAreaOffsetY
+     iny
+     lda $22
+     adc currentAreaWidth
+     sta $22
+     bcc dlOffsetLoop
+     inc $23
+     jmp dlOffsetLoop 
+     
+dlOffsetContinue
+     lda #$00                   ; Set counters to zero
      sta crsr
      sta iter
      sta drawat
+     
+     lda #$13                   ; Set lineEnd to current area X offset + screen width in tiles
+     adc currentAreaOffsetX     ; to indicate that we are one with a line when crsr has reached
+     sta lineEnd                ; that X position of level data
      
 drawlevelloop
      inc iter
      ldx iter
      
-     jsr drawline          
+     jsr drawline
 
      jsr incleveloffset
      jsr incscreenoffset
+     inc areaRow
 
      ldx iter
      cpx #$0a
@@ -271,7 +297,7 @@ screennocarry
 incleveloffset
      lda $22     
      clc
-     adc #$14
+     adc currentAreaWidth
      bcc levelnocarry
      inc $23
 levelnocarry
@@ -279,23 +305,34 @@ levelnocarry
      rts
      
 drawline
-     lda #$00
+     lda currentAreaOffsetX         ; Set up counter for area col to be drawn
+     sta areaCol
      sta crsr
+     lda #$00
      sta drawat
+
 drawlineloop
-; Load source block index
-     ldy crsr
-     lda ($22), y
-     
-; Multiply by 4 to jump to source block data and put start pos in Y
-     sta num1
-     lda #$04
-     sta num2
-     jsr multiply
-     tax
-     
-; Draw to screen 
-     ldy drawat     
+     lda areaRow
+     cmp currentAreaHeight
+     bcs loademptytile     
+     lda areaCol
+     cmp currentAreaWidth 
+     bcs loademptytile     
+     jmp loadtile
+loademptytile     lda #$00
+                  jmp loadtilea
+
+loadtile    ldy crsr       ; Load source block index
+            lda ($22), y
+
+loadtilea   sta num1       ; Multiply by 4 to jump to source block data and put start pos in X
+            lda #$04
+            sta num2
+            jsr multiply
+            tax
+ 
+drawtile     
+     ldy drawat     ; Draw to screen     
 
      jsr drawchar
      iny
@@ -322,7 +359,9 @@ drawlineloop
      iny
      sty crsr
      
-     cpy #$14
+     inc areaCol
+     
+     cpy lineEnd
      bne drawlineloop
      rts
 
@@ -341,6 +380,12 @@ drawat
 
 crsr
     .byte $00
+    
+areaRow .byte $00
+areaCol .byte $00 
+
+lineEnd
+    .byte $14
 
 ;; ----------------------
 ;; ANIMATE LEVEL CHARS
@@ -505,24 +550,46 @@ clearscreen      lda #$20     ; #$20 is the spacebar Screen Code
                  rts
 
 ;; ----------------------
+;; SCENE STATE
+;; ----------------------
+currentAreaOffsetX  .byte $02
+currentAreaOffsetY  .byte $00
+
+screenDirty .byte $00
+
+;; ----------------------
 ;; LEVEL DATA
 ;; ----------------------
 
 *=$8000
-testarea
-     .byte $05, $04, $03, $04, $05, $05, $04, $04, $04, $02, $02, $04, $04, $04, $05, $05, $05, $05, $04, $05
-     .byte $05, $05, $03, $04, $04, $04, $05, $04, $04, $02, $02, $04, $04, $04, $04, $04, $04, $01, $05, $05
-     .byte $04, $04, $03, $05, $04, $04, $05, $05, $04, $02, $02, $04, $04, $04, $04, $04, $05, $05, $04, $05
-     .byte $05, $04, $03, $04, $04, $01, $05, $04, $04, $02, $02, $02, $04, $04, $04, $05, $04, $04, $04, $05
-     .byte $04, $04, $03, $03, $04, $04, $04, $04, $04, $04, $02, $02, $04, $04, $04, $05, $04, $04, $04, $04
-     .byte $05, $04, $04, $03, $05, $04, $04, $01, $04, $04, $02, $02, $04, $05, $05, $04, $04, $05, $04, $05
-     .byte $04, $04, $04, $03, $03, $04, $04, $04, $04, $02, $02, $04, $04, $04, $05, $04, $04, $04, $04, $05
-     .byte $04, $04, $04, $04, $03, $03, $05, $04, $04, $02, $02, $04, $04, $05, $04, $04, $01, $05, $04, $04
-     .byte $05, $04, $04, $04, $04, $03, $03, $03, $04, $02, $02, $04, $04, $04, $04, $04, $04, $04, $04, $04
-     .byte $04, $04, $05, $04, $04, $04, $04, $03, $03, $03, $03, $03, $03, $03, $03, $04, $04, $04, $05, $05
-     .byte $05, $05, $04, $04, $05, $04, $05, $04, $01, $02, $02, $04, $04, $04, $03, $03, $03, $03, $03, $03
-     .byte $05, $04, $05, $04, $05, $04, $04, $04, $05, $02, $02, $05, $05, $04, $05, $05, $04, $05, $04, $04
 
+currentAreaWidth = #$17
+currentAreaHeight = #$17
+
+currentArea
+     .byte $05, $04, $03, $04, $05, $05, $04, $04, $04, $02, $02, $04, $04, $04, $05, $05, $05, $05, $04, $05, $05, $05, $05
+     .byte $05, $05, $03, $04, $04, $04, $05, $04, $04, $02, $02, $04, $04, $04, $04, $04, $04, $01, $05, $05, $04, $05, $04
+     .byte $04, $04, $03, $05, $04, $04, $05, $05, $04, $02, $02, $04, $04, $04, $04, $04, $05, $05, $04, $05, $05, $05, $05
+     .byte $05, $04, $03, $04, $04, $01, $05, $04, $04, $02, $02, $02, $04, $04, $04, $05, $04, $04, $04, $05, $05, $05, $05
+     .byte $04, $04, $03, $03, $04, $04, $04, $04, $04, $04, $02, $02, $04, $04, $04, $05, $04, $04, $04, $04, $04, $05, $04
+     .byte $05, $04, $04, $03, $05, $04, $04, $01, $04, $04, $02, $02, $04, $05, $05, $04, $04, $05, $04, $05, $04, $04, $05
+     .byte $04, $04, $04, $03, $03, $04, $04, $04, $04, $02, $02, $04, $04, $04, $05, $04, $04, $04, $04, $05, $05, $05, $05
+     .byte $04, $04, $04, $04, $03, $03, $05, $04, $04, $02, $02, $04, $04, $05, $04, $04, $01, $05, $04, $04, $05, $04, $04
+     .byte $05, $04, $04, $04, $04, $03, $03, $03, $04, $02, $02, $04, $04, $04, $04, $04, $04, $04, $04, $04, $05, $05, $05
+     .byte $04, $04, $05, $04, $04, $04, $04, $03, $03, $03, $03, $03, $03, $03, $03, $04, $04, $04, $05, $05, $05, $04, $05
+     .byte $05, $05, $04, $04, $05, $04, $05, $04, $01, $02, $02, $04, $04, $04, $03, $03, $03, $03, $03, $03, $03, $03, $03
+     .byte $05, $04, $05, $04, $05, $04, $04, $04, $05, $02, $02, $05, $05, $04, $05, $05, $04, $05, $04, $04, $05, $05, $04
+     .byte $04, $04, $05, $05, $04, $05, $05, $04, $05, $02, $02, $04, $05, $05, $05, $04, $04, $05, $05, $05, $05, $05, $05
+     .byte $04, $05, $04, $05, $05, $04, $05, $05, $04, $02, $02, $04, $04, $05, $04, $04, $04, $04, $05, $04, $05, $04, $04 
+     .byte $04, $04, $04, $05, $04, $05, $05, $04, $02, $02, $04, $05, $04, $04, $05, $04, $04, $04, $04, $05, $05, $04, $04 
+     .byte $04, $05, $05, $04, $05, $04, $04, $04, $02, $02, $04, $04, $04, $04, $04, $04, $04, $05, $04, $05, $04, $05, $05 
+     .byte $04, $04, $04, $05, $04, $04, $04, $02, $02, $02, $04, $04, $04, $05, $04, $04, $04, $05, $05, $05, $04, $04, $05 
+     .byte $04, $04, $04, $04, $04, $02, $02, $02, $02, $04, $05, $04, $05, $05, $05, $04, $04, $04, $04, $04, $05, $05, $04 
+     .byte $04, $04, $04, $04, $02, $02, $02, $02, $04, $04, $04, $04, $05, $05, $05, $05, $04, $04, $05, $05, $04, $04, $04 
+     .byte $04, $05, $04, $04, $02, $02, $04, $04, $04, $04, $04, $04, $04, $04, $05, $05, $04, $04, $05, $04, $05, $04, $05 
+     .byte $04, $04, $04, $02, $02, $04, $04, $04, $04, $04, $05, $05, $05, $04, $05, $04, $04, $04, $04, $04, $05, $04, $05 
+     .byte $04, $05, $04, $02, $02, $04, $04, $04, $04, $04, $04, $04, $04, $05, $04, $04, $04, $04, $05, $04, $04, $04, $04 
+     .byte $04, $04, $04, $02, $02, $04, $04, $04, $04, $04, $04, $04, $05, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04 
 
 ;; ----------------------
 ;; TILE DATA
@@ -530,16 +597,16 @@ testarea
 
 *=$3000
 icons
-     .byte $40, $00, $00, $00 ;; Unused
+     .byte $48, $48, $48, $48 ;; Nothing/Black
      .byte $47, $20, $20, $47 ;; Rocks
      .byte $46, $46, $46, $46 ;; Water
      .byte $44, $45, $45, $44 ;; Road
      .text "    "             ;; Background
      .byte $43, $42, $40, $41 ;; Tree
-     .byte $00, $00, $00, $00 ;; Unused
+     .byte $48, $48, $48, $48 ;; Nothing/Black 2 test
      
 iconcols 
-     .byte $1d, $1d, $1d, $1d
+     .byte $00, $00, $00, $00
      .byte $01, $01, $01, $01
      .byte $1e, $1e, $1e, $1e
      .byte $1d, $1d, $1d, $1d
