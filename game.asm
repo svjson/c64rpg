@@ -8,9 +8,11 @@
 ;; ------------
 *=$1000
 
-     lda #$00           ; Set screen color
+     jsr clearscreen
+
+     lda #$00           ; Set border color
      sta $D020
-     lda #$05
+     lda #$05           ; Set screen background color
      sta $D021
      
      lda #$09           ; Set character set color
@@ -21,9 +23,7 @@
      lda $d018          ; Remap character set
      ora #$0e
      sta $d018
-     
-     jsr clearscreen
-     
+
      lda #$18           ; Char multicolour mode on 
      sta $d016    
 
@@ -59,16 +59,65 @@
      
      lda #$02           ; Set sprite 2 to multicolor
      sta $d01c
+
+     jsr initStatusArea
+
+     lda #%01111111     ; Disable CIA interrupts
+     sta $dC0d
+     
+     and $d011          ; Clear highest bit in raster register
+     sta $d011
+     
+     lda #$d3           ; Set raster line for irq
+     sta $d012 
+     
+     lda #<enterstatusirq    ; Interrupt vector
+     sta $0314
+     lda #>enterstatusirq
+     sta $0315
+     
+     lda #%00000001     ; Enable raster interrupt signals
+     sta $d01a
      
      ; sei                 ;enable interrupts
 
      
      jmp mainloop
 
+enterstatusirq   lda #$00
+                 sta $d021
+
+                 lda #<leavestatusirq    ; Interrupt vector
+                 sta $0314
+                 lda #>leavestatusirq
+                 sta $0315
+                 
+                 lda #$ff           ; Set raster line for irq
+                 sta $d012 
+                        
+                 asl $d019
+                 jmp $ea31
+
+leavestatusirq   lda #$05
+                 sta $d021
+
+                 lda #<enterstatusirq    ; Interrupt vector
+                 sta $0314
+                 lda #>enterstatusirq
+                 sta $0315
+                 
+                 lda #$d3          ; Set raster line for irq
+                 sta $d012 
+
+                 
+                 asl $d019
+                 jmp $ea81
+
+
 ;; ------------
 ;; MAIN LOOP
 ;; ------------
-*=6000
+*=5000
 mainloop            
                     jsr readKey
 
@@ -124,9 +173,7 @@ move_up             lda $d001
                     sta $d003
                     jmp endReadKey
                     
-move_left           ;lda $dc00
-                    ;cmp 
-                    lda $d000
+move_left           lda $d000
                     sbc #$10      
                     sta $d000
                     sta $d002
@@ -184,7 +231,7 @@ drawlevelloop
      jsr incscreenoffset
 
      ldx iter
-     cpx #$0C
+     cpx #$0a
      bne drawlevelloop
      rts
      
@@ -278,6 +325,45 @@ crsr
 ;; ANIMATE LEVEL CHARS
 ;; ----------------------
 
+initStatusArea  lda #$00
+                sta $0720
+                lda #$1c
+                sta $0747
+                lda #$1e
+                sta $07e7
+                lda #$1f
+                sta $07c0
+
+                lda #$1b
+                ldx #$00
+horlineloop     sta $0721, x
+                sta $07c1, x
+                inx
+                cpx #$26
+                bne horlineloop
+                
+                lda #$1d
+vertlineloop    sta $0748        
+                sta $076f        
+                sta $0770        
+                sta $0797
+                sta $0798
+                sta $07bf
+
+                lda #$01
+                ldx #$00                                
+                
+colloop         sta $db20, x
+                inx
+                cpx #$c8
+                bne colloop
+
+                rts
+
+;; ----------------------
+;; ANIMATE LEVEL CHARS
+;; ----------------------
+
 animatechars
     ; anim water
     lda #$3a
@@ -340,7 +426,7 @@ clearscreen      lda #$20     ; #$20 is the spacebar Screen Code
                  sta $d900,x
                  sta $da00,x
                  sta $dae8,x
-                 inx         
+                 inx
                  bne clearscreen
                  rts
 
