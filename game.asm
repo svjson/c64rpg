@@ -89,7 +89,14 @@
 text_HP     .text "HP:  012/014"    
 text_EXP    .text "EXP: 050/100"
 
-enterstatusirq   lda #$00
+enterstatusirq   nop
+                 nop
+                 nop
+                 nop
+                 nop
+                 nop
+                 nop
+                 lda #$00
                  sta $d021
                  
                  lda #%00001000 ; Disable multicolor text mode
