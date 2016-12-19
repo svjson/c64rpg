@@ -49,7 +49,7 @@
      lda #$0f     
      sta $d026
      
-     lda #$64           ; Set player sprite coords
+     lda #$a4           ; Set player sprite coords
      sta $d000
      sta $d002
 
@@ -553,7 +553,7 @@ clearscreen      lda #$20     ; #$20 is the spacebar Screen Code
 ;; SCENE STATE
 ;; ----------------------
 currentAreaOffsetX  .byte $00
-currentAreaOffsetY  .byte $03
+currentAreaOffsetY  .byte $04
 
 screenDirty .byte $00
 
