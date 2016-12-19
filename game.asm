@@ -53,7 +53,7 @@
      sta $d000
      sta $d002
 
-     lda #$7e
+     lda #$7d
      sta $d001
      sta $d003
      
@@ -81,11 +81,19 @@
      
      ; sei                 ;enable interrupts
 
-     
+     jsr drawlevel
+
      jmp mainloop
+     
+     
+text_HP     .text "HP:  012/014"    
+text_EXP    .text "EXP: 050/100"
 
 enterstatusirq   lda #$00
                  sta $d021
+                 
+                 lda #%00001000 ; Disable multicolor text mode
+                 sta $d016
 
                  lda #<leavestatusirq    ; Interrupt vector
                  sta $0314
@@ -96,17 +104,31 @@ enterstatusirq   lda #$00
                  sta $d012 
                         
                  asl $d019
-                 jmp $ea31
+                 
+                 inc $fb      ; wait for anim/delay counter to loop
+                 lda #$20
+                 cmp $fb
+                 bne exitenterirq  
 
-leavestatusirq   lda #$05
+                 lda #$00     ; reset anim/delay counter
+                 sta $fb
+
+                 jsr animatechars
+                 
+exitenterirq     jmp $ea31
+
+leavestatusirq   lda #$05           
                  sta $d021
+                 
+                 lda #%00011000 ; Enable multicolor text mode
+                 sta $d016
 
                  lda #<enterstatusirq    ; Interrupt vector
                  sta $0314
                  lda #>enterstatusirq
                  sta $0315
                  
-                 lda #$d3          ; Set raster line for irq
+                 lda #$d2          ; Set raster line for next irq
                  sta $d012 
 
                  
@@ -125,16 +147,15 @@ mlcont              lda #$00     ; wait for raster retrace
                     cmp $d012  
                     bne mlcont
 
-                    inc $fb      ; wait for anim/delay counter to loop
-                    lda #$40
-                    cmp $fb
-                    bne mlcont 
+;                    inc $fb      ; wait for anim/delay counter to loop
+;                    lda #$40
+;                    cmp $fb
+;                    bne mlcont 
 
-                    lda #$00     ; reset anim/delay counter
-                    sta $fb
+;                    lda #$00     ; reset anim/delay counter
+;                    sta $fb
 
-                    jsr drawlevel
-                    jsr animatechars
+                    ;jsr animatechars
                     
                     jmp mainloop
     
@@ -357,6 +378,46 @@ colloop         sta $db20, x
                 inx
                 cpx #$c8
                 bne colloop
+                
+                lda #$0f
+                sta $db62
+                sta $db63
+
+                lda #$0f
+                sta $db8a
+                sta $db8b
+                sta $db8c
+                
+                sta $db6a
+                sta $db92
+
+                
+                lda #<text_HP
+                sta print_source
+                lda #>text_HP
+                sta print_source+1
+                
+                lda #<$0762
+                sta print_target
+                lda #>$0762
+                sta print_target+1
+                lda #$0c
+                sta print_source_length
+                jsr print_string
+
+                lda #<text_EXP
+                sta print_source
+                lda #>text_EXP
+                sta print_source+1
+                
+                lda #<$078a
+                sta print_target
+                lda #>$078a
+                sta print_target+1
+                lda #$0c
+                sta print_source_length
+                jsr print_string
+
 
                 rts
 
@@ -394,6 +455,19 @@ animatechars
 ;; ----------------------
 ;; UTILITIES
 ;; ----------------------
+
+print_source = $fb
+print_source_length = $02
+print_target = $fd
+
+print_string            ldy #$00
+print_string_loop       lda ($fb), y
+                        and #$3f
+                        sta ($fd), y
+                        iny      
+                        cpy print_source_length
+                        bne print_string_loop
+                        rts
 
 leftshift_20            ldy #$00                    ; Rotate Left/Bit-shift with wrap
                         lda ($20),y                 ; Operates on the value in zero-page adress $20 
