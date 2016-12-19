@@ -53,50 +53,101 @@
      sta $d000
      sta $d002
 
-     lda #$7f
+     lda #$7e
      sta $d001
      sta $d003
      
      lda #$02           ; Set sprite 2 to multicolor
      sta $d01c
      
-     sei                 ;enable interrupts
+     ; sei                 ;enable interrupts
 
      
      jmp mainloop
 
-*=6000    
-charactersettest
-     tax    
-     sta $0400, x
-     adc #$01
-     cmp #$ff
-     bne charactersettest
-     rts
-
 ;; ------------
 ;; MAIN LOOP
 ;; ------------
-         
-mainloop            lda #$00     ; wait for raster retrace
+*=6000
+mainloop            
+                    jsr readKey
+
+mlcont              lda #$00     ; wait for raster retrace
                     cmp $d012  
-                    bne mainloop
+                    bne mlcont
 
                     inc $fb      ; wait for anim/delay counter to loop
                     lda #$40
                     cmp $fb
-                    bne mainloop 
+                    bne mlcont 
 
                     lda #$00     ; reset anim/delay counter
                     sta $fb
-                    
-
 
                     jsr drawlevel
                     jsr animatechars
-
+                    
                     jmp mainloop
     
+;; -----------
+;; KEY INPUT
+;; -----------
+
+key_UP    = #$17    ;; W,
+key_LEFT  = #$01    ;; A
+
+key_RIGHT = #$04    ;; D,
+key_DOWN   = #$18   ;; X
+
+readKey
+                    ;jsr clearscreen
+                    jsr $ffe4
+                    and #$3f
+
+                    cmp key_UP
+                    beq move_up                    
+
+                    cmp key_LEFT
+                    beq move_left
+
+                    cmp key_DOWN
+                    beq move_down                  
+                  
+                    cmp key_RIGHT
+                    beq move_right
+
+                    jmp endReadKey
+                    
+move_up             lda $d001
+                    sbc #$10
+                    sta $d001                  
+                    sta $d003
+                    jmp endReadKey
+                    
+move_left           ;lda $dc00
+                    ;cmp 
+                    lda $d000
+                    sbc #$10      
+                    sta $d000
+                    sta $d002
+                    jmp endReadKey
+                    
+move_down           lda $d001
+                    adc #$0f
+                    sta $d001                  
+                    sta $d003
+                    jmp endReadKey
+                    
+move_right          lda $d000      
+                    adc #$0f  
+                    sta $d000
+                    sta $d002
+                    jmp endReadKey                    
+                  
+endReadKey                   
+                    rts
+
+
 
 ;; ----------------------
 ;; LEVEL DRAWING ROUTINES
