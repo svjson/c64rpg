@@ -79,6 +79,10 @@
      lda #%00000001     ; Enable raster interrupt signals
      sta $d01a
      
+     ldx playerX
+     ldy playerY
+     jsr attemptMove
+
      jsr drawlevel
 
      jmp mainloop
@@ -247,11 +251,11 @@ endReadKey
 
 attemptMove:        ; In parameters: target x, y in X and Y registers
                     jsr getTileAt       ; Look up tile at x, y
-
                     tax                 ; check if passable by comparing with tile table
                     lda iconprops, x
                     and #%10000000
-                    bne performMove
+                    cmp #%10000000
+                    beq performMove
                     rts
 
 performMove         ldx tmpX
@@ -259,8 +263,82 @@ performMove         ldx tmpX
                     stx playerX
                     sty playerY
                     inc screenDirty
+
+                    clc
+                    lda areaMode
+                    and #%10000000
+                    beq moveDone
+                    jsr updateFOV
+moveDone            rts
+
+clearFOVBuffer:
+                    lda #$10
+                    ldx #$00
+                    lda #$00
+clearFOVLoop        sta fovBuffer, x
+                    inx
+                    cpx #$c8
+                    bne clearFOVLoop
                     rts
 
+updateFOV:
+                    jsr clearFOVBuffer
+                    ; First set all adjacent tiles to player
+                    ldx playerX                 ; First set tile pointer to playerX-1, playerY-1
+                    ldy playerY
+                    dex
+                    dey
+                    jsr resolveTileRowPointer
+                    stx tmpX
+                    ldx #$00
+
+                    lda #>fovBuffer+88
+                    sta $21
+                    lda #<fovBuffer+88
+                    sta $20
+
+fovOuterLoop
+                    clc                     ; Set up pointer to fovBuffer
+                    lda $25
+                    sta $23
+                    lda $24
+                    adc tmpX
+                    sta $22
+                    bcc contFOV
+                    inc $23
+
+contFOV
+                    ldy #$00
+fovInnerLoop
+                    lda ($22), y
+                    sta ($20), y
+
+                    clc
+                    iny
+                    cpy #$03
+                    bne fovInnerLoop
+
+                    clc                 ; Move FOV Pointer to next row
+                    lda $20
+                    adc #$14
+                    sta $20
+
+                    clc
+                    inx
+                    cpx #$03
+                    beq fovDone
+
+                    clc                 ; Move Area pointer to next row
+                    lda $24
+                    adc currentAreaWidth
+                    sta $24
+                    bcc nopc
+                    inc $25
+nopc
+                    jmp fovOuterLoop
+
+fovDone
+                    rts
 
 
 ;; ----------------------
@@ -277,7 +355,17 @@ drawlevel;
                    sta $25
                    lda #$00
                    sta $24
+
+                   lda areaMode             ; Jump to FOV mode setup of offsets and level data if FOV is on
+                   and #%10000000
+                   bne prepareFOVMode
+                   sec                      ; Need to set carry after this operation. Not sure why
      
+                   lda currentAreaHeight
+                   sta drawBufferHeight
+                   lda currentAreaWidth
+                   sta drawBufferWidth
+
                    lda #>currentArea ; Level area offset in memory
                    sta $23
                    lda #<currentArea
@@ -321,13 +409,33 @@ dlOffsetPositive    inx
                     inc $23
                     jmp dlOffsetLoop
                     jmp dlOffsetCalculated
-     
+
+prepareFOVMode
+                   lda #>fovBuffer ; Level area offset in memory
+                   sta $23
+                   lda #<fovBuffer
+                   sta $22
+
+                   lda #$00
+                   sta currentAreaOffsetX
+                   sta currentAreaOffsetY
+                   clc
+
+                   lda #$14
+                   sta drawBufferWidth
+                   lda #$0a
+                   sta drawBufferHeight
+                   clc
+                   lda #$00
+                   sta areaRow
+
 dlOffsetCalculated  lda #$00                   ; Set counters to zero
                     sta crsr
                     sta iter
                     sta drawat
           
-                    lda #$13                   ; Set lineEnd to current area X offset + screen width in tiles
+                    clc
+                    lda #$14                   ; Set lineEnd to current area X offset + screen width in tiles
                     adc currentAreaOffsetX     ; to indicate that we are one with a line when crsr has reached
                     sta lineEnd                ; that X position of level data
      
@@ -361,7 +469,7 @@ screennocarry
 incleveloffset
      lda $22     
      clc
-     adc currentAreaWidth
+     adc drawBufferWidth
      bcc levelnocarry
      inc $23
 levelnocarry
@@ -377,10 +485,10 @@ drawline
 
 drawlineloop
      lda areaRow
-     cmp currentAreaHeight
+     cmp drawBufferHeight
      bcs loademptytile     
      lda areaCol
-     cmp currentAreaWidth 
+     cmp drawBufferWidth
      bcs loademptytile     
      jmp loadtile
 loademptytile     lda #$00
@@ -427,6 +535,25 @@ drawtile
      
      cpy lineEnd
      bne drawlineloop
+
+     lda #$18               ; Output Player X Coordinate to status area
+     sta $0749
+     lda #<$074b
+     sta print_target
+     lda #>$074b
+     sta print_target+1
+     ldx playerX
+     jsr print_decimal
+
+     lda #$19               ; Output Player Y Coordinate to status area
+     sta $0771
+     lda #<$0773
+     sta print_target
+     lda #>$0773
+     sta print_target+1
+     ldx playerY
+     jsr print_decimal
+
      rts
 
 drawchar
@@ -485,6 +612,50 @@ resolveTile
                     ldy tmpY
                     ldx tmpX
                     rts
+
+; Input: coords in X and Y. Return tile byte as A
+;getTileAt:
+                    ;jsr resolveTileRowPointer
+                    ldy tmpX
+                    lda ($24), y
+                    ldy tmpY
+                    ldx tmpX
+                    rts
+
+;; Input: coords in X and Y
+;; Return: Pointer to tile in level memory at $24, $25
+resolveTileRowPointer:
+                    stx tmpX
+                    sty tmpY
+
+                    ldy #$00
+                    lda #>currentArea
+                    sta $25
+                    lda #<currentArea
+                    sta $24
+
+getTileYPtrLoop     cpy tmpY
+                    bne contTilePtrLoop
+                    rts
+contTilePtrLoop     iny
+                    lda $24
+                    clc
+                    adc currentAreaWidth
+                    sta $24
+                    bcc getTileYPtrLoop
+                    inc $25
+                    jmp getTileYPtrLoop
+
+storeToFOVBuffer:
+                    stx tmpX
+                    sty tmpY
+
+                    ldy #$00
+                    lda #>fovBuffer
+                    sta $25
+                    lda #<fovBuffer
+                    sta $24
+
 
 
 ;; ----------------------
@@ -686,8 +857,8 @@ div10skip   rol div_lo
 currentAreaOffsetX  .byte $00
 currentAreaOffsetY  .byte $04
 
-playerX .byte $02
-playerY .byte $00
+playerX .byte $08
+playerY .byte $06
 
 screenDirty .byte $00
 
@@ -695,10 +866,23 @@ screenDirty .byte $00
 ;; LEVEL DATA
 ;; ----------------------
 
-*=$8000
+*=$7000
 
 currentAreaWidth = #$21
 currentAreaHeight = #$17
+
+drawBufferWidth = $0810
+drawBufferHeight = $0811
+
+areaMode:
+    .byte %10000000    ; 0/1 = FOV mode on/off
+                       ; Unused
+                       ; Unused
+                       ; Unused
+                       ; Unused
+                       ; Unused
+                       ; Unused
+                       ; Unused
 
 currentArea
      .byte $05, $04, $03, $04, $05, $05, $04, $04, $04, $02, $02, $04, $04, $04, $05, $05, $05, $05, $04, $05, $05, $05, $05, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04
@@ -724,6 +908,18 @@ currentArea
      .byte $04, $04, $04, $02, $02, $04, $04, $04, $04, $04, $05, $05, $05, $04, $05, $04, $04, $04, $04, $04, $05, $04, $05, $04, $04, $04, $04, $04, $05, $06, $04, $04, $04 
      .byte $04, $05, $01, $02, $02, $04, $04, $04, $04, $04, $04, $04, $04, $05, $04, $04, $04, $04, $05, $01, $04, $04, $04, $04, $04, $04, $04, $04, $04, $05, $04, $04, $04 
      .byte $04, $04, $04, $02, $02, $04, $04, $04, $04, $04, $04, $04, $05, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04 
+
+fovBuffer
+     .byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+     .byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+     .byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+     .byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+     .byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+     .byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+     .byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+     .byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+     .byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+     .byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
 
 ;; ----------------------
 ;; TILE DATA
