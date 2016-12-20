@@ -178,6 +178,9 @@ readKey
                     jsr $ffe4
                     and #$3f
 
+                    ldx playerX         ; Load player coordinates into X and Y register to prepare for move
+                    ldy playerY
+
                     cmp key_UP
                     beq move_up                    
 
@@ -192,21 +195,38 @@ readKey
 
                     jmp endReadKey
                     
-move_up             dec playerY
-                    jmp movePerformed                   
+move_up             dey
+                    jmp attemptMove
                     
-move_left           dec playerX
-                    jmp movePerformed                   
+move_left           dex
+                    jmp attemptMove
                     
-move_down           inc playerY
-                    jmp movePerformed                   
+move_down           iny
+                    jmp attemptMove
                     
-move_right          inc playerX
-                    jmp movePerformed                   
+move_right          inx
+                    jmp attemptMove
                     
 movePerformed                    
                     inc screenDirty     
 endReadKey                   
+                    rts
+
+
+attemptMove:        ; In parameters: target x, y in X and Y registers
+                    jsr getTileAt       ; Look up tile at x, y
+
+                    tax                 ; check if passable by comparing with tile table
+                    lda iconprops, x
+                    and #%10000000
+                    bne performMove
+                    rts
+
+performMove         ldx tmpX
+                    ldy tmpY
+                    stx playerX
+                    sty playerY
+                    inc screenDirty
                     rts
 
 
@@ -396,8 +416,44 @@ crsr
 areaRow .byte $00
 areaCol .byte $00 
 
-lineEnd
-    .byte $14
+lineEnd .byte $14
+
+tmpX = $0802
+tmpY = $0803
+
+;; ----------------------
+;; AREA FUNCTIONS
+;; ----------------------
+
+; Input: coords in X and Y. Return tile byte as A
+getTileAt:
+                    stx tmpX
+                    sty tmpY
+
+                    ldy #$00
+                    lda #>currentArea
+                    sta $25
+                    lda #<currentArea
+                    sta $24
+
+getTileYOffLoop     cpy tmpY
+                    beq resolveTile
+                    iny
+                    lda $24
+                    clc
+                    adc currentAreaWidth
+                    sta $24
+                    bcc getTileYOffLoop
+                    inc $25
+                    jmp getTileYOffLoop
+
+resolveTile
+                    ldy tmpX
+                    lda ($24), y
+                    ldy tmpY
+                    ldx tmpX
+                    rts
+
 
 ;; ----------------------
 ;; STATUS AREA ROUTINES
@@ -598,7 +654,7 @@ div10skip   rol div_lo
 currentAreaOffsetX  .byte $00
 currentAreaOffsetY  .byte $04
 
-playerX .byte $00
+playerX .byte $02
 playerY .byte $00
 
 screenDirty .byte $00
@@ -642,7 +698,7 @@ currentArea
 ;; ----------------------
 
 *=$3000
-icons
+icons:
      .byte $48, $48, $48, $48 ;; Nothing/Black   $00
      .byte $47, $20, $20, $47 ;; Rocks           $01
      .byte $46, $46, $46, $46 ;; Water           $02
@@ -654,7 +710,7 @@ icons
      .byte $4e, $4e, $4e, $4e ;; Red roof        $08
      .byte $51, $52, $4f, $50 ;; Door            $09
      
-iconcols 
+iconcols:
      .byte $00, $00, $00, $00 ;; Nothing / Black
      .byte $01, $01, $01, $01 ;; Rocks - Hires white
      .byte $1e, $1e, $1e, $1e ;; Water - blue
@@ -665,6 +721,18 @@ iconcols
      .byte $1a, $1a, $1a, $1a ;; Red wall - red
      .byte $1a, $1a, $1a, $1a ;; Red roof - red
      .byte $08, $08, $08, $08 ;; Door
+     
+iconprops:
+     .byte %00000000          ;; Nothing / Black. Not passable.
+     .byte %10000000          ;; Rocks.           Passable
+     .byte %00000000          ;; Water            Not passable
+     .byte %10000000          ;; Road             Passable
+     .byte %10000000          ;; Background       Passable
+     .byte %00000000          ;; Tree             Not passable
+     .byte %00000000          ;; Dead tree        Not passable
+     .byte %00000000          ;; Red wall         Not passable
+     .byte %00000000          ;; Red roof         Not passable
+     .byte %10000000          ;; Door             Passable
      
 
 
