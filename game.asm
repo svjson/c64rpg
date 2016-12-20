@@ -192,16 +192,16 @@ readKey
 
                     jmp endReadKey
                     
-move_up             dec currentAreaOffsetY
+move_up             dec playerY
                     jmp movePerformed                   
                     
-move_left           dec currentAreaOffsetX
+move_left           dec playerX
                     jmp movePerformed                   
                     
-move_down           inc currentAreaOffsetY
+move_down           inc playerY
                     jmp movePerformed                   
                     
-move_right          inc currentAreaOffsetX
+move_right          inc playerX
                     jmp movePerformed                   
                     
 movePerformed                    
@@ -215,7 +215,8 @@ endReadKey
 ;; LEVEL DRAWING ROUTINES
 ;; ----------------------
 
-drawlevel          lda #$04 ; Screen offset
+drawlevel;
+                   lda #$04 ; Screen offset
                    sta $21
                    lda #$00
                    sta $20  
@@ -229,7 +230,16 @@ drawlevel          lda #$04 ; Screen offset
                    sta $23
                    lda #<currentArea
                    sta $22
-     
+                   
+                   lda playerY                    ; set up area offset relative to player coordinates
+                   sbc #$05
+                   sta currentAreaOffsetY
+
+                   clc
+                   lda playerX
+                   sbc #$08
+                   sta currentAreaOffsetX
+
                    lda currentAreaOffsetY         ; Set up counter for area row to be drawn
                    sta areaRow
      
@@ -588,13 +598,16 @@ div10skip   rol div_lo
 currentAreaOffsetX  .byte $00
 currentAreaOffsetY  .byte $04
 
+playerX .byte $00
+playerY .byte $00
+
 screenDirty .byte $00
 
 ;; ----------------------
 ;; LEVEL DATA
 ;; ----------------------
 
-*=$8002
+*=$8000
 
 currentAreaWidth = #$21
 currentAreaHeight = #$17
