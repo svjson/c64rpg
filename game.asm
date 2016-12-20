@@ -79,8 +79,6 @@
      lda #%00000001     ; Enable raster interrupt signals
      sta $d01a
      
-     ; sei                 ;enable interrupts
-
      jsr drawlevel
 
      jmp mainloop
@@ -194,32 +192,16 @@ readKey
 
                     jmp endReadKey
                     
-move_up             ;lda $d001
-                    ;sbc #$10
-                    ;sta $d001                  
-                    ;sta $d003
-                    dec currentAreaOffsetY
+move_up             dec currentAreaOffsetY
                     jmp movePerformed                   
                     
-move_left           ;lda $d000
-                    ;sbc #$10      
-                    ;sta $d000
-                    ;sta $d002
-                    dec currentAreaOffsetX
+move_left           dec currentAreaOffsetX
                     jmp movePerformed                   
                     
-move_down           ;lda $d001
-                    ;adc #$0f
-                    ;sta $d001                  
-                    ;sta $d003
-                    inc currentAreaOffsetY
+move_down           inc currentAreaOffsetY
                     jmp movePerformed                   
                     
-move_right          ;lda $d000      
-                    ;adc #$0f  
-                    ;sta $d000
-                    ;sta $d002
-                    inc currentAreaOffsetX
+move_right          inc currentAreaOffsetX
                     jmp movePerformed                   
                     
 movePerformed                    
@@ -233,46 +215,59 @@ endReadKey
 ;; LEVEL DRAWING ROUTINES
 ;; ----------------------
 
-drawlevel          
-     lda #$04 ; Screen offset
-     sta $21
-     lda #$00
-     sta $20  
+drawlevel          lda #$04 ; Screen offset
+                   sta $21
+                   lda #$00
+                   sta $20  
 
-     lda #$d8 ; Color RAM offset
-     sta $25
-     lda #$00
-     sta $24
+                   lda #$d8 ; Color RAM offset
+                   sta $25
+                   lda #$00
+                   sta $24
      
-     lda #>currentArea ; Level area offset in memory
-     sta $23
-     lda #<currentArea
-     sta $22
+                   lda #>currentArea ; Level area offset in memory
+                   sta $23
+                   lda #<currentArea
+                   sta $22
      
-     lda currentAreaOffsetY         ; Set up counter for area row to be drawn
-     sta areaRow
+                   lda currentAreaOffsetY         ; Set up counter for area row to be drawn
+                   sta areaRow
      
-     ldy #$00         
-dlOffsetLoop
-     cpy currentAreaOffsetY         ; Move level area offset pointers in $22, $23 according 
-     beq dlOffsetContinue           ; currentAreaOffsetY
-     iny
-     lda $22
-     adc currentAreaWidth
-     sta $22
-     bcc dlOffsetLoop
-     inc $23
-     jmp dlOffsetLoop 
+                   ldx #$00                       ; Now offset pointer to the area data according to the screenOffsetY. 
+dlOffsetLoop       cpx currentAreaOffsetY         ; Move level area offset pointers in $22, $23 according currentAreaOffsetY
+                   beq dlOffsetCalculated         ; Nothing to do if Y is 0
+
+                   lda currentAreaOffsetY         ; Now inc or dec offset counter until it matches the Y offset
+                   cmp #$80
+                   bcc dlOffsetPositive
+
+dlOffsetNegative    dex
+                    lda $22
+                    sbc currentAreaWidth
+                    sta $22
+                    bcs dlOffsetLoop
+                    dec $23
+                    jmp dlOffsetLoop 
+                    jmp dlOffsetCalculated
+
+
+dlOffsetPositive    inx
+                    lda $22
+                    adc currentAreaWidth
+                    sta $22
+                    bcc dlOffsetLoop
+                    inc $23
+                    jmp dlOffsetLoop
+                    jmp dlOffsetCalculated
      
-dlOffsetContinue
-     lda #$00                   ; Set counters to zero
-     sta crsr
-     sta iter
-     sta drawat
-     
-     lda #$13                   ; Set lineEnd to current area X offset + screen width in tiles
-     adc currentAreaOffsetX     ; to indicate that we are one with a line when crsr has reached
-     sta lineEnd                ; that X position of level data
+dlOffsetCalculated  lda #$00                   ; Set counters to zero
+                    sta crsr
+                    sta iter
+                    sta drawat
+          
+                    lda #$13                   ; Set lineEnd to current area X offset + screen width in tiles
+                    adc currentAreaOffsetX     ; to indicate that we are one with a line when crsr has reached
+                    sta lineEnd                ; that X position of level data
      
 drawlevelloop
      inc iter
@@ -512,6 +507,7 @@ print_source = $fb
 print_source_length = $02
 print_target = $fd
 
+
 print_string            ldy #$00
 print_string_loop       lda ($fb), y
                         and #$3f
@@ -556,6 +552,36 @@ clearscreen      lda #$20     ; #$20 is the spacebar Screen Code
                  bne clearscreen
                  rts
 
+print_decimal:
+         stx div_lo
+         ldy #$00
+         sty div_hi
+
+         ldy #$02
+nextdec  jsr divideby10
+         ora #$30
+         sta (print_target),y
+         dey
+         bpl nextdec
+         rts
+
+div_lo = $0800
+div_hi = $0801
+
+divideby10:
+            ldx #$11
+            lda #$00
+            clc
+div10loop   rol
+            cmp #$0A
+            bcc div10skip
+            sbc #$0A
+div10skip   rol div_lo
+            rol div_hi
+            dex
+            bne div10loop
+            rts
+
 ;; ----------------------
 ;; SCENE STATE
 ;; ----------------------
@@ -568,7 +594,7 @@ screenDirty .byte $00
 ;; LEVEL DATA
 ;; ----------------------
 
-*=$8000
+*=$8002
 
 currentAreaWidth = #$21
 currentAreaHeight = #$17
