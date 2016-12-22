@@ -213,6 +213,9 @@ readKey
                     cmp key_DOWNRIGHT
                     beq move_downright
 
+                    cmp #$06
+                    beq toggleFOV
+
                     jmp endReadKey
                     
 move_up             dey
@@ -241,7 +244,14 @@ move_downleft       iny
 
 move_downright      inx
                     iny
-                    jmp attemptMove                    
+                    jmp attemptMove
+
+toggleFOV           lda areaMode
+                    eor %10000000
+                    sta areaMode
+                    ldx playerX
+                    ldy playerY
+                    jmp attemptMove
 
 movePerformed                    
                     inc screenDirty     
@@ -268,8 +278,13 @@ performMove         ldx tmpX
                     lda areaMode
                     and #%10000000
                     beq moveDone
-                    jsr updateFOV
+                    ;jsr updateFOV           ; Deprecated soon-ish
+                    jsr updateFOVLines
 moveDone            rts
+
+;; -----------
+;; FOV ROUTINES
+;; -----------
 
 clearFOVBuffer:
                     lda #$10
@@ -281,64 +296,300 @@ clearFOVLoop        sta fovBuffer, x
                     bne clearFOVLoop
                     rts
 
-updateFOV:
-                    jsr clearFOVBuffer
-                    ; First set all adjacent tiles to player
-                    ldx playerX                 ; First set tile pointer to playerX-1, playerY-1
+; FOV segment pointers.
+lSegmentAreaPtrHi
+    .byte $00
+    .byte $00
+    .byte $00
+    .byte $00
+    .byte $00
+lSegmentAreaPtrLo
+    .byte $00
+    .byte $00
+    .byte $00
+    .byte $00
+    .byte $00
+
+lSegmentFOVPtrHi
+    .byte $00
+    .byte $00
+    .byte $00
+    .byte $00
+    .byte $00
+lSegmentFOVPtrLo
+    .byte $00
+    .byte $00
+    .byte $00
+    .byte $00
+    .byte $00
+
+
+currentLine .byte $00               ; Track current line of FOV sector being investigated
+currentLineSegment .byte $00        ; Track the current segment of the line being investigated
+lineLength  .byte $00               ; Length of the current line
+
+fovSectorDir .byte $01              ; Positive or negative sector
+fovHorVert  .byte $01               ; Horizontal or vertical sector
+fovPtrModVal .byte $00
+areaPtrModVal .byte $00
+
+segMasks  .byte %10000000
+          .byte %01000000
+          .byte %00100000
+          .byte %00010000
+          .byte %00001000
+
+updateFOVLines:
+                    ldx playerX     ; Put player coords X and Y
                     ldy playerY
-                    dex
-                    dey
-                    jsr resolveTileRowPointer
-                    stx tmpX
-                    ldx #$00
+                    jsr resolveTileRowPointer   ; Put player tile row pointer at $24-$25
 
-                    lda #>fovBuffer+88
-                    sta $21
-                    lda #<fovBuffer+88
-                    sta $20
+                    clc
+                    lda $24                     ; Forward pointer to actual player X pos
+                    adc playerX
+                    sta $24
+                    bcc revealPlayerTile
+                    inc $25
 
-fovOuterLoop
-                    clc                     ; Set up pointer to fovBuffer
-                    lda $25
-                    sta $23
+revealPlayerTile    ldy #$00                        ; Reveal tile player is standing on
+                    lda ($24), y
+                    sta fovBuffer+109
+
+                    lda #$01
+                    sta fovSectorDir                ; Negative/Positive
+                    sta fovHorVert                  ; Horizontal/Vertical
+walkFOVSector:
+                    lda $25                         ; Store point of origin in first line segment pointer for area
+                    sta lSegmentAreaPtrHi
                     lda $24
-                    adc tmpX
-                    sta $22
-                    bcc contFOV
-                    inc $23
+                    sta lSegmentAreaPtrLo
 
-contFOV
-                    ldy #$00
-fovInnerLoop
+                    lda #>fovBuffer+109             ; Store point of origin in first line segment pointer for fov buffer
+                    sta lSegmentFOVPtrHi
+                    lda #<fovBuffer+109
+                    sta lSegmentFOVPtrLo
+
+                    lda #$13                        ; Set buffer widths as base mod factor
+                    sta fovPtrModVal
+                    lda currentAreaWidth
+                    sta areaPtrModVal
+
+                    ldx #$00
+                    lda fovHorVert
+                    cmp #$01
+                    beq setStartVertical
+setStartHorizontal  dec areaPtrModVal
+                    lda fovSectorDir
+                    cmp #$01
+                    bne fovStartPtrLoop
+                    dec fovPtrModVal                ; Buffer width+1 for horiz walks
+                    dec areaPtrModVal
+                    jmp fovStartPtrLoop
+setStartVertical    inc fovPtrModVal                ; Buffer width-1 for vertical walks
+                    lda fovSectorDir
+                    cmp #$01
+                    beq fovStartPtrLoop
+                    inc fovPtrModVal
+                    inc areaPtrModVal
+fovStartPtrLoop     lda lSegmentFOVPtrLo, x         ; Mod FOV line segment ptr
+                    sta incBuf
+                    lda lSegmentFOVPtrHi, x
+                    sta incBuf+1
+                    lda fovPtrModVal
+                    sta modVal
+                    lda fovSectorDir
+                    cmp #$01
+                    beq fovStartPtrDec
+fovStartPtrInc      jsr incPtr
+                    jmp fovStartPtrSet
+fovStartPtrDec      jsr decPtr
+fovStartPtrSet      lda incBuf
+                    sta lSegmentFOVPtrLo, x
+                    lda incBuf+1
+                    sta lSegmentFOVPtrHi, x
+
+                    lda lSegmentAreaPtrLo, x         ; Mod area line segment ptr
+                    sta incBuf
+                    lda lSegmentAreaPtrHi, x
+                    sta incBuf+1
+                    lda areaPtrModVal
+                    sta modVal
+                    lda fovSectorDir
+                    cmp #$01
+                    beq areaStartPtrDec
+areaStartPtrInc     jsr incPtr
+                    jmp areaStartPtrSet
+areaStartPtrDec     jsr decPtr
+areaStartPtrSet     lda incBuf
+                    sta lSegmentAreaPtrLo, x
+                    lda incBuf+1
+                    sta lSegmentAreaPtrHi, x
+
+segPointersSet      txa
+                    tay
+                    inx
+                    cpx #$05                       ; Move on if this was the last segment
+                    bne prepareNextStartPtr
+                    jmp beginLineWalks
+
+prepareNextStartPtr                             ; Prepare next iteration by copying ptr positions to next round
+                    lda lSegmentAreaPtrHi, y
+                    sta lSegmentAreaPtrHi, x
+                    lda lSegmentAreaPtrLo, y
+                    sta lSegmentAreaPtrLo, x
+                    lda lSegmentFOVPtrHi, y
+                    sta lSegmentFOVPtrHi, x
+                    lda lSegmentFOVPtrLo, y
+                    sta lSegmentFOVPtrLo, x
+                    jmp fovStartPtrLoop
+
+beginLineWalks:
+                    ldx #$00                        ; Set line index to 0 (of 8)
+                    stx currentLine
+
+walkFOVLine:        ;; Assume currentLine is loaded into X when we return here
+                    lda fovLineTable, x
+                    and #%00000111
+                    sta lineLength                 ; Store away line length
+
+                    ldx #$00
+                    stx currentLineSegment
+walkSegmentsLoop    lda lSegmentAreaPtrLo,x      ; Copy pointers to zero page
+                    sta $22
+                    lda lSegmentAreaPtrHi,x
+                    sta $23
+
+                    lda lSegmentFOVPtrLo,x
+                    sta $20
+                    lda lSegmentFOVPtrHi,x
+                    sta $21
+
+                    ldy #$00                   ; Copy tile from level data to fov buffer
                     lda ($22), y
                     sta ($20), y
 
-                    clc
-                    iny
-                    cpy #$03
-                    bne fovInnerLoop
-
-                    clc                 ; Move FOV Pointer to next row
-                    lda $20
-                    adc #$14
-                    sta $20
-
-                    clc
                     inx
-                    cpx #$03
-                    beq fovDone
+                    cpx lineLength
+                    bne walkSegmentsLoop
 
-                    clc                 ; Move Area pointer to next row
-                    lda $24
-                    adc currentAreaWidth
-                    sta $24
-                    bcc nopc
-                    inc $25
-nopc
-                    jmp fovOuterLoop
+                    inc currentLine
+                    ldx currentLine
+                    cpx #$0a                   ; 0a for all lines, There are ten lines to a sector
+                    bne prepareNextLine
 
-fovDone
+                    inc fovSectorDir
+                    lda fovSectorDir
+                    cmp #$03
+                    beq nextOrientation
+                    jmp walkFOVSector
+nextOrientation     inc fovHorVert
+                    lda fovHorVert
+                    cmp #$03
+                    beq endOfFov
+                    lda #$01
+                    sta fovSectorDir
+                    jmp walkFOVSector
+endOfFov
                     rts
+
+prepareNextLine     lda fovHorVert              ; Prepare next FOV line
+                    cmp #$01
+                    beq prepHorLineStep
+prepVertLineStep    lda currentAreaWidth
+                    sta areaPtrModVal
+                    lda #$14
+                    sta fovPtrModVal
+                    lda fovSectorDir
+                    cmp #$01
+                    beq prepareLoop
+                    dec fovPtrModVal
+                    dec areaPtrModVal
+                    jmp prepareLoop
+prepHorLineStep     lda #$01
+                    sta areaPtrModVal
+                    sta fovPtrModVal
+                    lda fovSectorDir
+                    cmp #$01
+                    beq prepareLoop
+                    dec fovPtrModVal
+                    dec areaPtrModVal
+
+prepareLoop         lda fovLineTable, x
+                    ldx #$00
+                    tay
+modSegmentLoop      clc                 ; Set up segment modifiers for next round
+                    and segMasks, x     ; Check if fovTable dictates seg mod
+                    cmp segMasks, x
+                    bne noSegMod
+modFovPtr           lda fovPtrModVal
+                    sta modVal
+                    lda lSegmentFOVPtrLo, x
+                    sta incBuf
+                    lda lSegmentFOVPtrHi, x
+                    sta incBuf+1
+                    lda fovSectorDir
+                    cmp #$01
+                    bne decFovMod
+incFovMod           jsr incPtr
+                    jmp modAreaPtr
+decFovMod           jsr decPtr
+modAreaPtr          lda incBuf
+                    sta lSegmentFOVPtrLo, x
+                    lda incBuf+1
+                    sta lSegmentFOVPtrHi, x
+
+                    lda areaPtrModVal
+                    sta modVal
+                    lda lSegmentAreaPtrLo, x
+                    sta incBuf
+                    lda lSegmentAreaPtrHi, x
+                    sta incBuf+1
+                    lda fovSectorDir
+                    cmp #$01
+                    bne decAreaMod
+incAreaMod          jsr incPtr
+                    jmp storeAreaMod
+decAreaMod          jsr decPtr
+storeAreaMod        lda incBuf
+                    sta lSegmentAreaPtrLo, x
+                    lda incBuf+1
+                    sta lSegmentAreaPtrHi, x
+noSegMod
+                    cpy #$00
+                    beq prepareNextSeg
+                    lda currentLine             ; This here is a little fix for the fifth segment
+                    cmp #$03                    ; by running it an extra iteration through the loop
+                    bcs prepareNextSeg
+                    cpx #$04
+                    bne prepareNextSeg
+                    ldy #$00
+                    jmp modFovPtr
+
+prepareNextSeg      inx
+                    tya
+                    cpx #$05
+                    bne contLoop
+                    ldx currentLine
+                    jmp walkFOVLine
+
+contLoop
+                    jmp modSegmentLoop
+
+
+fovLineTable:
+     ;;     MOD  LEN
+     .byte %00001011  ; A-1     - 1
+     .byte %00111100  ; A-2     - 2
+
+     .byte %11111100  ; B-1     - 3
+     .byte %01010101  ; B-2     - 4
+     .byte %00100101  ; B-3     - 5
+     .byte %00011101  ; B-4     - 6
+     .byte %00011101  ; B-5     - 7
+     .byte %00100101  ; B-6     - 8
+     .byte %01010100  ; B-7     - 9
+
+     .byte %11110100  ; C-1     - 10
 
 
 ;; ----------------------
@@ -951,18 +1202,16 @@ iconcols:
      .byte $08, $08, $08, $08 ;; Door
      
 iconprops:
-     .byte %00000000          ;; Nothing / Black. Not passable.
-     .byte %10000000          ;; Rocks.           Passable
-     .byte %00000000          ;; Water            Not passable
-     .byte %10000000          ;; Road             Passable
-     .byte %10000000          ;; Background       Passable
-     .byte %00000000          ;; Tree             Not passable
-     .byte %00000000          ;; Dead tree        Not passable
-     .byte %00000000          ;; Red wall         Not passable
-     .byte %00000000          ;; Red roof         Not passable
-     .byte %10000000          ;; Door             Passable
-     
-
+     .byte %00000000          ;; Nothing / Black. Not passable.    Block Sight
+     .byte %11000000          ;; Rocks.           Passable         See-through
+     .byte %01000000          ;; Water            Not passable     See-through
+     .byte %11000000          ;; Road             Passable         See-through
+     .byte %11000000          ;; Background       Passable         See-through
+     .byte %00000000          ;; Tree             Not passable     Block sight
+     .byte %01000000          ;; Dead tree        Not passable     See-through
+     .byte %00000000          ;; Red wall         Not passable     Block sight
+     .byte %00000000          ;; Red roof         Not passable     Block sight
+     .byte %10000000          ;; Door             Passable         Block sight
 
 ;; ----------------------
 ;; MATH
@@ -985,6 +1234,29 @@ mply_enterLoop   lsr num2
                  bne mply_loop
                  rts
 
+;--------
+
+modVal .byte $00
+incBuf .byte $00
+       .byte $00
+
+incPtr:             ; Helper subroutine for increasing 16-bit buffer value
+                    lda incBuf
+                    clc
+                    adc modVal
+                    sta incBuf
+                    bcc localRts
+                    inc incBuf+1
+localRts            rts
+
+decPtr              ; Helper subroutine for decreasing 16-bit buffer value
+                    lda incBuf
+                    clc
+                    sbc modVal
+                    sta incBuf
+                    bcs localRts
+                    dec incBuf+1
+                    rts
 
 
 *=$2000
