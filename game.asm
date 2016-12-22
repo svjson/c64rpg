@@ -340,6 +340,7 @@ segMasks  .byte %10000000
           .byte %00001000
 
 updateFOVLines:
+                    jsr clearFOVBuffer
                     ldx playerX     ; Put player coords X and Y
                     ldy playerY
                     jsr resolveTileRowPointer   ; Put player tile row pointer at $24-$25
@@ -468,11 +469,17 @@ walkSegmentsLoop    lda lSegmentAreaPtrLo,x      ; Copy pointers to zero page
                     lda ($22), y
                     sta ($20), y
 
+                    tay
+                    lda iconprops, y
+                    and #%01000000
+                    cmp #%01000000
+                    bne lineWalked
+
                     inx
                     cpx lineLength
                     bne walkSegmentsLoop
 
-                    inc currentLine
+lineWalked          inc currentLine
                     ldx currentLine
                     cpx #$0a                   ; 0a for all lines, There are ten lines to a sector
                     bne prepareNextLine
