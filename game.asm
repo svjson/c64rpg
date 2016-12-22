@@ -258,11 +258,13 @@ movePerformed
 endReadKey                   
                     rts
 
+currentTileProps    .byte %00000000
 
 attemptMove:        ; In parameters: target x, y in X and Y registers
-                    jsr getTileAt       ; Look up tile at x, y
-                    tax                 ; check if passable by comparing with tile table
+                    jsr getTileAt           ; Look up tile at x, y
+                    tax                     ; check if passable by comparing with tile table
                     lda iconprops, x
+                    sta currentTileProps    ; Keep icon properties for later use
                     and #%10000000
                     cmp #%10000000
                     beq performMove
@@ -277,10 +279,143 @@ performMove         ldx tmpX
                     clc
                     lda areaMode
                     and #%10000000
-                    beq moveDone
-                    ;jsr updateFOV           ; Deprecated soon-ish
+                    beq triggerCheck
                     jsr updateFOVLines
+
+triggerCheck        lda currentTileProps
+                    and #%00100000
+                    cmp #%00100000
+                    beq evalTriggers
 moveDone            rts
+
+evalTriggers
+                    ldy #$00
+triggerIterLoop     cpy triggerTableSize
+                    beq moveDone
+
+                    sty num1
+                    lda #$07
+                    sta num2
+                    jsr multiply
+
+                    tax
+                    lda triggerTable, x
+                    cmp playerX
+                    bne nextTrigger
+
+                    inx
+                    lda triggerTable, x
+                    cmp playerY
+                    bne nextTrigger
+
+executeTrigger      inx
+                    lda triggerTable, x     ; Trigger type. Ignore for now
+
+                    inx
+                    lda triggerTable, x     ; Area addr lo-byte
+                    sta $20
+                    inx
+                    lda triggerTable, x     ; Area addr hi-byte
+                    sta $21
+
+                    inx
+                    lda triggerTable, x     ; Target X coord
+                    sta playerX
+                    inx
+                    lda triggerTable, x     ; Target Y coord
+                    sta playerY
+                    jmp enterArea
+
+nextTrigger         iny
+                    jmp triggerIterLoop
+
+;                   Input
+;                   Area addr  $20-21
+enterArea:
+                    ldy #$00
+                    lda ($20), y
+                    sta currentAreaWidth
+                    iny
+                    lda ($20), y
+                    sta currentAreaHeight
+                    iny
+                    lda ($20), y
+                    sta areaMode
+
+                    lda $20
+                    sta incBuf
+                    lda $21
+                    sta incBuf+1
+                    lda #$03
+                    sta modVal
+                    jsr incPtr
+                    lda incBuf
+                    sta $20
+                    lda incBuf+1
+                    sta $21
+
+                    lda #<currentArea
+                    sta $22
+                    lda #>currentArea
+                    sta $23
+
+                    lda #$01
+                    sta modVal
+                    ldx #$00
+                    stx currentLine
+loadAreaMapColLoop  ldx #$00
+loadAreaMapRowLoop  ldy #$00
+                    lda ($20), y
+                    sta ($22), y
+
+                    lda $20
+                    sta incBuf
+                    lda $21
+                    sta incBuf+1
+                    jsr incPtr
+                    lda incBuf
+                    sta $20
+                    lda incBuf+1
+                    sta $21
+
+                    lda $22
+                    sta incBuf
+                    lda $23
+                    sta incBuf+1
+                    jsr incPtr
+                    lda incBuf
+                    sta $22
+                    lda incBuf+1
+                    sta $23
+                    inx
+                    cpx currentAreaWidth
+                    bne loadAreaMapRowLoop
+                    inc currentLine
+                    ldx currentLine
+                    cpx currentAreaHeight
+                    bne loadAreaMapColLoop
+
+loadAreaTriggerTable lda ($20), y
+                     sta triggerTableSize   ; Trigger table size
+
+                     sta num1
+                     lda #$07
+                     sta num2
+                     jsr multiply
+                     sta num1
+                     inc num1
+                     iny
+copyTriggerTableLoop  lda ($20), y
+                      sta triggerTableSize, y
+                      iny
+                      cpy num1
+                      bne copyTriggerTableLoop
+
+                      ldx playerX
+                      stx tmpX
+                      ldy playerY
+                      sty tmpY
+                      jmp performMove
 
 ;; -----------
 ;; FOV ROUTINES
@@ -1115,8 +1250,8 @@ div10skip   rol div_lo
 currentAreaOffsetX  .byte $00
 currentAreaOffsetY  .byte $04
 
-playerX .byte $08
-playerY .byte $06
+playerX .byte $1d
+playerY .byte $11
 
 screenDirty .byte $00
 
@@ -1126,14 +1261,14 @@ screenDirty .byte $00
 
 *=$7000
 
-currentAreaWidth = #$21
-currentAreaHeight = #$17
+currentAreaWidth .byte $21
+currentAreaHeight .byte $17
 
 drawBufferWidth = $0810
 drawBufferHeight = $0811
 
 areaMode:
-    .byte %10000000    ; 0/1 = FOV mode on/off
+    .byte %00000000    ; 0/1 = FOV mode on/off
                        ; Unused
                        ; Unused
                        ; Unused
@@ -1166,6 +1301,74 @@ currentArea
      .byte $0d, $04, $04, $02, $02, $04, $04, $0d, $0e, $0c, $05, $05, $05, $04, $05, $0b, $0f, $10, $04, $04, $05, $04, $05, $04, $04, $0b, $0e, $0d, $05, $06, $04, $0f, $04 
      .byte $04, $05, $01, $02, $02, $04, $04, $04, $04, $0d, $04, $04, $04, $11, $04, $0e, $0c, $04, $05, $01, $04, $04, $04, $04, $0b, $0c, $0c, $0e, $04, $05, $04, $04, $04 
      .byte $04, $04, $04, $02, $02, $04, $04, $04, $04, $04, $04, $04, $05, $04, $04, $04, $0d, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04 
+
+triggerTableSize
+     .byte $01
+triggerTable
+     .byte $1d  ; Trigger X
+     .byte $10  ; Trigger Y
+     .byte $01  ; Trigger Type (01 = Teleport to new area)
+     .byte <(houseArea)
+     .byte >(houseArea)
+     .byte $04
+     .byte $06
+
+outsidearea
+     .byte $21  ; width
+     .byte $17  ; height
+     .byte $00  ; area mode
+     .byte $05, $04, $03, $04, $05, $05, $04, $04, $04, $02, $02, $04, $0e, $0c, $05, $05, $05, $05, $04, $05, $05, $05, $05, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04
+     .byte $05, $05, $0a, $04, $04, $04, $05, $04, $0c, $02, $02, $0d, $04, $04, $04, $04, $04, $01, $05, $05, $04, $05, $04, $04, $04, $04, $04, $05, $04, $04, $04, $05, $0c
+     .byte $04, $04, $03, $05, $04, $04, $11, $05, $04, $02, $02, $04, $0b, $04, $04, $04, $11, $05, $04, $05, $11, $05, $05, $04, $05, $04, $04, $04, $04, $04, $05, $05, $04
+     .byte $05, $04, $0a, $04, $0b, $01, $05, $04, $0e, $02, $02, $02, $04, $0f, $04, $06, $04, $04, $04, $05, $05, $11, $05, $04, $04, $04, $04, $06, $05, $05, $06, $04, $04
+     .byte $04, $04, $0a, $03, $0c, $04, $04, $04, $04, $04, $02, $02, $04, $04, $04, $06, $04, $04, $0d, $0c, $0b, $05, $04, $06, $11, $04, $04, $04, $0d, $0e, $05, $04, $04
+     .byte $05, $04, $04, $0a, $05, $04, $04, $01, $04, $04, $02, $02, $04, $06, $05, $04, $04, $05, $04, $05, $04, $04, $05, $04, $04, $05, $04, $06, $06, $05, $04, $06, $04
+     .byte $04, $04, $04, $03, $0a, $0d, $0e, $04, $0d, $02, $02, $0c, $04, $04, $11, $0e, $04, $04, $04, $05, $05, $05, $05, $04, $0d, $05, $05, $04, $04, $04, $04, $04, $0c
+     .byte $04, $04, $04, $04, $03, $03, $05, $04, $04, $02, $02, $0b, $04, $05, $0b, $0c, $0d, $05, $04, $04, $05, $04, $04, $04, $0c, $04, $05, $04, $04, $04, $0e, $04, $04
+     .byte $05, $04, $04, $04, $04, $0a, $03, $0a, $04, $02, $02, $04, $04, $04, $04, $0b, $04, $04, $0b, $04, $05, $05, $05, $04, $0b, $04, $04, $04, $04, $04, $0d, $05, $0b
+     .byte $04, $04, $05, $04, $04, $04, $04, $0a, $03, $12, $12, $03, $0a, $03, $03, $04, $04, $04, $05, $05, $05, $04, $05, $04, $04, $04, $0b, $04, $0f, $04, $0c, $05, $04
+     .byte $05, $05, $04, $04, $05, $04, $11, $04, $01, $02, $02, $04, $04, $04, $0a, $0a, $03, $0a, $03, $0a, $03, $0a, $03, $03, $04, $04, $0c, $0e, $04, $04, $04, $04, $05
+     .byte $05, $04, $05, $04, $06, $04, $04, $0f, $05, $02, $02, $05, $05, $04, $05, $05, $04, $05, $04, $04, $11, $05, $04, $0a, $03, $04, $0d, $04, $04, $04, $04, $04, $05
+     .byte $04, $0b, $05, $05, $04, $11, $05, $04, $05, $02, $02, $04, $11, $05, $05, $04, $04, $05, $05, $05, $05, $05, $11, $04, $0a, $04, $08, $08, $08, $08, $08, $08, $05
+     .byte $04, $05, $04, $05, $11, $04, $11, $05, $04, $02, $02, $04, $0b, $05, $04, $04, $04, $04, $05, $04, $11, $04, $0b, $04, $03, $04, $08, $08, $08, $08, $08, $08, $04
+     .byte $0d, $04, $04, $05, $04, $05, $11, $04, $02, $02, $04, $05, $0c, $0b, $11, $04, $04, $0f, $04, $05, $05, $04, $0d, $04, $0a, $04, $08, $08, $08, $08, $08, $08, $04
+     .byte $04, $05, $05, $04, $11, $04, $04, $04, $02, $02, $0f, $0c, $0e, $04, $04, $04, $04, $05, $04, $11, $04, $11, $05, $0b, $0a, $04, $08, $08, $08, $08, $08, $08, $04
+     .byte $04, $04, $04, $05, $04, $04, $04, $02, $02, $02, $04, $0d, $04, $11, $04, $04, $04, $05, $05, $05, $04, $04, $11, $0c, $03, $04, $07, $07, $07, $09, $07, $07, $04
+     .byte $04, $04, $04, $04, $04, $02, $02, $02, $02, $04, $05, $04, $06, $05, $05, $04, $04, $04, $04, $04, $05, $05, $04, $04, $0a, $0a, $04, $06, $04, $0a, $04, $05, $04 
+     .byte $0b, $04, $04, $04, $02, $02, $02, $02, $04, $04, $04, $04, $06, $06, $11, $05, $04, $04, $05, $05, $04, $04, $04, $04, $04, $03, $03, $0a, $0a, $03, $03, $0a, $03 
+     .byte $04, $05, $04, $04, $02, $02, $04, $04, $04, $0b, $04, $04, $04, $04, $11, $05, $01, $04, $05, $04, $05, $04, $11, $04, $04, $04, $04, $04, $0f, $04, $04, $04, $04
+     .byte $0d, $04, $04, $02, $02, $04, $04, $0d, $0e, $0c, $05, $05, $05, $04, $05, $0b, $0f, $10, $04, $04, $05, $04, $05, $04, $04, $0b, $0e, $0d, $05, $06, $04, $0f, $04 
+     .byte $04, $05, $01, $02, $02, $04, $04, $04, $04, $0d, $04, $04, $04, $11, $04, $0e, $0c, $04, $05, $01, $04, $04, $04, $04, $0b, $0c, $0c, $0e, $04, $05, $04, $04, $04 
+     .byte $04, $04, $04, $02, $02, $04, $04, $04, $04, $04, $04, $04, $05, $04, $04, $04, $0d, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04 
+     .byte $01
+     .byte $1d  ; Trigger X
+     .byte $10  ; Trigger Y
+     .byte $01  ; Trigger Type (01 = Teleport to new area)
+     .byte <(houseArea)
+     .byte >(houseArea)
+     .byte $04
+     .byte $06
+
+houseArea
+     .byte $08 ; Area width
+     .byte $08 ; Area height
+     .byte %10000000
+     .byte $05, $05, $05, $05, $05, $05, $05, $05
+     .byte $05, $05, $04, $04, $04, $04, $04, $05
+     .byte $05, $05, $04, $04, $04, $04, $04, $05
+     .byte $05, $05, $04, $04, $04, $04, $04, $05
+     .byte $05, $05, $04, $04, $04, $04, $04, $05
+     .byte $05, $05, $04, $04, $04, $04, $04, $05
+     .byte $05, $05, $04, $04, $04, $04, $04, $05
+     .byte $05, $05, $05, $05, $09, $05, $05, $05
+     .byte $01  ; Trigger table size
+     .byte $04  ; Trigger 1 X
+     .byte $07  ; Trigger 1 Y
+     .byte $01  ; trigger type
+     .byte <(outsidearea)
+     .byte >(outsidearea)
+     .byte $1d  ; Target X
+     .byte $11  ; Target Y
 
 fovBuffer
      .byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
@@ -1237,7 +1440,7 @@ iconprops:
      .byte %01000000          ;; Dead tree        Not passable     See-through
      .byte %00000000          ;; Red wall         Not passable     Block sight
      .byte %00000000          ;; Red roof         Not passable     Block sight
-     .byte %10000000          ;; Door             Passable         Block sight
+     .byte %10100000          ;; Door             Passable         Block sight  Trigger
      .byte %11000000          ;; Road             Passable         See-through
      .byte %11000000          ;; Grass            Passable         See-through
      .byte %11000000          ;; Grass            Passable         See-through
