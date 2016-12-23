@@ -14,6 +14,7 @@
      sta $D020
      lda #$05           ; Set screen background color
      sta $D021
+     sta sceneColBg
      
      lda #$09           ; Set character set color
      sta $D022
@@ -21,7 +22,7 @@
      sta $D023
           
      lda $d018          ; Remap character set
-     ora #$0e
+     ora #%00001110
      sta $d018
 
      lda #$18           ; Char multicolour mode on 
@@ -126,7 +127,7 @@ enterstatusirq   nop
                  
 exitenterirq     jmp $ea31
 
-leavestatusirq   lda #$05           
+leavestatusirq   lda sceneColBg
                  sta $d021
                  
                  lda #%00011000 ; Enable multicolor text mode
@@ -341,12 +342,25 @@ enterArea:
                     iny
                     lda ($20), y
                     sta areaMode
+                    iny
+                    lda ($20), y
+                    sta tilesetMask
+
+                    iny
+                    lda ($20), y           ; Set screen background color
+                    sta sceneColBg
+                    iny
+                    lda ($20), y           ; Set character set color
+                    sta sceneCol1
+                    iny
+                    lda ($20), y
+                    sta sceneCol2
 
                     lda $20
                     sta incBuf
                     lda $21
                     sta incBuf+1
-                    lda #$03
+                    lda #$07
                     sta modVal
                     jsr incPtr
                     lda incBuf
@@ -411,11 +425,97 @@ copyTriggerTableLoop  lda ($20), y
                       cpy num1
                       bne copyTriggerTableLoop
 
+selectTileSet         lda tilesetMask
+                      cmp #%00001110
+                      beq loadOutdoorsTiles
+
+loadIndoorsTiles      lda #<indoorsTileset
+                      sta tmpPtr1
+                      lda #>indoorsTileset
+                      sta tmpPtr1+1
+
+                      lda #<indoorsTilesetColorTable
+                      sta tmpPtr2
+                      lda #>indoorsTilesetColorTable
+                      sta tmpPtr2+1
+
+                      lda #<indoorsTilesetPropsTable
+                      sta tmpPtr3
+                      lda #>indoorsTilesetPropsTable+1
+                      sta tmpPtr3+1
+                      jmp loadTileset
+
+loadOutdoorsTiles     lda #<outdoorsTileset
+                      sta tmpPtr1
+                      lda #>outdoorsTileset
+                      sta tmpPtr1+1
+
+                      lda #<outdoorsTilesetColorTable
+                      sta tmpPtr2
+                      lda #>outdoorsTilesetColorTable
+                      sta tmpPtr2+1
+
+                      lda #<outdoorsTilesetPropsTable
+                      sta tmpPtr3
+                      lda #>outdoorsTilesetPropsTable+1
+                      sta tmpPtr3+1
+
+loadTileset           lda #$01
+                      lda tmpPtr1
+                      sta $20
+                      lda tmpPtr1+1
+                      sta $21
+                      lda #<icons
+                      sta $22
+                      lda #>icons
+                      sta $23
+                      lda #$04
+                      sta memcpy_rowSize
+                      jsr memcpy_readRowsByte
+
+                      lda tmpPtr2
+                      sta $20
+                      lda tmpPtr2+1
+                      sta $21
+                      lda #<iconcols
+                      sta $22
+                      lda #>iconcols
+                      sta $23
+                      jsr memcpy
+
+                      lda tmpPtr3
+                      sta $20
+                      lda tmpPtr3+1
+                      sta $21
+                      lda #<iconprops
+                      sta $22
+                      lda #>iconprops
+                      sta $23
+                      lda #$01
+                      sta memcpy_rowSize
+                      jsr memcpy
+
+areaLoaded            lda $d018              ; Remap tileset
+                      and #%11110001
+                      ora tilesetMask
+                      sta $d018
+
+                      lda sceneCol1          ; Set character set color
+                      sta $d022
+                      lda sceneCol2
+                      sta $d023
+
                       ldx playerX
                       stx tmpX
                       ldy playerY
                       sty tmpY
+
                       jmp performMove
+
+tilesetMask .byte %00000000
+sceneColBg  .byte $00
+sceneCol1   .byte $00
+sceneCol2   .byte $00
 
 ;; -----------
 ;; FOV ROUTINES
@@ -1099,7 +1199,6 @@ colloop         sta $db20, x
                 
                 sta $db6a
                 sta $db92
-
                 
                 lda #<text_HP
                 sta print_source
@@ -1244,6 +1343,48 @@ div10skip   rol div_lo
             bne div10loop
             rts
 
+memcpy_rowSize .byte $00        ; Size of each row of mem to copy (in bytes)
+memcpy_rows    .byte $00        ; Number of rows to copy
+
+memcpy_readRowsByte:
+            ldy #$00            ; Read number of rows from source mem area
+            lda ($20), y
+            sta memcpy_rows
+            lda $20
+            clc                 ; Move ptr to data
+            adc #$01
+            sta $20
+            bcc memcpy
+            inc $21
+
+; Source ptr at $20-21, Target ptr at $22-23
+memcpy:
+               ldx #$00
+memcpyrowloop  stx $0780
+               cpx memcpy_rows
+               beq end_memcpy
+               ldy #$00
+memcpycolloop  lda ($20), y
+               sta ($22), y
+               iny
+               cpy memcpy_rowSize
+               bne memcpycolloop
+               inx
+incSrcPtr      lda $20
+               clc
+               adc memcpy_rowSize
+               sta $20
+               bcc incTrgPtr
+               inc $21
+incTrgPtr      lda $22
+               clc
+               adc memcpy_rowSize
+               sta $22
+               bcc memcpyrowloop
+               inc $23
+               jmp memcpyrowloop
+end_memcpy     rts
+
 ;; ----------------------
 ;; SCENE STATE
 ;; ----------------------
@@ -1260,7 +1401,6 @@ screenDirty .byte $00
 ;; ----------------------
 
 *=$7000
-
 currentAreaWidth .byte $21
 currentAreaHeight .byte $17
 
@@ -1317,6 +1457,8 @@ outsidearea
      .byte $21  ; width
      .byte $17  ; height
      .byte $00  ; area mode
+     .byte %00001110; tileset mask
+     .byte $05, $09, $1d
      .byte $05, $04, $03, $04, $05, $05, $04, $04, $04, $02, $02, $04, $0e, $0c, $05, $05, $05, $05, $04, $05, $05, $05, $05, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04
      .byte $05, $05, $0a, $04, $04, $04, $05, $04, $0c, $02, $02, $0d, $04, $04, $04, $04, $04, $01, $05, $05, $04, $05, $04, $04, $04, $04, $04, $05, $04, $04, $04, $05, $0c
      .byte $04, $04, $03, $05, $04, $04, $11, $05, $04, $02, $02, $04, $0b, $04, $04, $04, $11, $05, $04, $05, $11, $05, $05, $04, $05, $04, $04, $04, $04, $04, $05, $05, $04
@@ -1353,14 +1495,16 @@ houseArea
      .byte $08 ; Area width
      .byte $08 ; Area height
      .byte %10000000
-     .byte $05, $05, $05, $05, $05, $05, $05, $05
-     .byte $05, $05, $04, $04, $04, $04, $04, $05
-     .byte $05, $05, $04, $04, $04, $04, $04, $05
-     .byte $05, $05, $04, $04, $04, $04, $04, $05
-     .byte $05, $05, $04, $04, $04, $04, $04, $05
-     .byte $05, $05, $04, $04, $04, $04, $04, $05
-     .byte $05, $05, $04, $04, $04, $04, $04, $05
-     .byte $05, $05, $05, $05, $09, $05, $05, $05
+     .byte %00001100    ; Tile set mask
+     .byte $1e, $08, $09
+     .byte $00, $06, $02, $02, $02, $02, $02, $07
+     .byte $00, $03, $01, $01, $01, $01, $01, $04
+     .byte $00, $03, $01, $01, $01, $01, $01, $04
+     .byte $00, $03, $01, $09, $02, $02, $02, $0c
+     .byte $00, $03, $01, $01, $01, $01, $01, $04
+     .byte $00, $03, $01, $0e, $0d, $0f, $01, $04
+     .byte $00, $03, $01, $01, $01, $01, $01, $04
+     .byte $00, $05, $02, $02, $0b, $02, $02, $08
      .byte $01  ; Trigger table size
      .byte $04  ; Trigger 1 X
      .byte $07  ; Trigger 1 Y
@@ -1386,7 +1530,7 @@ fovBuffer
 ;; TILE DATA
 ;; ----------------------
 
-*=$3000
+*=$4000
 icons:
      .byte $48, $48, $48, $48 ;; Nothing/Black   $00
      .byte $47, $20, $20, $47 ;; Rocks           $01
@@ -1451,10 +1595,133 @@ iconprops:
      .byte %00000000          ;; Tree             Not passable     Block sight
      .byte %11000000          ;; Bridge           Passable         See-through
      
+; Outdoors tileset
+outdoorsTileset:
+     .byte $13 ; 19 tile definitions
+     .byte $48, $48, $48, $48 ;; Nothing/Black   $00
+     .byte $47, $20, $20, $47 ;; Rocks           $01
+     .byte $46, $46, $46, $46 ;; Water           $02
+     .byte $44, $45, $45, $44 ;; Road            $03
+     .text "    "             ;; Background      $04
+     .byte $43, $42, $40, $41 ;; Tree            $05
+     .byte $4b, $4c, $49, $4a ;; Dead tree       $06
+     .byte $4d, $4d, $4d, $4d ;; Red wall        $07
+     .byte $4e, $4e, $4e, $4e ;; Red roof        $08
+     .byte $51, $52, $4f, $50 ;; Door            $09
+     .byte $45, $44, $44, $45 ;; RoadInverse     $0a
+     .byte $20, $53, $54, $20 ;; Grass Half 1    $0b
+     .byte $54, $53, $53, $54 ;; Grass Half 2    $0c
+     .byte $54, $20, $20, $53 ;; Grass Half 1    $0d
+     .byte $53, $54, $54, $53 ;; Grass Half 2    $0e
+     .byte $20, $56, $20, $55 ;; Flowers Red     $0f
+     .byte $56, $20, $55, $20 ;; Flowers Yellow  $10
+     .byte $57, $58, $40, $41 ;; Tree Variant    $11
+     .byte $59, $59, $59, $59 ;; Bridge          $12
+
+outdoorsTilesetColorTable:
+     .byte $00, $00, $00, $00 ;; Nothing / Black
+     .byte $01, $01, $01, $01 ;; Rocks - Hires white
+     .byte $1e, $1e, $1e, $1e ;; Water - blue
+     .byte $1d, $1d, $1d, $1d ;; Road - green
+     .byte $1d, $1d, $1d, $1d ;; Background - N/A
+     .byte $1d, $1d, $1d, $1d ;; Tree - green
+     .byte $1a, $1a, $1a, $1a ;; Dead tree - red
+     .byte $1a, $1a, $1a, $1a ;; Red wall - red
+     .byte $1a, $1a, $1a, $1a ;; Red roof - red
+     .byte $08, $08, $08, $08 ;; Door
+     .byte $1d, $1d, $1d, $1d ;; Road - green
+     .byte $00, $00, $00, $00 ;; Grass
+     .byte $00, $00, $00, $00 ;; Grass
+     .byte $00, $00, $00, $00 ;; Grass
+     .byte $00, $00, $00, $00 ;; Grass
+     .byte $00, $02, $00, $00 ;; Flowers Yellow
+     .byte $07, $00, $00, $00 ;; Flowers Red
+     .byte $1d, $1d, $1d, $1d ;; Tree variant
+     .byte $08, $08, $08, $08 ;; Bridge
+
+outdoorsTilesetPropsTable:
+     .byte %00000000          ;; Nothing / Black. Not passable.    Block Sight
+     .byte %11000000          ;; Rocks.           Passable         See-through
+     .byte %01000000          ;; Water            Not passable     See-through
+     .byte %11000000          ;; Road             Passable         See-through
+     .byte %11000000          ;; Background       Passable         See-through
+     .byte %00000000          ;; Tree             Not passable     Block sight
+     .byte %01000000          ;; Dead tree        Not passable     See-through
+     .byte %00000000          ;; Red wall         Not passable     Block sight
+     .byte %00000000          ;; Red roof         Not passable     Block sight
+     .byte %10100000          ;; Door             Passable         Block sight  Trigger
+     .byte %11000000          ;; Road             Passable         See-through
+     .byte %11000000          ;; Grass            Passable         See-through
+     .byte %11000000          ;; Grass            Passable         See-through
+     .byte %11000000          ;; Grass            Passable         See-through
+     .byte %11000000          ;; Grass            Passable         See-through
+     .byte %11000000          ;; Flowers          Passable         See-through
+     .byte %11000000          ;; Flowers          Passable         See-through
+     .byte %00000000          ;; Tree             Not passable     Block sight
+     .byte %11000000          ;; Bridge           Passable         See-through
+
+indoorsTileset:
+     .byte $10
+     .byte $48, $48, $48, $48 ;; Nothing/Black      $00
+     .byte $40, $40, $40, $40 ;; Wood floor         $01
+     .byte $42, $42, $41, $41 ;; Wood wall w-e      $02
+     .byte $48, $45, $48, $45 ;; Wood wall n-s(r)   $03
+     .byte $45, $48, $45, $48 ;; Wood wall n-s(l)   $04
+     .byte $48, $43, $48, $41 ;; Wood wall crn e-n  $05
+     .byte $48, $46, $48, $45 ;; Wood wall crn e-s  $06
+     .byte $47, $48, $45, $48 ;; Wood wall crn w-s  $07
+     .byte $44, $48, $41, $48 ;; Wood wall crn w-n  $08
+     .byte $55, $42, $53, $41 ;; Wood wall end w    $09
+     .byte $42, $56, $41, $54 ;; Wood wall end e    $0a
+     .byte $51, $52, $4f, $50 ;; Door               $0b
+     .byte $49, $48, $45, $48 ;; Wood wall n-s-w    $0c
+     .byte $59, $5a, $57, $58 ;; Table              $0d
+     .byte $5b, $5c, $5d, $5e ;; Chair facing E     $0e
+     .byte $60, $5f, $62, $61 ;; Chair facing W     $0e
+
+indoorsTilesetColorTable;
+     .byte $00, $00, $00, $00 ;; Nothing / Black
+     .byte $1a, $1a, $1a, $1a ;; Wood floor
+     .byte $08, $08, $08, $08 ;; Wood wall
+     .byte $08, $08, $08, $08 ;; Wood wall
+     .byte $08, $08, $08, $08 ;; Wood wall
+     .byte $08, $08, $08, $08 ;; Wood wall corner
+     .byte $08, $08, $08, $08 ;; Wood wall corner
+     .byte $08, $08, $08, $08 ;; Wood wall corner
+     .byte $08, $08, $08, $08 ;; Wood wall corner
+     .byte $08, $08, $08, $08 ;; Wood wall end
+     .byte $08, $08, $08, $08 ;; Wood wall end
+     .byte $08, $08, $08, $08 ;; Door
+     .byte $08, $08, $08, $08 ;; Wood wall n-s-w
+     .byte $08, $08, $08, $08 ;; Table
+     .byte $08, $08, $08, $08 ;; Chair facing E
+     .byte $08, $08, $08, $08 ;; Chair facing W
+
+indoorsTilesetPropsTable:
+     .byte %00000000          ;; Nothing / Black. Not passable.    Block Sight
+     .byte %11000000          ;; Wood floor       Passable         See-through
+     .byte %00000000          ;; Wood wall        Not passable     Block Sight
+     .byte %00000000          ;; Wood wall        Not passable     Block Sight
+     .byte %00000000          ;; Wood wall        Not passable     Block Sight
+     .byte %00000000          ;; Wood wall crn    Not passable     Block Sight
+     .byte %00000000          ;; Wood wall crn    Not passable     Block Sight
+     .byte %00000000          ;; Wood wall crn    Not passable     Block Sight
+     .byte %00000000          ;; Wood wall crn    Not passable     Block Sight
+     .byte %00000000          ;; Wood wall end    Not passable     Block Sight
+     .byte %00000000          ;; Wood wall end    Not passable     Block Sight
+     .byte %10100000          ;; Door             Passable         Block sight  Trigger
+     .byte %00000000          ;; Wood wall T      Not passable     Block Sight
+     .byte %01000000          ;; Wood Table       Not passable     See-through
+     .byte %11000000          ;; Chair            Passable         See-through
+     .byte %11000000          ;; Chair            Passable         See-through
 
 ;; ----------------------
 ;; MATH
 ;; ----------------------
+
+tmpPtr1     .byte $00, $00
+tmpPtr2     .byte $00, $00
+tmpPtr3     .byte $00, $00
 
 num1        .byte $00                ; Math input #1
 num2        .byte $00                ; Math input #2
@@ -1502,6 +1769,10 @@ decCarry            dec incBuf+1
 
 *=$2000
 .binary "spritedata.raw"
+
+
+*=$3000
+.binary "indoors-charset.bin"
 
 *=$3800
 .binary "gamechars-charset.bin" 
