@@ -428,6 +428,8 @@ copyTriggerTableLoop  lda ($20), y
 selectTileSet         lda tilesetMask
                       cmp #%00001110
                       beq loadOutdoorsTiles
+                      cmp #%00001010
+                      beq loadDungeonTiles
 
 loadIndoorsTiles      lda #<indoorsTileset
                       sta tmpPtr1
@@ -459,6 +461,25 @@ loadOutdoorsTiles     lda #<outdoorsTileset
                       sta tmpPtr3
                       lda #>outdoorsTilesetPropsTable+1
                       sta tmpPtr3+1
+                      jmp loadTileset
+
+
+loadDungeonTiles      lda #<dungeonTileset
+                      sta tmpPtr1
+                      lda #>dungeonTileset
+                      sta tmpPtr1+1
+
+                      lda #<dungeonTilesetColorTable
+                      sta tmpPtr2
+                      lda #>dungeonTilesetColorTable
+                      sta tmpPtr2+1
+
+                      lda #<dungeonTilesetPropsTable
+                      sta tmpPtr3
+                      lda #>dungeonTilesetPropsTable+1
+                      sta tmpPtr3+1
+                      jmp loadTileset
+
 
 loadTileset           lda #$01
                       lda tmpPtr1
@@ -1452,6 +1473,13 @@ triggerTable
      .byte >(houseArea)
      .byte $04
      .byte $06
+     .byte $1d  ; Trigger X
+     .byte $10  ; Trigger Y
+     .byte $01  ; Trigger Type (01 = Teleport to new area)
+     .byte <(houseArea)
+     .byte >(houseArea)
+     .byte $04
+     .byte $06
 
 outsidearea
      .byte $21  ; width
@@ -1491,21 +1519,59 @@ outsidearea
      .byte $04
      .byte $06
 
+dungeoncellar
+     .byte $21  ; width
+     .byte $17  ; height
+     .byte %10000000
+     .byte %00001010    ; Tile set mask
+     .byte $1f, $1c, $1b
+     .byte $0d, $0d, $07, $04, $04, $04, $04, $04, $04, $04, $04, $04, $0e, $0d, $0d, $0d, $0d, $07, $04, $04, $04, $04, $04, $04, $0e, $0d, $0d, $07, $04, $04, $0e, $0d, $0d
+     .byte $0d, $0d, $05, $01, $02, $03, $01, $01, $02, $03, $02, $01, $08, $04, $04, $04, $04, $09, $01, $03, $03, $01, $01, $02, $08, $0e, $0d, $05, $01, $02, $08, $0e, $0d
+     .byte $0d, $0d, $05, $03, $02, $0f, $01, $0b, $0a, $0c, $02, $01, $01, $01, $01, $01, $01, $01, $02, $01, $02, $02, $03, $01, $02, $06, $0d, $05, $03, $01, $01, $06, $0d
+     .byte $0d, $07, $09, $01, $03, $10, $01, $06, $0d, $05, $03, $03, $0b, $0a, $0a, $0a, $0c, $03, $0b, $0a, $0a, $0a, $0c, $03, $01, $08, $0e, $07, $15, $02, $03, $08, $0e
+     .byte $0d, $05, $03, $02, $01, $10, $01, $06, $0d, $05, $01, $01, $06, $07, $04, $04, $09, $02, $08, $04, $04, $0e, $05, $01, $02, $01, $06, $05, $01, $03, $01, $01, $06
+     .byte $0d, $05, $01, $0b, $0a, $05, $01, $06, $0d, $05, $02, $01, $06, $05, $01, $03, $02, $01, $01, $01, $03, $06, $05, $02, $03, $01, $14, $09, $03, $01, $02, $03, $06
+     .byte $0d, $05, $02, $08, $04, $09, $01, $08, $0e, $05, $02, $03, $06, $05, $03, $02, $01, $01, $01, $02, $01, $06, $05, $01, $03, $02, $13, $03, $02, $03, $02, $01, $06
+     .byte $07, $09, $03, $01, $01, $01, $01, $02, $06, $05, $03, $01, $06, $05, $01, $02, $03, $02, $01, $03, $03, $06, $05, $01, $0f, $01, $03, $01, $01, $0b, $0a, $0a, $0d
+     .byte $05, $01, $01, $03, $01, $0b, $0a, $0a, $0d, $05, $01, $01, $06, $05, $03, $01, $02, $01, $03, $01, $02, $06, $05, $01, $06, $0c, $01, $01, $02, $08, $04, $04, $0e
+     .byte $0d, $0c, $03, $01, $01, $08, $04, $04, $0e, $05, $02, $02, $06, $05, $03, $01, $01, $02, $01, $03, $01, $06, $07, $12, $04, $09, $01, $03, $03, $01, $01, $01, $06
+     .byte $0d, $05, $02, $02, $01, $01, $03, $01, $06, $05, $01, $01, $06, $05, $02, $01, $03, $02, $01, $02, $02, $06, $05, $01, $01, $01, $01, $03, $0b, $0c, $03, $0b, $0d
+     .byte $0d, $0d, $0c, $01, $03, $01, $03, $01, $06, $05, $03, $02, $06, $05, $02, $01, $01, $01, $02, $01, $03, $06, $05, $03, $02, $03, $02, $18, $04, $09, $02, $08, $0e
+     .byte $0d, $0d, $0d, $0c, $01, $02, $01, $01, $06, $05, $02, $03, $06, $05, $01, $01, $01, $03, $01, $01, $01, $06, $05, $02, $02, $03, $02, $10, $02, $01, $01, $01, $06
+     .byte $0d, $0d, $07, $09, $03, $01, $02, $03, $08, $09, $01, $02, $08, $09, $03, $0b, $0a, $0a, $0a, $0a, $0a, $0d, $05, $01, $01, $01, $01, $10, $01, $0f, $03, $02, $06
+     .byte $0d, $0d, $05, $01, $02, $03, $01, $01, $03, $03, $01, $01, $01, $01, $01, $06, $0d, $07, $04, $0e, $0d, $0d, $05, $02, $03, $02, $0b, $05, $03, $10, $02, $0b, $0d
+     .byte $0d, $0d, $05, $03, $01, $02, $02, $03, $11, $12, $16, $12, $17, $0c, $03, $06, $0d, $05, $02, $06, $0d, $0d, $05, $01, $02, $01, $06, $05, $03, $10, $01, $08, $0e
+     .byte $0d, $07, $09, $02, $03, $01, $01, $01, $01, $02, $10, $03, $08, $09, $01, $08, $04, $09, $03, $08, $04, $04, $09, $02, $02, $03, $14, $09, $02, $10, $02, $03, $06
+     .byte $0d, $05, $02, $01, $01, $03, $02, $02, $01, $02, $06, $0c, $01, $03, $01, $01, $02, $01, $01, $03, $01, $02, $02, $03, $0b, $07, $09, $01, $02, $14, $15, $02, $06
+     .byte $0d, $05, $01, $02, $01, $01, $01, $01, $0f, $01, $06, $05, $02, $02, $02, $01, $0b, $0a, $0c, $01, $01, $01, $18, $12, $04, $09, $01, $01, $18, $09, $01, $01, $06
+     .byte $0d, $0d, $0c, $01, $03, $03, $01, $01, $10, $03, $06, $05, $03, $01, $03, $01, $06, $0d, $05, $01, $03, $0b, $05, $01, $01, $02, $01, $02, $10, $01, $03, $01, $06
+     .byte $0d, $0d, $05, $01, $02, $03, $01, $01, $10, $01, $08, $09, $01, $0b, $0a, $0a, $0d, $0d, $0d, $0a, $0a, $0d, $0d, $0c, $02, $03, $03, $02, $10, $02, $03, $02, $06
+     .byte $0d, $0d, $0d, $0a, $0a, $0a, $0c, $01, $10, $01, $03, $01, $02, $06, $0d, $0d, $0d, $0d, $0d, $0d, $0d, $0d, $0d, $0d, $0c, $01, $01, $01, $10, $01, $01, $0b, $0d
+     .byte $0d, $0d, $0d, $0d, $0d, $0d, $0d, $0a, $0d, $0a, $0a, $0a, $0a, $0d, $0d, $0d, $0d, $0d, $0d, $0d, $0d, $0d, $0d, $0d, $0d, $0a, $0a, $0a, $0d, $0a, $0a, $0d, $0d
+     .byte $01
+     .byte $1d  ; Trigger X
+     .byte $10  ; Trigger Y
+     .byte $01  ; Trigger Type (01 = Teleport to new area)
+     .byte <(houseArea)
+     .byte >(houseArea)
+     .byte $04
+     .byte $06
+
 houseArea
      .byte $08 ; Area width
      .byte $08 ; Area height
      .byte %10000000
      .byte %00001100    ; Tile set mask
-     .byte $1e, $08, $09
+     .byte $1f, $08, $09
      .byte $00, $06, $02, $02, $02, $02, $02, $07
-     .byte $00, $03, $01, $01, $01, $01, $01, $04
+     .byte $00, $03, $01, $01, $01, $01, $10, $04
      .byte $00, $03, $01, $01, $01, $01, $01, $04
      .byte $00, $03, $01, $09, $02, $02, $02, $0c
      .byte $00, $03, $01, $01, $01, $01, $01, $04
      .byte $00, $03, $01, $0e, $0d, $0f, $01, $04
      .byte $00, $03, $01, $01, $01, $01, $01, $04
      .byte $00, $05, $02, $02, $0b, $02, $02, $08
-     .byte $01  ; Trigger table size
+     .byte $02  ; Trigger table size
      .byte $04  ; Trigger 1 X
      .byte $07  ; Trigger 1 Y
      .byte $01  ; trigger type
@@ -1513,6 +1579,13 @@ houseArea
      .byte >(outsidearea)
      .byte $1d  ; Target X
      .byte $11  ; Target Y
+     .byte $06  ; Trigger 2 X
+     .byte $01  ; Trigger 2 Y
+     .byte $01  ; trigger type
+     .byte <(dungeoncellar)
+     .byte >(dungeoncellar)
+     .byte $0f  ; Target X
+     .byte $0a  ; Target Y
 
 fovBuffer
      .byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
@@ -1551,7 +1624,15 @@ icons:
      .byte $56, $20, $55, $20 ;; Flowers Yellow  $10
      .byte $57, $58, $40, $41 ;; Tree Variant    $11
      .byte $59, $59, $59, $59 ;; Bridge          $12
-     
+     .byte $00, $00, $00, $00
+     .byte $00, $00, $00, $00
+     .byte $00, $00, $00, $00
+     .byte $00, $00, $00, $00
+     .byte $00, $00, $00, $00
+     .byte $00, $00, $00, $00
+     .byte $00, $00, $00, $00
+     .byte $00, $00, $00, $00
+
 iconcols:
      .byte $00, $00, $00, $00 ;; Nothing / Black
      .byte $01, $01, $01, $01 ;; Rocks - Hires white
@@ -1572,6 +1653,14 @@ iconcols:
      .byte $07, $00, $00, $00 ;; Flowers Red
      .byte $1d, $1d, $1d, $1d ;; Tree variant
      .byte $08, $08, $08, $08 ;; Bridge
+     .byte $00, $00, $00, $00
+     .byte $00, $00, $00, $00
+     .byte $00, $00, $00, $00
+     .byte $00, $00, $00, $00
+     .byte $00, $00, $00, $00
+     .byte $00, $00, $00, $00
+     .byte $00, $00, $00, $00
+     .byte $00, $00, $00, $00
      
      
 iconprops:
@@ -1594,6 +1683,16 @@ iconprops:
      .byte %11000000          ;; Flowers          Passable         See-through
      .byte %00000000          ;; Tree             Not passable     Block sight
      .byte %11000000          ;; Bridge           Passable         See-through
+     .byte %00000000
+     .byte %00000000
+     .byte %00000000
+     .byte %00000000
+     .byte %00000000
+     .byte %00000000
+     .byte %00000000
+     .byte %00000000
+     .byte %00000000
+     .byte %00000000
      
 ; Outdoors tileset
 outdoorsTileset:
@@ -1661,7 +1760,7 @@ outdoorsTilesetPropsTable:
      .byte %11000000          ;; Bridge           Passable         See-through
 
 indoorsTileset:
-     .byte $10
+     .byte $11
      .byte $48, $48, $48, $48 ;; Nothing/Black      $00
      .byte $40, $40, $40, $40 ;; Wood floor         $01
      .byte $42, $42, $41, $41 ;; Wood wall w-e      $02
@@ -1677,7 +1776,8 @@ indoorsTileset:
      .byte $49, $48, $45, $48 ;; Wood wall n-s-w    $0c
      .byte $59, $5a, $57, $58 ;; Table              $0d
      .byte $5b, $5c, $5d, $5e ;; Chair facing E     $0e
-     .byte $60, $5f, $62, $61 ;; Chair facing W     $0e
+     .byte $60, $5f, $62, $61 ;; Chair facing W     $0f
+     .byte $63, $64, $65, $66 ;; Stairs down        $10
 
 indoorsTilesetColorTable;
      .byte $00, $00, $00, $00 ;; Nothing / Black
@@ -1696,6 +1796,7 @@ indoorsTilesetColorTable;
      .byte $08, $08, $08, $08 ;; Table
      .byte $08, $08, $08, $08 ;; Chair facing E
      .byte $08, $08, $08, $08 ;; Chair facing W
+     .byte $00, $00, $00, $00 ;; Chair facing W
 
 indoorsTilesetPropsTable:
      .byte %00000000          ;; Nothing / Black. Not passable.    Block Sight
@@ -1714,6 +1815,92 @@ indoorsTilesetPropsTable:
      .byte %01000000          ;; Wood Table       Not passable     See-through
      .byte %11000000          ;; Chair            Passable         See-through
      .byte %11000000          ;; Chair            Passable         See-through
+     .byte %11100000          ;; Chair            Passable         See-through  Trigger
+
+; Dungeon tile set
+dungeonTileset:
+     .byte $19
+     .byte $48, $48, $48, $48       ;; Nothing/Black        $00
+     .byte $40, $41, $41, $40       ;; Dungeon floor        $01
+     .byte $41, $40, $40, $41       ;; Dungeon floor        $02
+     .byte $42, $41, $42, $40       ;; Dungeon floor        $03
+     .byte $44, $46, $43, $45       ;; Dungeon wall w-e     $04
+     .byte $4d, $49, $4d, $47       ;; Dungeon wall n-s (l) $05
+     .byte $4c, $4d, $4c, $4d       ;; Dungeon wall n-s (r) $06
+     .byte $4d, $4a, $4d, $4f       ;; Dungeon wall s-e (l) $07
+     .byte $50, $46, $51, $43       ;; Dungeon wall n-e (l) $08
+     .byte $46, $53, $43, $52       ;; Dungeon wall n-w (r) $09
+     .byte $54, $54, $4d, $4d       ;; Dungeon wall w-e (s) $0a
+     .byte $4b, $54, $4c, $4d       ;; Dungeon wall s-e     $0b
+     .byte $54, $55, $4d, $49       ;; Dungeon wall s-w     $0c
+     .byte $4d, $4d, $4d, $4d       ;; Solid rock           $0d
+     .byte $56, $4d, $57, $4d       ;; Dungeon wall s-w     $0e
+     .byte $4b, $55, $4c, $49       ;; Dungeon wall s (end) $0f
+     .byte $4c, $49, $4c, $47       ;; Dungeon wall n-s (l) $10
+     .byte $59, $58, $51, $43       ;; Dungeon wall e       $11
+     .byte $58, $5a, $45, $43       ;; Dungeon wall we      $12
+     .byte $50, $53, $51, $52       ;; Dungeon wall s (end) $13
+     .byte $4c, $4a, $4c, $4f       ;; Dungeon wall nse     $14
+     .byte $5a, $5b, $45, $52       ;; Dungeon wall e (end) $15
+     .byte $56, $4a, $57, $4f       ;; Dungeon wall wes     $16
+     .byte $56, $54, $57, $4d       ;; Dungeon wall wes2    $17
+     .byte $4b, $4a, $4c, $4f       ;; Dungeon wall n e     $18
+
+dungeonTilesetColorTable:
+     .byte $00, $00, $00, $00 ;; Nothing / Black
+     .byte $08, $08, $08, $08 ;; Dungeon floor
+     .byte $08, $08, $08, $08 ;; Dungeon floor
+     .byte $08, $08, $08, $08 ;; Dungeon floor
+     .byte $08, $08, $08, $08 ;; Dungeon wall w-e
+     .byte $08, $08, $08, $08 ;; Dungeon wall n-s (l)
+     .byte $08, $08, $08, $08 ;; Dungeon wall n-s (r)
+     .byte $08, $08, $08, $08 ;; Dungeon wall s-e (r)
+     .byte $08, $08, $08, $08 ;; Dungeon wall n-e
+     .byte $08, $08, $08, $08 ;; Dungeon wall n-w
+     .byte $08, $08, $08, $08 ;; Dungeon wall w-e (s)
+     .byte $08, $08, $08, $08 ;; Dungeon wall s-e
+     .byte $08, $08, $08, $08 ;; Dungeon wall s-w
+     .byte $08, $08, $08, $08 ;; Solid rock
+     .byte $08, $08, $08, $08 ;; Dungeon wall s-w
+     .byte $08, $08, $08, $08 ;; Dungeon wall s (end)
+     .byte $08, $08, $08, $08 ;; Dungeon wall n-s
+     .byte $08, $08, $08, $08 ;; Dungeon wall e
+     .byte $08, $08, $08, $08 ;; Dungeon wall w e
+     .byte $08, $08, $08, $08 ;; Dungeon wall n
+     .byte $08, $08, $08, $08 ;; Dungeon wall nse
+     .byte $08, $08, $08, $08 ;; Dungeon wall nse
+     .byte $08, $08, $08, $08 ;; Dungeon wall nse
+     .byte $08, $08, $08, $08 ;; Dungeon wall nse
+     .byte $08, $08, $08, $08 ;; Dungeon wall nse
+     .byte $08, $08, $08, $08 ;; Dungeon wall nse
+
+dungeonTilesetPropsTable:
+     .byte %00000000          ;; Nothing / Black. Not passable.    Block Sight
+     .byte %11000000          ;; Dungeon floor    Passable         See-through
+     .byte %11000000          ;; Dungeon floor    Passable         See-through
+     .byte %11000000          ;; Dungeon floor    Passable         See-through
+     .byte %00000000          ;; Dungeon wall     Not passable.    Block sight
+     .byte %00000000          ;; Dungeon wall     Not passable.    Block sight
+     .byte %00000000          ;; Dungeon wall     Not passable.    Block sight
+     .byte %00000000          ;; Dungeon wall     Not passable.    Block sight
+     .byte %00000000          ;; Dungeon wall     Not passable.    Block sight
+     .byte %00000000          ;; Dungeon wall     Not passable.    Block sight
+     .byte %00000000          ;; Dungeon wall     Not passable.    Block sight
+     .byte %00000000          ;; Dungeon wall     Not passable.    Block sight
+     .byte %00000000          ;; Dungeon wall     Not passable.    Block sight
+     .byte %00000000          ;; Dungeon wall     Not passable.    Block sight
+     .byte %00000000          ;; Dungeon wall     Not passable.    Block sight
+     .byte %00000000          ;; Dungeon wall     Not passable.    Block sight
+     .byte %00000000          ;; Dungeon wall     Not passable.    Block sight
+     .byte %00000000          ;; Dungeon wall     Not passable.    Block sight
+     .byte %00000000          ;; Dungeon wall     Not passable.    Block sight
+     .byte %00000000          ;; Dungeon wall     Not passable.    Block sight
+     .byte %00000000          ;; Dungeon wall     Not passable.    Block sight
+     .byte %00000000          ;; Dungeon wall     Not passable.    Block sight
+     .byte %00000000          ;; Dungeon wall     Not passable.    Block sight
+     .byte %00000000          ;; Dungeon wall     Not passable.    Block sight
+     .byte %00000000          ;; Dungeon wall     Not passable.    Block sight
+     .byte %00000000          ;; Dungeon wall     Not passable.    Block sight
 
 ;; ----------------------
 ;; MATH
@@ -1770,6 +1957,8 @@ decCarry            dec incBuf+1
 *=$2000
 .binary "spritedata.raw"
 
+*=$2800
+.binary "dungeon-charset.bin"
 
 *=$3000
 .binary "indoors-charset.bin"
