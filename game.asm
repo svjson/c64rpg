@@ -701,7 +701,7 @@ prepareNextStartPtr                             ; Prepare next iteration by copy
                     jmp fovStartPtrLoop
 
 beginLineWalks:
-                    ldx #$00                        ; Set line index to 0 (of 8)
+                    ldx #$00                        ; Set line index to 0 (of c)
                     stx currentLine
 
 walkFOVLine:        ;; Assume currentLine is loaded into X when we return here
@@ -737,7 +737,7 @@ walkSegmentsLoop    lda lSegmentAreaPtrLo,x      ; Copy pointers to zero page
 
 lineWalked          inc currentLine
                     ldx currentLine
-                    cpx #$0a                   ; 0a for all lines, There are ten lines to a sector
+                    cpx #$0c                   ; 0a for all lines, There are ten lines to a sector
                     bne prepareNextLine
 
                     inc fovSectorDir
@@ -821,7 +821,7 @@ noSegMod
                     cpy #$00
                     beq prepareNextSeg
                     lda currentLine             ; This here is a little fix for the fifth segment
-                    cmp #$03                    ; by running it an extra iteration through the loop
+                    cmp #$02                    ; by running it an extra iteration through the loop
                     bcs prepareNextSeg
                     cpx #$04
                     bne prepareNextSeg
@@ -843,16 +843,18 @@ fovLineTable:
      ;;     MOD  LEN
      .byte %00001011  ; A-1     - 1
      .byte %00111100  ; A-2     - 2
+     .byte %01011100  ; A-3     - 3
 
-     .byte %11111100  ; B-1     - 3
-     .byte %01010101  ; B-2     - 4
-     .byte %00100101  ; B-3     - 5
-     .byte %00011101  ; B-4     - 6
-     .byte %00011101  ; B-5     - 7
-     .byte %00100101  ; B-6     - 8
-     .byte %01010100  ; B-7     - 9
+     .byte %10101100  ; B-1     - 4
+     .byte %01010101  ; B-2     - 5
+     .byte %00100101  ; B-3     - 6
+     .byte %00011101  ; B-4     - 7
+     .byte %00011101  ; B-5     - 8
+     .byte %00100101  ; B-6     - 9
+     .byte %01010100  ; B-7     - 10
 
-     .byte %11110100  ; C-1     - 10
+     .byte %10100100  ; C-1     - 11
+     .byte %01010100  ; C-1     - 12
 
 
 ;; ----------------------
