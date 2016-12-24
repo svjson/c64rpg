@@ -1381,8 +1381,7 @@ memcpy_readRowsByte:
 ; Source ptr at $20-21, Target ptr at $22-23
 memcpy:
                ldx #$00
-memcpyrowloop  stx $0780
-               cpx memcpy_rows
+memcpyrowloop  cpx memcpy_rows
                beq end_memcpy
                ldy #$00
 memcpycolloop  lda ($20), y
@@ -1535,7 +1534,7 @@ dungeoncellar
      .byte $07, $09, $03, $01, $01, $01, $01, $02, $06, $05, $03, $01, $06, $05, $01, $02, $03, $02, $01, $03, $03, $06, $05, $01, $0f, $01, $03, $01, $01, $0b, $0a, $0a, $0d
      .byte $05, $01, $01, $03, $01, $0b, $0a, $0a, $0d, $05, $01, $01, $06, $05, $03, $01, $02, $01, $03, $01, $02, $06, $05, $01, $06, $0c, $01, $01, $02, $08, $04, $04, $0e
      .byte $0d, $0c, $03, $01, $01, $08, $04, $04, $0e, $05, $02, $02, $06, $05, $03, $01, $01, $02, $01, $03, $01, $06, $07, $12, $04, $09, $01, $03, $03, $01, $01, $01, $06
-     .byte $0d, $05, $02, $02, $01, $01, $03, $01, $06, $05, $01, $01, $06, $05, $02, $01, $03, $02, $01, $02, $02, $06, $05, $01, $01, $01, $01, $03, $0b, $0c, $03, $0b, $0d
+     .byte $0d, $05, $02, $02, $01, $01, $03, $01, $06, $05, $01, $01, $06, $05, $19, $02, $03, $02, $01, $02, $02, $06, $05, $01, $01, $01, $01, $03, $0b, $0c, $03, $0b, $0d
      .byte $0d, $0d, $0c, $01, $03, $01, $03, $01, $06, $05, $03, $02, $06, $05, $02, $01, $01, $01, $02, $01, $03, $06, $05, $03, $02, $03, $02, $18, $04, $09, $02, $08, $0e
      .byte $0d, $0d, $0d, $0c, $01, $02, $01, $01, $06, $05, $02, $03, $06, $05, $01, $01, $01, $03, $01, $01, $01, $06, $05, $02, $02, $03, $02, $10, $02, $01, $01, $01, $06
      .byte $0d, $0d, $07, $09, $03, $01, $02, $03, $08, $09, $01, $02, $08, $09, $03, $0b, $0a, $0a, $0a, $0a, $0a, $0d, $05, $01, $01, $01, $01, $10, $01, $0f, $03, $02, $06
@@ -1549,13 +1548,13 @@ dungeoncellar
      .byte $0d, $0d, $0d, $0a, $0a, $0a, $0c, $01, $10, $01, $03, $01, $02, $06, $0d, $0d, $0d, $0d, $0d, $0d, $0d, $0d, $0d, $0d, $0c, $01, $01, $01, $10, $01, $01, $0b, $0d
      .byte $0d, $0d, $0d, $0d, $0d, $0d, $0d, $0a, $0d, $0a, $0a, $0a, $0a, $0d, $0d, $0d, $0d, $0d, $0d, $0d, $0d, $0d, $0d, $0d, $0d, $0a, $0a, $0a, $0d, $0a, $0a, $0d, $0d
      .byte $01
-     .byte $1d  ; Trigger X
-     .byte $10  ; Trigger Y
-     .byte $01  ; Trigger Type (01 = Teleport to new area)
+     .byte $0e  ; Trigger 2 X
+     .byte $0a  ; Trigger 2 Y
+     .byte $01  ; trigger type
      .byte <(houseArea)
      .byte >(houseArea)
-     .byte $04
-     .byte $06
+     .byte $05  ; Target X
+     .byte $01  ; Target Y
 
 houseArea
      .byte $08 ; Area width
@@ -1819,7 +1818,7 @@ indoorsTilesetPropsTable:
 
 ; Dungeon tile set
 dungeonTileset:
-     .byte $19
+     .byte $1a
      .byte $48, $48, $48, $48       ;; Nothing/Black        $00
      .byte $40, $41, $41, $40       ;; Dungeon floor        $01
      .byte $41, $40, $40, $41       ;; Dungeon floor        $02
@@ -1845,6 +1844,7 @@ dungeonTileset:
      .byte $56, $4a, $57, $4f       ;; Dungeon wall wes     $16
      .byte $56, $54, $57, $4d       ;; Dungeon wall wes2    $17
      .byte $4b, $4a, $4c, $4f       ;; Dungeon wall n e     $18
+     .byte $5e, $5f, $5c, $5d       ;; Stairs               $19
 
 dungeonTilesetColorTable:
      .byte $00, $00, $00, $00 ;; Nothing / Black
@@ -1866,13 +1866,13 @@ dungeonTilesetColorTable:
      .byte $08, $08, $08, $08 ;; Dungeon wall n-s
      .byte $08, $08, $08, $08 ;; Dungeon wall e
      .byte $08, $08, $08, $08 ;; Dungeon wall w e
-     .byte $08, $08, $08, $08 ;; Dungeon wall n
+     .byte $08, $08, $08, $08 ;; Dungeon wall s (end)
      .byte $08, $08, $08, $08 ;; Dungeon wall nse
-     .byte $08, $08, $08, $08 ;; Dungeon wall nse
-     .byte $08, $08, $08, $08 ;; Dungeon wall nse
-     .byte $08, $08, $08, $08 ;; Dungeon wall nse
-     .byte $08, $08, $08, $08 ;; Dungeon wall nse
-     .byte $08, $08, $08, $08 ;; Dungeon wall nse
+     .byte $08, $08, $08, $08 ;; Dungeon wall e (end)
+     .byte $08, $08, $08, $08 ;; Dungeon wall wes
+     .byte $08, $08, $08, $08 ;; Dungeon wall wes2
+     .byte $08, $08, $08, $08 ;; Dungeon wall n e
+     .byte $00, $00, $00, $00 ;; Stairs up
 
 dungeonTilesetPropsTable:
      .byte %00000000          ;; Nothing / Black. Not passable.    Block Sight
@@ -1900,7 +1900,7 @@ dungeonTilesetPropsTable:
      .byte %00000000          ;; Dungeon wall     Not passable.    Block sight
      .byte %00000000          ;; Dungeon wall     Not passable.    Block sight
      .byte %00000000          ;; Dungeon wall     Not passable.    Block sight
-     .byte %00000000          ;; Dungeon wall     Not passable.    Block sight
+     .byte %11100000          ;; Dungeon floor    Stairs up        See-through    Trigger
 
 ;; ----------------------
 ;; MATH
