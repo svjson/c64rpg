@@ -11,15 +11,15 @@
      jsr clearscreen
 
      lda #$00           ; Set border color
-     sta $D020
+     sta $d020
      lda #$05           ; Set screen background color
-     sta $D021
+     sta $d021
      sta sceneColBg
      
      lda #$09           ; Set character set color
-     sta $D022
+     sta $d022
      lda #$1d
-     sta $D023
+     sta $d023
           
      lda $d018          ; Remap character set
      ora #%00001110
@@ -358,17 +358,9 @@ enterArea:
                     lda ($20), y
                     sta sceneCol2
 
-                    lda $20
-                    sta incBuf
-                    lda $21
-                    sta incBuf+1
-                    lda #$07
-                    sta modVal
-                    jsr incPtr
-                    lda incBuf
-                    sta $20
-                    lda incBuf+1
-                    sta $21
+                    lda #$07              ; Set up map pointer for memcpy
+                    sta inc20ModVal
+                    jsr inc20Ptr
 
                     lda #<currentArea     ; Set currentArea map memory as target for memcpy
                     sta $22
@@ -1922,6 +1914,29 @@ decPtr              ; Helper subroutine for decreasing 16-bit buffer value
                     rts
 decCarry            dec incBuf+1
                     rts
+
+inc20ModVal .byte $00
+inc20Ptr:             ; Helper subroutine for increasing 16-bit buffer value at $20-21
+                    lda $20
+                    clc
+                    adc inc20ModVal
+                    sta $20
+                    bcs inc20Carry
+                    rts
+inc20Carry          inc $21
+                    rts
+
+inc22ModVal .byte $00
+inc22Ptr:             ; Helper subroutine for increasing 16-bit buffer value at $22-23
+                    lda $22
+                    clc
+                    adc inc22ModVal
+                    sta $22
+                    bcs inc20Carry
+                    rts
+inc22Carry          inc $23
+                    rts
+
 
 
 *=$2000
