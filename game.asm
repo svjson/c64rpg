@@ -576,89 +576,64 @@ revealPlayerTile    ldy #$00                        ; Reveal tile player is stan
                     sta fovSectorDir                ; Negative/Positive
                     sta fovHorVert                  ; Horizontal/Vertical
 walkFOVSector:
-                    lda $25                         ; Store point of origin in first line segment pointer for area
-                    sta lSegmentAreaPtrHi
+                    lda $25                         ; Store point of origin in $22-23
+                    sta $23
                     lda $24
-                    sta lSegmentAreaPtrLo
+                    sta $22
 
-                    lda #>fovBuffer+109             ; Store point of origin in first line segment pointer for fov buffer
-                    sta lSegmentFOVPtrHi
+                    lda #>fovBuffer+109             ; Store point of origin in $20-$21
+                    sta $21
                     lda #<fovBuffer+109
-                    sta lSegmentFOVPtrLo
+                    sta $20
 
                     lda #$13                        ; Set buffer widths as base mod factor
-                    sta fovPtrModVal
+                    sta inc20ModVal
                     lda currentAreaWidth
-                    sta areaPtrModVal
+                    sta inc22ModVal
 
                     ldx #$00
                     lda fovHorVert
                     cmp #$01
                     beq setStartVertical
-setStartHorizontal  dec areaPtrModVal
+setStartHorizontal  dec inc22ModVal
                     lda fovSectorDir
                     cmp #$01
                     bne fovStartPtrLoop
-                    dec fovPtrModVal                ; Buffer width+1 for horiz walks
-                    dec areaPtrModVal
+                    dec inc20ModVal                ; Buffer width+1 for horiz walks
+                    dec inc22ModVal
                     jmp fovStartPtrLoop
-setStartVertical    inc fovPtrModVal                ; Buffer width-1 for vertical walks
+setStartVertical    inc inc20ModVal                ; Buffer width-1 for vertical walks
                     lda fovSectorDir
                     cmp #$01
                     beq fovStartPtrLoop
-                    inc fovPtrModVal
-                    inc areaPtrModVal
-fovStartPtrLoop     lda lSegmentFOVPtrLo, x         ; Mod FOV line segment ptr
-                    sta incBuf
-                    lda lSegmentFOVPtrHi, x
-                    sta incBuf+1
-                    lda fovPtrModVal
-                    sta modVal
-                    lda fovSectorDir
+                    inc inc20ModVal
+                    inc inc22ModVal
+fovStartPtrLoop     lda fovSectorDir
                     cmp #$01
                     beq fovStartPtrDec
-fovStartPtrInc      jsr incPtr
+fovStartPtrInc      jsr inc20Ptr
                     jmp fovStartPtrSet
-fovStartPtrDec      jsr decPtr
-fovStartPtrSet      lda incBuf
+fovStartPtrDec      jsr dec20Ptr
+fovStartPtrSet      lda $20
                     sta lSegmentFOVPtrLo, x
-                    lda incBuf+1
+                    lda $21
                     sta lSegmentFOVPtrHi, x
 
-                    lda lSegmentAreaPtrLo, x         ; Mod area line segment ptr
-                    sta incBuf
-                    lda lSegmentAreaPtrHi, x
-                    sta incBuf+1
-                    lda areaPtrModVal
-                    sta modVal
                     lda fovSectorDir
                     cmp #$01
                     beq areaStartPtrDec
-areaStartPtrInc     jsr incPtr
+areaStartPtrInc     jsr inc22Ptr
                     jmp areaStartPtrSet
-areaStartPtrDec     jsr decPtr
-areaStartPtrSet     lda incBuf
+areaStartPtrDec     jsr dec22Ptr
+areaStartPtrSet     lda $22
                     sta lSegmentAreaPtrLo, x
-                    lda incBuf+1
+                    lda $23
                     sta lSegmentAreaPtrHi, x
 
-segPointersSet      txa
-                    tay
-                    inx
+segPointersSet      inx
                     cpx #$05                       ; Move on if this was the last segment
-                    bne prepareNextStartPtr
+                    bne fovStartPtrLoop            ;prepareNextStartPtr
                     jmp beginLineWalks
-
-prepareNextStartPtr                             ; Prepare next iteration by copying ptr positions to next round
-                    lda lSegmentAreaPtrHi, y
-                    sta lSegmentAreaPtrHi, x
-                    lda lSegmentAreaPtrLo, y
-                    sta lSegmentAreaPtrLo, x
-                    lda lSegmentFOVPtrHi, y
-                    sta lSegmentFOVPtrHi, x
-                    lda lSegmentFOVPtrLo, y
-                    sta lSegmentFOVPtrLo, x
-                    jmp fovStartPtrLoop
 
 beginLineWalks:
                     ldx #$00                        ; Set line index to 0 (of c)
@@ -719,63 +694,60 @@ prepareNextLine     lda fovHorVert              ; Prepare next FOV line
                     cmp #$01
                     beq prepHorLineStep
 prepVertLineStep    lda currentAreaWidth
-                    sta areaPtrModVal
+                    sta inc22ModVal
                     lda #$14
-                    sta fovPtrModVal
+                    sta inc20ModVal
                     lda fovSectorDir
                     cmp #$01
                     beq prepareLoop
-                    dec fovPtrModVal
-                    dec areaPtrModVal
+                    dec inc20ModVal
+                    dec inc22ModVal
                     jmp prepareLoop
 prepHorLineStep     lda #$01
-                    sta areaPtrModVal
-                    sta fovPtrModVal
+                    sta inc22ModVal
+                    sta inc20ModVal
                     lda fovSectorDir
                     cmp #$01
                     beq prepareLoop
-                    dec fovPtrModVal
-                    dec areaPtrModVal
+                    dec inc20ModVal
+                    dec inc22ModVal
 
 prepareLoop         lda fovLineTable, x
                     ldx #$00
                     tay
+
 modSegmentLoop      clc                 ; Set up segment modifiers for next round
                     and segMasks, x     ; Check if fovTable dictates seg mod
                     cmp segMasks, x
                     bne noSegMod
-modFovPtr           lda fovPtrModVal
-                    sta modVal
-                    lda lSegmentFOVPtrLo, x
-                    sta incBuf
+modFovPtr           lda lSegmentFOVPtrLo, x
+                    sta $20
                     lda lSegmentFOVPtrHi, x
-                    sta incBuf+1
+                    sta $21
                     lda fovSectorDir
                     cmp #$01
                     bne decFovMod
-incFovMod           jsr incPtr
+incFovMod           jsr inc20Ptr
                     jmp modAreaPtr
-decFovMod           jsr decPtr
-modAreaPtr          lda incBuf
+decFovMod           jsr dec20Ptr
+modAreaPtr          lda $20
                     sta lSegmentFOVPtrLo, x
-                    lda incBuf+1
+                    lda $21
                     sta lSegmentFOVPtrHi, x
 
-                    lda areaPtrModVal
-                    sta modVal
                     lda lSegmentAreaPtrLo, x
-                    sta incBuf
+                    sta $22
                     lda lSegmentAreaPtrHi, x
-                    sta incBuf+1
+                    sta $23
                     lda fovSectorDir
                     cmp #$01
                     bne decAreaMod
-incAreaMod          jsr incPtr
+incAreaMod          jsr inc22Ptr
                     jmp storeAreaMod
-decAreaMod          jsr decPtr
-storeAreaMod        lda incBuf
+decAreaMod          jsr dec22Ptr
+storeAreaMod        lda $22
                     sta lSegmentAreaPtrLo, x
-                    lda incBuf+1
+                    lda $23
                     sta lSegmentAreaPtrHi, x
 noSegMod
                     cpy #$00
@@ -1926,18 +1898,36 @@ inc20Ptr:             ; Helper subroutine for increasing 16-bit buffer value at 
 inc20Carry          inc $21
                     rts
 
+dec20Ptr:           ; Helper subroutine for decreasing 16-bit buffer value at $20-21
+                    lda $20
+                    clc
+                    sbc inc20ModVal
+                    sta $20
+                    bcc dec20Carry
+                    rts
+dec20Carry          dec $21
+                    rts
+
 inc22ModVal .byte $00
 inc22Ptr:             ; Helper subroutine for increasing 16-bit buffer value at $22-23
                     lda $22
                     clc
                     adc inc22ModVal
                     sta $22
-                    bcs inc20Carry
+                    bcs inc22Carry
                     rts
 inc22Carry          inc $23
                     rts
 
-
+dec22Ptr:           ; Helper subroutine for decreasing 16-bit buffer value at $20-21
+                    lda $22
+                    clc
+                    sbc inc22ModVal
+                    sta $22
+                    bcc dec22Carry
+                    rts
+dec22Carry          dec $23
+                    rts
 
 *=$2000
 .binary "spritedata.raw"
