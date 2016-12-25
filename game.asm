@@ -1094,17 +1094,6 @@ contTilePtrLoop     iny
                     inc $25
                     jmp getTileYPtrLoop
 
-storeToFOVBuffer:
-                    stx tmpX
-                    sty tmpY
-
-                    ldy #$00
-                    lda #>fovBuffer
-                    sta $25
-                    lda #<fovBuffer
-                    sta $24
-
-
 
 ;; ----------------------
 ;; STATUS AREA ROUTINES
