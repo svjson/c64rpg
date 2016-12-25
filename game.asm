@@ -336,9 +336,11 @@ enterArea:
                     ldy #$00
                     lda ($20), y
                     sta currentAreaWidth
+                    sta memcpy_rowSize    ; Also store as rowSize for memcpy
                     iny
                     lda ($20), y
                     sta currentAreaHeight
+                    sta memcpy_rows       ; Also store as rows for memcpy to copy
                     iny
                     lda ($20), y
                     sta areaMode
@@ -368,47 +370,13 @@ enterArea:
                     lda incBuf+1
                     sta $21
 
-                    lda #<currentArea
+                    lda #<currentArea     ; Set currentArea map memory as target for memcpy
                     sta $22
                     lda #>currentArea
                     sta $23
 
-                    lda #$01
-                    sta modVal
-                    ldx #$00
-                    stx currentLine
-loadAreaMapColLoop  ldx #$00
-loadAreaMapRowLoop  ldy #$00
-                    lda ($20), y
-                    sta ($22), y
-
-                    lda $20
-                    sta incBuf
-                    lda $21
-                    sta incBuf+1
-                    jsr incPtr
-                    lda incBuf
-                    sta $20
-                    lda incBuf+1
-                    sta $21
-
-                    lda $22
-                    sta incBuf
-                    lda $23
-                    sta incBuf+1
-                    jsr incPtr
-                    lda incBuf
-                    sta $22
-                    lda incBuf+1
-                    sta $23
-                    inx
-                    cpx currentAreaWidth
-                    bne loadAreaMapRowLoop
-                    inc currentLine
-                    ldx currentLine
-                    cpx currentAreaHeight
-                    bne loadAreaMapColLoop
-
+                    jsr memcpy
+                    ldy #$00             ; Memcpy will have left the pointer in $20 right where we want it to start reading the trigger table
 loadAreaTriggerTable lda ($20), y
                      sta triggerTableSize   ; Trigger table size
 
