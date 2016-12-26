@@ -512,6 +512,117 @@ clearFOVLoop        sta fovBuffer, x
                     bne clearFOVLoop
                     rts
 
+prepareScreenBuffer:
+                   lda #>screenBuffer ; Screen Buffer offset
+                   sta $21
+                   lda #<screenBuffer
+                   sta $20
+
+                   lda #$14
+                   sta inc20ModVal
+
+                   lda #>currentArea ; Level area offset in memory
+                   sta $23
+                   lda #<currentArea
+                   sta $22
+
+                   lda currentAreaHeight
+                   sta drawBufferHeight
+                   lda currentAreaWidth
+                   sta drawBufferWidth
+
+                   lda playerY                    ; set up area offset relative to player coordinates
+                   sbc #$05
+                   sta currentAreaOffsetY
+
+                   clc
+                   lda playerX
+                   sbc #$08
+                   sta currentAreaOffsetX
+
+                   lda currentAreaOffsetY         ; Set up counter for area row to be copied
+                   sta areaRow
+
+                   ldx #$00                       ; Now offset pointer to the area data according to the screenOffsetY. 
+psbOffsetLoop      cpx currentAreaOffsetY         ; Move level area offset pointers in $22, $23 according currentAreaOffsetY
+                   beq psbOffsetCalculated         ; Nothing to do if Y is 0
+
+                   lda currentAreaOffsetY         ; Now inc or dec offset counter until it matches the Y offset
+                   cmp #$80
+                   bcc psbOffsetPositive
+
+psbOffsetNegative   dex
+                    lda $22
+                    sbc currentAreaWidth
+                    sta $22
+                    bcs psbOffsetLoop
+                    dec $23
+                    jmp psbOffsetLoop
+
+psbOffsetPositive   inx
+                    lda $22
+                    adc currentAreaWidth
+                    sta $22
+                    bcc psbOffsetLoop
+                    inc $23
+                    jmp psbOffsetLoop
+
+psbOffsetCalculated  lda #$00                   ; Set counters to zero
+                     sta crsr
+                     sta iter
+                     sta drawat
+
+                     clc
+                     lda #$14                   ; Set lineEnd to current area X offset + screen width in tiles
+                     adc currentAreaOffsetX     ; to indicate that we are done with a line when crsr has reached
+                     sta lineEnd                ; that X position of level data
+
+copyToScreenBufferLoop
+                     inc iter
+                     ldx iter
+
+                     jsr copyLineToScreenBuffer
+                     jsr incleveloffset
+                     jsr inc20Ptr
+                     inc areaRow
+
+                     lda #$00
+                     sta drawat
+                     sta crsr
+
+                     ldx iter
+                     cpx #$0a
+                     bne copyToScreenBufferLoop
+                     rts
+
+copyLineToScreenBuffer
+                     lda currentAreaOffsetX         ; Set up counter for area col to be drawn
+                     sta areaCol
+
+copyLineLoop
+                     lda areaRow
+                     cmp drawBufferHeight
+                     bcs psbEmptytile
+                     lda areaCol
+                     cmp drawBufferWidth
+                     bcs psbEmptytile
+                     jmp psbTile
+
+psbEmptytile         lda #$00
+                     jmp psbOutTile
+
+psbTile              ldy areaCol       ; Load source block index
+                     lda ($22), y
+
+psbOutTile           ldy crsr
+                     sta ($20), y
+                     inc crsr
+                     inc areaCol
+                     ldy areaCol
+                     cpy lineEnd
+                     bne copyLineLoop
+                     rts
+
 ; FOV segment pointers.
 lSegmentAreaPtrHi
     .byte $00
@@ -557,16 +668,11 @@ segMasks  .byte %10000000
 
 updateFOVLines:
                     jsr clearFOVBuffer
-                    ldx playerX     ; Put player coords X and Y
-                    ldy playerY
-                    jsr resolveTileRowPointer   ; Put player tile row pointer at $24-$25
-
-                    clc
-                    lda $24                     ; Forward pointer to actual player X pos
-                    adc playerX
+                    jsr prepareScreenBuffer
+                    lda #>screenBuffer+109
+                    sta $25
+                    lda #<screenBuffer+109
                     sta $24
-                    bcc revealPlayerTile
-                    inc $25
 
 revealPlayerTile    ldy #$00                        ; Reveal tile player is standing on
                     lda ($24), y
@@ -588,21 +694,20 @@ walkFOVSector:
 
                     lda #$13                        ; Set buffer widths as base mod factor
                     sta inc20ModVal
-                    lda currentAreaWidth
                     sta inc22ModVal
 
                     ldx #$00
                     lda fovHorVert
                     cmp #$01
                     beq setStartVertical
-setStartHorizontal  dec inc22ModVal
-                    lda fovSectorDir
+setStartHorizontal  lda fovSectorDir
                     cmp #$01
                     bne fovStartPtrLoop
                     dec inc20ModVal                ; Buffer width+1 for horiz walks
                     dec inc22ModVal
                     jmp fovStartPtrLoop
 setStartVertical    inc inc20ModVal                ; Buffer width-1 for vertical walks
+                    inc inc22ModVal                ; Buffer width-1 for vertical walks
                     lda fovSectorDir
                     cmp #$01
                     beq fovStartPtrLoop
@@ -693,10 +798,9 @@ endOfFov
 prepareNextLine     lda fovHorVert              ; Prepare next FOV line
                     cmp #$01
                     beq prepHorLineStep
-prepVertLineStep    lda currentAreaWidth
-                    sta inc22ModVal
-                    lda #$14
+prepVertLineStep    lda #$14
                     sta inc20ModVal
+                    sta inc22ModVal
                     lda fovSectorDir
                     cmp #$01
                     beq prepareLoop
@@ -900,9 +1004,28 @@ drawlevelloop
      ldx iter
      cpx #$0a
      bne drawlevelloop
+
+     lda #$18               ; Output Player X Coordinate to status area
+     sta $0749
+     lda #<$074b
+     sta print_target
+     lda #>$074b
+     sta print_target+1
+     ldx playerX
+     jsr print_decimal
+
+     lda #$19               ; Output Player Y Coordinate to status area
+     sta $0771
+     lda #<$0773
+     sta print_target
+     lda #>$0773
+     sta print_target+1
+     ldx playerY
+     jsr print_decimal
+
      rts
      
-incscreenoffset    
+incscreenoffset
      lda $20
      clc
      adc #$50
@@ -983,24 +1106,6 @@ drawtile
      
      cpy lineEnd
      bne drawlineloop
-
-     lda #$18               ; Output Player X Coordinate to status area
-     sta $0749
-     lda #<$074b
-     sta print_target
-     lda #>$074b
-     sta print_target+1
-     ldx playerX
-     jsr print_decimal
-
-     lda #$19               ; Output Player Y Coordinate to status area
-     sta $0771
-     lda #<$0773
-     sta print_target
-     lda #>$0773
-     sta print_target+1
-     ldx playerY
-     jsr print_decimal
 
      rts
 
@@ -1510,6 +1615,18 @@ houseArea
      .byte $0a  ; Target Y
 
 fovBuffer
+     .byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+     .byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+     .byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+     .byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+     .byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+     .byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+     .byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+     .byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+     .byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+     .byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+
+screenBuffer
      .byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
      .byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
      .byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
