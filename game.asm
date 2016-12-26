@@ -36,12 +36,13 @@
      lda #$80          ; Set player sprite pointers
      sta $07f9
      
-     lda #$03           ; Enable player sprites
+     lda #%00000011     ; Enable player sprites
      sta $d015
-     lda #$10
+
+     lda #$10           ; Set up sprite colors
      sta $d027
      
-     lda #$08           ; Set up sprite colors
+     lda #$08
      sta $d028
      
      lda #$0e      
@@ -57,7 +58,7 @@
      lda #$7d
      sta $d001
      sta $d003
-     
+
      lda #$02           ; Set sprite 2 to multicolor
      sta $d01c
 
@@ -625,6 +626,9 @@ psbOutTile           ldy crsr
                      rts
 
 applyNpcs:
+                     lda #%00000011
+                     sta spritePrepMask
+
                      lda #>npcs
                      sta $25
                      lda #<npcs
@@ -648,6 +652,7 @@ npcPosLoop           ldy #$00
                      cmp #$14
                      bpl noNpc
                      sta npcOffset
+                     sta tmpX
                      iny
 
                      clc
@@ -659,6 +664,7 @@ npcPosLoop           ldy #$00
                      clc
                      cmp #$0a
                      bpl noNpc
+                     sta tmpY
                      tay
                      lda powersOf20, y
                      adc npcOffset
@@ -668,12 +674,15 @@ npcPosLoop           ldy #$00
                      lda ($24), y
                      ldy npcOffset
                      sta screenBuffer, y
+                     jsr npcSpritesTempRoutine
                      jmp npcChecked
 noNpc:
 npcChecked:
                      inx
                      cpx #$08
                      bne prepNextNpcLoop
+                     lda spritePrepMask
+                     sta $d015
                      rts
 prepNextNpcLoop
                      lda $24
@@ -681,10 +690,40 @@ prepNextNpcLoop
                      sta $24
                      jmp npcPosLoop
 
+npcSpritesTempRoutine
+                     ldy #$04           ; Set sprite pointer
+                     lda ($24), y
+                     lda #$89
+                     sta $07fa, x
+
+                     ldy tmpX
+                     lda powersOf16, y
+                     sta tmpX
+                     ldy tmpY
+                     lda powersOf16, y
+                     sta tmpY
+
+                     lda tmpX
+                     adc #$18
+                     ldy powersOf2, x
+                     sta $d004, y
+                     lda tmpY
+                     adc #$32
+                     ldy powersOf2, x
+                     iny
+                     sta $d004, y
+
+                     lda npcSpriteMasks, x
+                     ora spritePrepMask
+                     sta spritePrepMask
+                     lda #$00
+                     sta $d029, x
+
                      rts
 
 npcOffset
     .byte $00
+spritePrepMask .byte %00000011
 
 ; FOV segment pointers.
 lSegmentAreaPtrHi
@@ -728,6 +767,42 @@ segMasks  .byte %10000000
           .byte %00100000
           .byte %00010000
           .byte %00001000
+
+npcSpriteMasks  .byte %00000100
+                .byte %00001000
+                .byte %00010000
+                .byte %00100000
+                .byte %01000000
+                .byte %10000000
+
+powersOf2     .byte $00 ;0
+              .byte $02 ;1
+              .byte $04 ;2
+              .byte $06 ;3
+              .byte $08 ;4
+              .byte $0a ;5
+
+powersOf16    .byte $00 ;0
+              .byte $10 ;1
+              .byte $20 ;2
+              .byte $30 ;3
+              .byte $40 ;4
+              .byte $50 ;5
+              .byte $60 ;6
+              .byte $70 ;7
+              .byte $80 ;8
+              .byte $90 ;9
+              .byte $a0 ;10
+              .byte $b0 ;11
+              .byte $c0 ;12
+              .byte $d0 ;13
+              .byte $e0 ;14
+              .byte $f0 ;15
+              .byte $00 ;16
+              .byte $10 ;17
+              .byte $20 ;18
+              .byte $30 ;19
+
 
 powersOf20    .byte $00 ;0
               .byte $14 ;1
