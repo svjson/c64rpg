@@ -593,6 +593,7 @@ copyToScreenBufferLoop
                      ldx iter
                      cpx #$0a
                      bne copyToScreenBufferLoop
+                     jmp applyNpcs
                      rts
 
 copyLineToScreenBuffer
@@ -622,6 +623,68 @@ psbOutTile           ldy crsr
                      cpy lineEnd
                      bne copyLineLoop
                      rts
+
+applyNpcs:
+                     lda #>npcs
+                     sta $25
+                     lda #<npcs
+                     sta $24
+
+                     ldx #$00
+npcPosLoop           ldy #$00
+                     lda ($24), y          ; Load npc status flag
+                     and #%10000000
+                     cmp #%10000000
+                     bne noNpc
+                     iny
+
+                     clc
+                     lda ($24), y
+                     adc #$01
+                     sbc currentAreaOffsetX
+                     cmp #$00
+                     bmi noNpc
+                     clc
+                     cmp #$14
+                     bpl noNpc
+                     sta npcOffset
+                     iny
+
+                     clc
+                     lda ($24), y
+                     adc #$01
+                     sbc currentAreaOffsetY
+                     cmp #$00
+                     bmi noNpc
+                     clc
+                     cmp #$0a
+                     bpl noNpc
+                     tay
+                     lda powersOf20, y
+                     adc npcOffset
+                     sta npcOffset
+
+                     ldy #$03
+                     lda ($24), y
+                     ldy npcOffset
+                     sta screenBuffer, y
+                     jmp npcChecked
+noNpc:
+npcChecked:
+                     inx
+                     cpx #$08
+                     bne prepNextNpcLoop
+                     rts
+prepNextNpcLoop
+                     lda $24
+                     adc #$05
+                     sta $24
+                     jmp npcPosLoop
+
+                     rts
+
+npcOffset
+    .byte $00
 
 ; FOV segment pointers.
 lSegmentAreaPtrHi
@@ -665,6 +728,18 @@ segMasks  .byte %10000000
           .byte %00100000
           .byte %00010000
           .byte %00001000
+
+powersOf20    .byte $00 ;0
+              .byte $14 ;1
+              .byte $28 ;2
+              .byte $3c ;3
+              .byte $50 ;4
+              .byte $64 ;5
+              .byte $78 ;6
+              .byte $8c ;7
+              .byte $a0 ;8
+              .byte $b4 ;9
+              .byte $c8 ;10
 
 updateFOVLines:
                     jsr clearFOVBuffer
@@ -1439,6 +1514,9 @@ end_memcpy     rts
 currentAreaOffsetX  .byte $00
 currentAreaOffsetY  .byte $04
 
+maxVisibleX         .byte $00
+maxVisibleY         .byte $00
+
 playerX .byte $09
 playerY .byte $09
 
@@ -1663,14 +1741,22 @@ icons:
      .byte $56, $20, $55, $20 ;; Flowers Yellow  $10
      .byte $57, $58, $40, $41 ;; Tree Variant    $11
      .byte $59, $59, $59, $59 ;; Bridge          $12
-     .byte $00, $00, $00, $00
-     .byte $00, $00, $00, $00
-     .byte $00, $00, $00, $00
-     .byte $00, $00, $00, $00
-     .byte $00, $00, $00, $00
-     .byte $00, $00, $00, $00
-     .byte $00, $00, $00, $00
-     .byte $00, $00, $00, $00
+     .byte $00, $00, $00, $00 ;;                 $13
+     .byte $00, $00, $00, $00 ;;                 $14
+     .byte $00, $00, $00, $00 ;;                 $15
+     .byte $00, $00, $00, $00 ;;                 $16
+     .byte $00, $00, $00, $00 ;;                 $17
+     .byte $00, $00, $00, $00 ;;                 $18
+     .byte $00, $00, $00, $00 ;;                 $19
+     .byte $00, $00, $00, $00 ;;                 $1a
+     .byte $00, $00, $00, $00 ;;                 $1b
+     .byte $00, $00, $00, $00 ;;                 $1c
+     .byte $00, $00, $00, $00 ;;                 $1d
+     .byte $00, $00, $00, $00 ;;                 $1e
+     .byte $00, $00, $00, $00 ;;                 $1f
+npctiles:
+     .byte $80, $81, $a0, $a1 ;; Rat             $20
+
 
 iconcols:
      .byte $00, $00, $00, $00 ;; Nothing / Black
@@ -1692,15 +1778,20 @@ iconcols:
      .byte $07, $00, $00, $00 ;; Flowers Red
      .byte $1d, $1d, $1d, $1d ;; Tree variant
      .byte $08, $08, $08, $08 ;; Bridge
-     .byte $00, $00, $00, $00
-     .byte $00, $00, $00, $00
-     .byte $00, $00, $00, $00
-     .byte $00, $00, $00, $00
-     .byte $00, $00, $00, $00
-     .byte $00, $00, $00, $00
-     .byte $00, $00, $00, $00
-     .byte $00, $00, $00, $00
-     
+     .byte $00, $00, $00, $00 ;;                 $13
+     .byte $00, $00, $00, $00 ;;                 $14
+     .byte $00, $00, $00, $00 ;;                 $15
+     .byte $00, $00, $00, $00 ;;                 $16
+     .byte $00, $00, $00, $00 ;;                 $17
+     .byte $00, $00, $00, $00 ;;                 $18
+     .byte $00, $00, $00, $00 ;;                 $19
+     .byte $00, $00, $00, $00 ;;                 $1a
+     .byte $00, $00, $00, $00 ;;                 $1b
+     .byte $00, $00, $00, $00 ;;                 $1c
+     .byte $00, $00, $00, $00 ;;                 $1d
+     .byte $00, $00, $00, $00 ;;                 $1e
+     .byte $00, $00, $00, $00 ;;                 $1f
+     .byte $1a, $1a, $1a, $1a ;; Rat             $20
      
 iconprops:
      .byte %00000000          ;; Nothing / Black. Not passable.    Block Sight
@@ -1732,7 +1823,45 @@ iconprops:
      .byte %00000000
      .byte %00000000
      .byte %00000000
-     
+     .byte %00000000
+     .byte %00000000
+     .byte %00000000
+     .byte %11000000
+
+npcs:
+     .byte %10000000
+     .byte $0f, $08         ;; X and Y pos
+     .byte $20              ;; Tile ID
+     .byte $8a              ;; Sprite pointer   $00 = off
+     .byte %10000000
+     .byte $04, $04         ;; X and Y pos
+     .byte $20              ;; Tile ID
+     .byte $8a              ;; Sprite pointer   $00 = off
+     .byte %10000000
+     .byte $12, $09         ;; X and Y pos
+     .byte $20              ;; Tile ID
+     .byte $8a              ;; Sprite pointer   $00 = off
+     .byte %10000000
+     .byte $0e, $13         ;; X and Y pos
+     .byte $20              ;; Tile ID
+     .byte $8a              ;; Sprite pointer   $00 = off
+     .byte %00000000
+     .byte $0f, $08         ;; X and Y pos
+     .byte $20              ;; Tile ID
+     .byte $8a              ;; Sprite pointer   $00 = off
+     .byte %00000000
+     .byte $0f, $08         ;; X and Y pos
+     .byte $20              ;; Tile ID
+     .byte $8a              ;; Sprite pointer   $00 = off
+     .byte %00000000
+     .byte $0f, $08         ;; X and Y pos
+     .byte $20              ;; Tile ID
+     .byte $8a              ;; Sprite pointer   $00 = off
+     .byte %00000000
+     .byte $0f, $08         ;; X and Y pos
+     .byte $20              ;; Tile ID
+     .byte $8a              ;; Sprite pointer   $00 = off
+
 ; Outdoors tileset
 outdoorsTileset:
      .byte $13 ; 19 tile definitions
