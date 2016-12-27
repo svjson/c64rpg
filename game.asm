@@ -726,41 +726,18 @@ npcOffset
 spritePrepMask .byte %00000011
 
 ; FOV segment pointers.
-lSegmentAreaPtrHi
+segmentOffsets
     .byte $00
     .byte $00
     .byte $00
     .byte $00
     .byte $00
-lSegmentAreaPtrLo
-    .byte $00
-    .byte $00
-    .byte $00
-    .byte $00
-    .byte $00
-
-lSegmentFOVPtrHi
-    .byte $00
-    .byte $00
-    .byte $00
-    .byte $00
-    .byte $00
-lSegmentFOVPtrLo
-    .byte $00
-    .byte $00
-    .byte $00
-    .byte $00
-    .byte $00
-
 
 currentLine .byte $00               ; Track current line of FOV sector being investigated
 currentLineSegment .byte $00        ; Track the current segment of the line being investigated
 lineLength  .byte $00               ; Length of the current line
 
-fovSectorDir .byte $01              ; Positive or negative sector
-fovHorVert  .byte $01               ; Horizontal or vertical sector
-fovPtrModVal .byte $00
-areaPtrModVal .byte $00
+fovSectorDir .byte $01              ; N, S, W, E
 
 segMasks  .byte %10000000
           .byte %01000000
@@ -819,76 +796,76 @@ powersOf20    .byte $00 ;0
 updateFOVLines:
                     jsr clearFOVBuffer
                     jsr prepareScreenBuffer
-                    lda #>screenBuffer+109
-                    sta $25
-                    lda #<screenBuffer+109
-                    sta $24
 
-revealPlayerTile    ldy #$00                        ; Reveal tile player is standing on
-                    lda ($24), y
+revealPlayerTile    lda screenBuffer+109            ; Reveal tile player is standing on
                     sta fovBuffer+109
-
                     lda #$01
-                    sta fovSectorDir                ; Negative/Positive
-                    sta fovHorVert                  ; Horizontal/Vertical
+                    sta fovSectorDir
 walkFOVSector:
-                    lda $25                         ; Store point of origin in $22-23
+                    lda #>screenBuffer              ; Store source buffer in $22-23
                     sta $23
-                    lda $24
+                    lda #<screenBuffer
                     sta $22
 
-                    lda #>fovBuffer+109             ; Store point of origin in $20-$21
+                    lda #>fovBuffer                 ; Store target buffer in $20-$21
                     sta $21
-                    lda #<fovBuffer+109
+                    lda #<fovBuffer
                     sta $20
 
-                    lda #$13                        ; Set buffer widths as base mod factor
-                    sta inc20ModVal
-                    sta inc22ModVal
-
-                    ldx #$00
-                    lda fovHorVert
-                    cmp #$01
-                    beq setStartVertical
-setStartHorizontal  lda fovSectorDir
-                    cmp #$01
-                    bne fovStartPtrLoop
-                    dec inc20ModVal                ; Buffer width+1 for horiz walks
-                    dec inc22ModVal
-                    jmp fovStartPtrLoop
-setStartVertical    inc inc20ModVal                ; Buffer width-1 for vertical walks
-                    inc inc22ModVal                ; Buffer width-1 for vertical walks
                     lda fovSectorDir
                     cmp #$01
-                    beq fovStartPtrLoop
-                    inc inc20ModVal
-                    inc inc22ModVal
-fovStartPtrLoop     lda fovSectorDir
-                    cmp #$01
-                    beq fovStartPtrDec
-fovStartPtrInc      jsr inc20Ptr
-                    jmp fovStartPtrSet
-fovStartPtrDec      jsr dec20Ptr
-fovStartPtrSet      lda $20
-                    sta lSegmentFOVPtrLo, x
-                    lda $21
-                    sta lSegmentFOVPtrHi, x
-
-                    lda fovSectorDir
-                    cmp #$01
-                    beq areaStartPtrDec
-areaStartPtrInc     jsr inc22Ptr
-                    jmp areaStartPtrSet
-areaStartPtrDec     jsr dec22Ptr
-areaStartPtrSet     lda $22
-                    sta lSegmentAreaPtrLo, x
-                    lda $23
-                    sta lSegmentAreaPtrHi, x
-
-segPointersSet      inx
-                    cpx #$05                       ; Move on if this was the last segment
-                    bne fovStartPtrLoop            ;prepareNextStartPtr
+                    beq initNSector
+                    cmp #$02
+                    beq initSSector
+                    cmp #$03
+                    beq initWSector
+initESector:
+                    lda #90
+                    sta segmentOffsets
+                    lda #71
+                    sta segmentOffsets+1
+                    lda #52
+                    sta segmentOffsets+2
+                    lda #33
+                    sta segmentOffsets+3
+                    lda #72
+                    sta segmentOffsets+4
                     jmp beginLineWalks
+initWSector:
+                    lda #128
+                    sta segmentOffsets
+                    lda #147
+                    sta segmentOffsets+1
+                    lda #166
+                    sta segmentOffsets+2
+                    lda #185
+                    sta segmentOffsets+3
+                    lda #144
+                    sta segmentOffsets+4
+                    jmp beginLineWalks
+initSSector:
+                    lda #130
+                    sta segmentOffsets
+                    lda #151
+                    sta segmentOffsets+1
+                    lda #172
+                    sta segmentOffsets+2
+                    lda #193
+                    sta segmentOffsets+3
+                    lda #211
+                    sta segmentOffsets+4
+                    jmp beginLineWalks
+initNSector:
+                    lda #88
+                    sta segmentOffsets
+                    lda #67
+                    sta segmentOffsets+1
+                    lda #46
+                    sta segmentOffsets+2
+                    lda #25
+                    sta segmentOffsets+3
+                    lda #07
+                    sta segmentOffsets+4
 
 beginLineWalks:
                     ldx #$00                        ; Set line index to 0 (of c)
@@ -898,22 +875,11 @@ walkFOVLine:        ;; Assume currentLine is loaded into X when we return here
                     lda fovLineTable, x
                     and #%00000111
                     sta lineLength                 ; Store away line length
-
                     ldx #$00
                     stx currentLineSegment
-walkSegmentsLoop    lda lSegmentAreaPtrLo,x      ; Copy pointers to zero page
-                    sta $22
-                    lda lSegmentAreaPtrHi,x
-                    sta $23
-
-                    lda lSegmentFOVPtrLo,x
-                    sta $20
-                    lda lSegmentFOVPtrHi,x
-                    sta $21
-
-                    ldy #$00                   ; Copy tile from level data to fov buffer
-                    lda ($22), y
-                    sta ($20), y
+walkSegmentsLoop    ldy segmentOffsets, x      ; Copy pointers to zero page
+                    lda screenBuffer, y
+                    sta fovBuffer, y
 
                     tay
                     lda iconprops, y
@@ -926,110 +892,64 @@ walkSegmentsLoop    lda lSegmentAreaPtrLo,x      ; Copy pointers to zero page
                     bne walkSegmentsLoop
 
 lineWalked          inc currentLine
-                    ldx currentLine
-                    cpx #$0c                   ; 0a for all lines, There are ten lines to a sector
+                    ldy currentLine
+                    cpy #$0c                  ; 0c for all lines, There are twelve lines to a sector
                     bne prepareNextLine
 
                     inc fovSectorDir
                     lda fovSectorDir
-                    cmp #$03
-                    beq nextOrientation
-                    jmp walkFOVSector
-nextOrientation     inc fovHorVert
-                    lda fovHorVert
-                    cmp #$03
+                    cmp #$05
                     beq endOfFov
-                    lda #$01
-                    sta fovSectorDir
                     jmp walkFOVSector
 endOfFov
                     rts
 
-prepareNextLine     lda fovHorVert              ; Prepare next FOV line
-                    cmp #$01
-                    beq prepHorLineStep
-prepVertLineStep    lda #$14
-                    sta inc20ModVal
-                    sta inc22ModVal
+prepareNextLine
                     lda fovSectorDir
-                    cmp #$01
-                    beq prepareLoop
-                    dec inc20ModVal
-                    dec inc22ModVal
+                    cmp #$01                ; Prepare next FOV line
+                    beq prepNFOVStep
+                    cmp #$02
+                    beq prepSFOVStep
+                    cmp #$03
+                    beq prepWFOVStep
+prepEFOVStep:
+                    lda #20
                     jmp prepareLoop
-prepHorLineStep     lda #$01
-                    sta inc22ModVal
-                    sta inc20ModVal
-                    lda fovSectorDir
-                    cmp #$01
-                    beq prepareLoop
-                    dec inc20ModVal
-                    dec inc22ModVal
-
-prepareLoop         lda fovLineTable, x
+prepWFOVStep:
+                    lda #236
+                    jmp prepareLoop
+prepNFOVStep:
+                    lda #1
+                    jmp prepareLoop
+prepSFOVStep:
+                    lda #255
+prepareLoop
+                    sta modVal
+                    ldy currentLine
                     ldx #$00
-                    tay
 
 modSegmentLoop      clc                 ; Set up segment modifiers for next round
-                    and segMasks, x     ; Check if fovTable dictates seg mod
+                    lda fovLineTable, y ; Check if fovTable dictates seg mod
+                    and segMasks, x
                     cmp segMasks, x
                     bne noSegMod
-modFovPtr           lda lSegmentFOVPtrLo, x
-                    sta $20
-                    lda lSegmentFOVPtrHi, x
-                    sta $21
-                    lda fovSectorDir
-                    cmp #$01
-                    bne decFovMod
-incFovMod           jsr inc20Ptr
-                    jmp modAreaPtr
-decFovMod           jsr dec20Ptr
-modAreaPtr          lda $20
-                    sta lSegmentFOVPtrLo, x
-                    lda $21
-                    sta lSegmentFOVPtrHi, x
 
-                    lda lSegmentAreaPtrLo, x
-                    sta $22
-                    lda lSegmentAreaPtrHi, x
-                    sta $23
-                    lda fovSectorDir
-                    cmp #$01
-                    bne decAreaMod
-incAreaMod          jsr inc22Ptr
-                    jmp storeAreaMod
-decAreaMod          jsr dec22Ptr
-storeAreaMod        lda $22
-                    sta lSegmentAreaPtrLo, x
-                    lda $23
-                    sta lSegmentAreaPtrHi, x
+modSegmentOffset    lda segmentOffsets, x
+                    clc
+                    adc modVal
+                    sta segmentOffsets, x
 noSegMod
-                    cpy #$00
-                    beq prepareNextSeg
-                    lda currentLine             ; This here is a little fix for the fifth segment
-                    cmp #$02                    ; by running it an extra iteration through the loop
-                    bcs prepareNextSeg
-                    cpx #$04
-                    bne prepareNextSeg
-                    ldy #$00
-                    jmp modFovPtr
-
-prepareNextSeg      inx
-                    tya
+                    inx
                     cpx #$05
-                    bne contLoop
+                    bne modSegmentLoop
                     ldx currentLine
                     jmp walkFOVLine
 
-contLoop
-                    jmp modSegmentLoop
-
-
 fovLineTable:
      ;;     MOD  LEN
-     .byte %00001011  ; A-1     - 1
-     .byte %00111100  ; A-2     - 2
-     .byte %01011100  ; A-3     - 3
+     .byte %00000011  ; A-1     - 1
+     .byte %00110100  ; A-2     - 2
+     .byte %01010100  ; A-3     - 3
 
      .byte %10101100  ; B-1     - 4
      .byte %01010101  ; B-2     - 5
@@ -1710,8 +1630,8 @@ dungeoncellar
      .byte $0d, $0d, $05, $03, $02, $0f, $01, $0b, $0a, $0c, $02, $01, $01, $01, $01, $01, $01, $01, $02, $01, $02, $02, $03, $01, $02, $06, $0d, $05, $03, $01, $01, $06, $0d
      .byte $0d, $07, $09, $01, $03, $10, $01, $06, $0d, $05, $03, $03, $0b, $0a, $0a, $0a, $0c, $03, $0b, $0a, $0a, $0a, $0c, $03, $01, $08, $0e, $07, $15, $02, $03, $08, $0e
      .byte $0d, $05, $03, $02, $01, $10, $01, $06, $0d, $05, $01, $01, $06, $07, $04, $04, $09, $02, $08, $04, $04, $0e, $05, $01, $02, $01, $06, $05, $01, $03, $01, $01, $06
-     .byte $0d, $05, $01, $0b, $0a, $05, $01, $06, $0d, $05, $02, $01, $06, $05, $01, $03, $02, $01, $01, $01, $03, $06, $05, $02, $03, $01, $14, $09, $03, $01, $02, $03, $06
-     .byte $0d, $05, $02, $08, $04, $09, $01, $08, $0e, $05, $02, $03, $06, $05, $03, $02, $01, $01, $01, $02, $01, $06, $05, $01, $03, $02, $13, $03, $02, $03, $02, $01, $06
+     .byte $0d, $05, $01, $0b, $0a, $05, $01, $06, $0d, $05, $02, $01, $06, $05, $01, $03, $02, $01, $01, $1a, $1a, $06, $05, $02, $03, $01, $14, $09, $03, $01, $02, $03, $06
+     .byte $0d, $05, $02, $08, $04, $09, $01, $08, $0e, $05, $02, $03, $06, $05, $03, $02, $01, $01, $01, $02, $1a, $06, $05, $01, $03, $02, $13, $03, $02, $03, $02, $01, $06
      .byte $07, $09, $03, $01, $01, $01, $01, $02, $06, $05, $03, $01, $06, $05, $01, $02, $03, $02, $01, $03, $03, $06, $05, $01, $0f, $01, $03, $01, $01, $0b, $0a, $0a, $0d
      .byte $05, $01, $01, $03, $01, $0b, $0a, $0a, $0d, $05, $01, $01, $06, $05, $03, $01, $02, $01, $03, $01, $02, $06, $05, $01, $06, $0c, $01, $01, $02, $08, $04, $04, $0e
      .byte $0d, $0c, $03, $01, $01, $08, $04, $04, $0e, $05, $02, $02, $06, $05, $03, $01, $01, $02, $01, $03, $01, $06, $07, $12, $04, $09, $01, $03, $03, $01, $01, $01, $06
@@ -2062,7 +1982,7 @@ indoorsTilesetPropsTable:
 
 ; Dungeon tile set
 dungeonTileset:
-     .byte $1a
+     .byte $1b
      .byte $48, $48, $48, $48       ;; Nothing/Black        $00
      .byte $40, $41, $41, $40       ;; Dungeon floor        $01
      .byte $41, $40, $40, $41       ;; Dungeon floor        $02
@@ -2089,6 +2009,7 @@ dungeonTileset:
      .byte $56, $54, $57, $4d       ;; Dungeon wall wes2    $17
      .byte $4b, $4a, $4c, $4f       ;; Dungeon wall n e     $18
      .byte $5e, $5f, $5c, $5d       ;; Stairs               $19
+     .byte $62, $63, $60, $61       ;; Barrel               $1a
 
 dungeonTilesetColorTable:
      .byte $00, $00, $00, $00 ;; Nothing / Black
@@ -2117,6 +2038,7 @@ dungeonTilesetColorTable:
      .byte $08, $08, $08, $08 ;; Dungeon wall wes2
      .byte $08, $08, $08, $08 ;; Dungeon wall n e
      .byte $00, $00, $00, $00 ;; Stairs up
+     .byte $1a, $1a, $1a, $1a ;; Barrel
 
 dungeonTilesetPropsTable:
      .byte %00000000          ;; Nothing / Black. Not passable.    Block Sight
@@ -2145,6 +2067,7 @@ dungeonTilesetPropsTable:
      .byte %00000000          ;; Dungeon wall     Not passable.    Block sight
      .byte %00000000          ;; Dungeon wall     Not passable.    Block sight
      .byte %11100000          ;; Dungeon floor    Stairs up        See-through    Trigger
+     .byte %01000000          ;; Barrel           Not passable.    See-through
 
 ;; ----------------------
 ;; MATH
