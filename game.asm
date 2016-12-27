@@ -3,9 +3,11 @@
 .byte $34, $30, $39, $36, $00, $00
 .byte $00
 
-;; ------------
-;; INIT ROUTINE
-;; ------------
+;; +----------------------------------+
+;; |                                  |
+;; |    INIT ROUTINE                  |
+;; |                                  |
+;; +----------------------------------+
 *=$1000
 
      jsr clearscreen
@@ -147,9 +149,11 @@ leavestatusirq   lda sceneColBg
                  jmp $ea81
 
 
-;; ------------
-;; MAIN LOOP
-;; ------------
+;; +----------------------------------+
+;; |                                  |
+;; |    MAIN GAME LOOP                |
+;; |                                  |
+;; +----------------------------------+
 *=5000
 mainloop            
                     jsr readKey
@@ -169,9 +173,11 @@ mlcont              lda #$15     ; wait for raster retrace
                     
                     jmp mainloop
     
-;; -----------
-;; KEY INPUT
-;; -----------
+;; +----------------------------------+
+;; |                                  |
+;; |    KEY INPUT                     |
+;; |                                  |
+;; +----------------------------------+
 
 key_UP    = #$17      ;; W,
 key_LEFT  = #$01      ;; A
@@ -262,6 +268,12 @@ endReadKey
 
 currentTileProps    .byte %00000000
 
+;; +----------------------------------+
+;; |                                  |
+;; |    MOVEMENT ROUTINES             |
+;; |                                  |
+;; +----------------------------------+
+
 attemptMove:        ; In parameters: target x, y in X and Y registers
                     jsr getTileAt           ; Look up tile at x, y
                     tax                     ; check if passable by comparing with tile table
@@ -330,6 +342,12 @@ executeTrigger      inx
 
 nextTrigger         iny
                     jmp triggerIterLoop
+
+;; +----------------------------------+
+;; |                                  |
+;; |    AREA LOADING ROUTINES         |
+;; |                                  |
+;; +----------------------------------+
 
 ;                   Input
 ;                   Area addr  $20-21
@@ -760,6 +778,18 @@ segMasks  .byte %10000000
           .byte %00100000
           .byte %00010000
           .byte %00001000
+fovLineTable .byte %00000011  ; A-1     - 1
+             .byte %00110100  ; A-2     - 2
+             .byte %01010100  ; A-3     - 3
+             .byte %10101100  ; B-1     - 4
+             .byte %01010101  ; B-2     - 5
+             .byte %00100101  ; B-3     - 6
+             .byte %00011101  ; B-4     - 7
+             .byte %00011101  ; B-5     - 8
+             .byte %00100101  ; B-6     - 9
+             .byte %01010100  ; B-7     - 10
+             .byte %10100100  ; C-1     - 11
+             .byte %01010100  ; C-1     - 12
 
 ; Walk FOV lines, sector by sector
 updateFOVLines:
@@ -841,24 +871,6 @@ noSegMod
                     bne modSegmentLoop
                     ldx currentLine
                     jmp walkFOVLine
-
-fovLineTable:
-     ;;     MOD  LEN
-     .byte %00000011  ; A-1     - 1
-     .byte %00110100  ; A-2     - 2
-     .byte %01010100  ; A-3     - 3
-
-     .byte %10101100  ; B-1     - 4
-     .byte %01010101  ; B-2     - 5
-     .byte %00100101  ; B-3     - 6
-     .byte %00011101  ; B-4     - 7
-     .byte %00011101  ; B-5     - 8
-     .byte %00100101  ; B-6     - 9
-     .byte %01010100  ; B-7     - 10
-
-     .byte %10100100  ; C-1     - 11
-     .byte %01010100  ; C-1     - 12
-
 
 ;; ----------------------
 ;; LEVEL DRAWING ROUTINES
@@ -1400,23 +1412,24 @@ incTrgPtr      lda $22
                jmp memcpyrowloop
 end_memcpy     rts
 
-;; ----------------------
-;; SCENE STATE
-;; ----------------------
+;; +----------------------------------+
+;; |                                  |
+;; |    CURRENT AREA STATE            |
+;; |                                  |
+;; +----------------------------------+
 currentAreaOffsetX  .byte $00
 currentAreaOffsetY  .byte $04
-
-maxVisibleX         .byte $00
-maxVisibleY         .byte $00
 
 playerX .byte $09
 playerY .byte $09
 
 screenDirty .byte $00
 
-;; ----------------------
-;; LEVEL DATA
-;; ----------------------
+;; +----------------------------------+
+;; |                                  |
+;; |    CURRENT AREA DATA             |
+;; |                                  |
+;; +----------------------------------+
 
 *=$7000
 currentAreaWidth .byte $28
@@ -1477,6 +1490,47 @@ triggerTable
      .byte >(houseArea)
      .byte $04
      .byte $06
+
+
+npcs
+     .byte %10000000
+     .byte $0f, $08         ;; X and Y pos
+     .byte $20              ;; Tile ID
+     .byte $8a              ;; Sprite pointer   $00 = off
+     .byte %10000000
+     .byte $04, $04         ;; X and Y pos
+     .byte $20              ;; Tile ID
+     .byte $8a              ;; Sprite pointer   $00 = off
+     .byte %10000000
+     .byte $12, $09         ;; X and Y pos
+     .byte $20              ;; Tile ID
+     .byte $8a              ;; Sprite pointer   $00 = off
+     .byte %10000000
+     .byte $0e, $13         ;; X and Y pos
+     .byte $20              ;; Tile ID
+     .byte $8a              ;; Sprite pointer   $00 = off
+     .byte %00000000
+     .byte $0f, $08         ;; X and Y pos
+     .byte $20              ;; Tile ID
+     .byte $8a              ;; Sprite pointer   $00 = off
+     .byte %00000000
+     .byte $0f, $08         ;; X and Y pos
+     .byte $20              ;; Tile ID
+     .byte $8a              ;; Sprite pointer   $00 = off
+     .byte %00000000
+     .byte $0f, $08         ;; X and Y pos
+     .byte $20              ;; Tile ID
+     .byte $8a              ;; Sprite pointer   $00 = off
+     .byte %00000000
+     .byte $0f, $08         ;; X and Y pos
+     .byte $20              ;; Tile ID
+     .byte $8a              ;; Sprite pointer   $00 = off
+
+;; +----------------------------------+
+;; |                                  |
+;; |    TEST AREAS                    |
+;; |                                  |
+;; +----------------------------------+
 
 outsidearea
      .byte $28  ; width
@@ -1584,6 +1638,12 @@ houseArea
      .byte $0f  ; Target X
      .byte $0a  ; Target Y
 
+;; +----------------------------------+
+;; |                                  |
+;; |    CURRENT VIEWPORT BUFFERS      |
+;; |                                  |
+;; +----------------------------------+
+
 fovBuffer
      .byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
      .byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
@@ -1608,9 +1668,11 @@ screenBuffer
      .byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
      .byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
 
-;; ----------------------
-;; TILE DATA
-;; ----------------------
+;; +----------------------------------+
+;; |                                  |
+;; |    CURRENT TILESET               |
+;; |                                  |
+;; +----------------------------------+
 
 *=$4000
 icons:
@@ -1720,39 +1782,11 @@ iconprops:
      .byte %00000000
      .byte %11000000
 
-npcs:
-     .byte %10000000
-     .byte $0f, $08         ;; X and Y pos
-     .byte $20              ;; Tile ID
-     .byte $8a              ;; Sprite pointer   $00 = off
-     .byte %10000000
-     .byte $04, $04         ;; X and Y pos
-     .byte $20              ;; Tile ID
-     .byte $8a              ;; Sprite pointer   $00 = off
-     .byte %10000000
-     .byte $12, $09         ;; X and Y pos
-     .byte $20              ;; Tile ID
-     .byte $8a              ;; Sprite pointer   $00 = off
-     .byte %10000000
-     .byte $0e, $13         ;; X and Y pos
-     .byte $20              ;; Tile ID
-     .byte $8a              ;; Sprite pointer   $00 = off
-     .byte %00000000
-     .byte $0f, $08         ;; X and Y pos
-     .byte $20              ;; Tile ID
-     .byte $8a              ;; Sprite pointer   $00 = off
-     .byte %00000000
-     .byte $0f, $08         ;; X and Y pos
-     .byte $20              ;; Tile ID
-     .byte $8a              ;; Sprite pointer   $00 = off
-     .byte %00000000
-     .byte $0f, $08         ;; X and Y pos
-     .byte $20              ;; Tile ID
-     .byte $8a              ;; Sprite pointer   $00 = off
-     .byte %00000000
-     .byte $0f, $08         ;; X and Y pos
-     .byte $20              ;; Tile ID
-     .byte $8a              ;; Sprite pointer   $00 = off
+;; +----------------------------------+
+;; |                                  |
+;; |    TILE SET DEFINITIONS          |
+;; |                                  |
+;; +----------------------------------+
 
 ; Outdoors tileset
 outdoorsTileset:
@@ -1819,6 +1853,8 @@ outdoorsTilesetPropsTable:
      .byte %00000000          ;; Tree             Not passable     Block sight
      .byte %11000000          ;; Bridge           Passable         See-through
 
+
+;; Indoors tileset
 indoorsTileset:
      .byte $11
      .byte $48, $48, $48, $48 ;; Nothing/Black      $00
@@ -1876,6 +1912,7 @@ indoorsTilesetPropsTable:
      .byte %11000000          ;; Chair            Passable         See-through
      .byte %11000000          ;; Chair            Passable         See-through
      .byte %11100000          ;; Chair            Passable         See-through  Trigger
+
 
 ; Dungeon tile set
 dungeonTileset:
@@ -1966,9 +2003,11 @@ dungeonTilesetPropsTable:
      .byte %11100000          ;; Dungeon floor    Stairs up        See-through    Trigger
      .byte %01000000          ;; Barrel           Not passable.    See-through
 
-;; ----------------------
-;; MATH
-;; ----------------------
+;; +----------------------------------+
+;; |                                  |
+;; |    MATH CONSTANTS & ROUTINES     |
+;; |                                  |
+;; +----------------------------------+
 
 powersOf2     .byte $00 ;0
               .byte $02 ;1
@@ -2099,6 +2138,12 @@ dec22Ptr:           ; Helper subroutine for decreasing 16-bit buffer value at $2
                     rts
 dec22Carry          dec $23
                     rts
+
+;; +----------------------------------+
+;; |                                  |
+;; |    RESOURCE IMPORTS              |
+;; |                                  |
+;; +----------------------------------+
 
 *=$2000
 .binary "spritedata.raw"
