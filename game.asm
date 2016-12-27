@@ -499,19 +499,11 @@ sceneColBg  .byte $00
 sceneCol1   .byte $00
 sceneCol2   .byte $00
 
-;; -----------
-;; FOV ROUTINES
-;; -----------
-
-clearFOVBuffer:
-                    lda #$10
-                    ldx #$00
-                    lda #$00
-clearFOVLoop        sta fovBuffer, x
-                    inx
-                    cpx #$c8
-                    bne clearFOVLoop
-                    rts
+;; +----------------------------------+
+;; |                                  |
+;; |    SCREEN BUFFER ROUTINES        |
+;; |                                  |
+;; +----------------------------------+
 
 prepareScreenBuffer:
                    lda #>screenBuffer ; Screen Buffer offset
@@ -725,26 +717,6 @@ npcOffset
     .byte $00
 spritePrepMask .byte %00000011
 
-; FOV segment pointers.
-segmentOffsets
-    .byte $00
-    .byte $00
-    .byte $00
-    .byte $00
-    .byte $00
-
-currentLine .byte $00               ; Track current line of FOV sector being investigated
-currentLineSegment .byte $00        ; Track the current segment of the line being investigated
-lineLength  .byte $00               ; Length of the current line
-
-fovSectorDir .byte $01              ; N, S, W, E
-
-segMasks  .byte %10000000
-          .byte %01000000
-          .byte %00100000
-          .byte %00010000
-          .byte %00001000
-
 npcSpriteMasks  .byte %00000100
                 .byte %00001000
                 .byte %00010000
@@ -752,194 +724,119 @@ npcSpriteMasks  .byte %00000100
                 .byte %01000000
                 .byte %10000000
 
-powersOf2     .byte $00 ;0
-              .byte $02 ;1
-              .byte $04 ;2
-              .byte $06 ;3
-              .byte $08 ;4
-              .byte $0a ;5
+;; +----------------------------------+
+;; |                                  |
+;; |    FOV ROUTINES                  |
+;; |                                  |
+;; +----------------------------------+
 
-powersOf16    .byte $00 ;0
-              .byte $10 ;1
-              .byte $20 ;2
-              .byte $30 ;3
-              .byte $40 ;4
-              .byte $50 ;5
-              .byte $60 ;6
-              .byte $70 ;7
-              .byte $80 ;8
-              .byte $90 ;9
-              .byte $a0 ;10
-              .byte $b0 ;11
-              .byte $c0 ;12
-              .byte $d0 ;13
-              .byte $e0 ;14
-              .byte $f0 ;15
-              .byte $00 ;16
-              .byte $10 ;17
-              .byte $20 ;18
-              .byte $30 ;19
+; Clear FOV Buffer between runs
+clearFOVBuffer:
+                    lda #$10
+                    ldx #$00
+                    lda #$00
+clearFOVLoop        sta fovBuffer, x
+                    inx
+                    cpx #$c8
+                    bne clearFOVLoop
+                    rts
 
+; FOV Routine local variables
+segmentOffsets .byte $00, $00, $00, $00, $00
+currentLine .byte $00               ; Track current line of FOV sector being investigated
+currentLineSegment .byte $00        ; Track the current segment of the line being investigated
+lineLength  .byte $00               ; Length of the current line
+fovSectorDir .byte $00              ; N, S, W, E
 
-powersOf20    .byte $00 ;0
-              .byte $14 ;1
-              .byte $28 ;2
-              .byte $3c ;3
-              .byte $50 ;4
-              .byte $64 ;5
-              .byte $78 ;6
-              .byte $8c ;7
-              .byte $a0 ;8
-              .byte $b4 ;9
-              .byte $c8 ;10
+; FOV Routine constants
+segment1Start   .byte 88,   130,    128,    90
+segment2Start   .byte 67,   151,    147,    71
+segment3Start   .byte 46,   172,    166,    52
+segment4Start   .byte 25,   193,    185,    33
+segment5Start   .byte 07,   211,    144,    72
+dirMods .byte 01, 255, 236, 20
+segMasks  .byte %10000000
+          .byte %01000000
+          .byte %00100000
+          .byte %00010000
+          .byte %00001000
 
+; Walk FOV lines, sector by sector
 updateFOVLines:
                     jsr clearFOVBuffer
                     jsr prepareScreenBuffer
 
 revealPlayerTile    lda screenBuffer+109            ; Reveal tile player is standing on
                     sta fovBuffer+109
-                    lda #$01
+                    lda #$00
                     sta fovSectorDir
 walkFOVSector:
-                    lda #>screenBuffer              ; Store source buffer in $22-23
-                    sta $23
-                    lda #<screenBuffer
-                    sta $22
-
-                    lda #>fovBuffer                 ; Store target buffer in $20-$21
-                    sta $21
-                    lda #<fovBuffer
-                    sta $20
-
-                    lda fovSectorDir
-                    cmp #$01
-                    beq initNSector
-                    cmp #$02
-                    beq initSSector
-                    cmp #$03
-                    beq initWSector
-initESector:
-                    lda #90
+                    ldx fovSectorDir
+                    lda segment1Start, x
                     sta segmentOffsets
-                    lda #71
+                    lda segment2Start, x
                     sta segmentOffsets+1
-                    lda #52
+                    lda segment3Start, x
                     sta segmentOffsets+2
-                    lda #33
+                    lda segment4Start, x
                     sta segmentOffsets+3
-                    lda #72
+                    lda segment5Start, x
                     sta segmentOffsets+4
-                    jmp beginLineWalks
-initWSector:
-                    lda #128
-                    sta segmentOffsets
-                    lda #147
-                    sta segmentOffsets+1
-                    lda #166
-                    sta segmentOffsets+2
-                    lda #185
-                    sta segmentOffsets+3
-                    lda #144
-                    sta segmentOffsets+4
-                    jmp beginLineWalks
-initSSector:
-                    lda #130
-                    sta segmentOffsets
-                    lda #151
-                    sta segmentOffsets+1
-                    lda #172
-                    sta segmentOffsets+2
-                    lda #193
-                    sta segmentOffsets+3
-                    lda #211
-                    sta segmentOffsets+4
-                    jmp beginLineWalks
-initNSector:
-                    lda #88
-                    sta segmentOffsets
-                    lda #67
-                    sta segmentOffsets+1
-                    lda #46
-                    sta segmentOffsets+2
-                    lda #25
-                    sta segmentOffsets+3
-                    lda #07
-                    sta segmentOffsets+4
-
-beginLineWalks:
                     ldx #$00                        ; Set line index to 0 (of c)
                     stx currentLine
 
 walkFOVLine:        ;; Assume currentLine is loaded into X when we return here
-                    lda fovLineTable, x
+                    lda fovLineTable, x             ; Store away line length
                     and #%00000111
-                    sta lineLength                 ; Store away line length
-                    ldx #$00
+                    sta lineLength
+                    ldx #$00                        ; Set line segment look counter to zero
                     stx currentLineSegment
-walkSegmentsLoop    ldy segmentOffsets, x      ; Copy pointers to zero page
+walkSegmentsLoop    ldy segmentOffsets, x           ; Copy tile to target fovBuffer
                     lda screenBuffer, y
                     sta fovBuffer, y
 
-                    tay
+                    tay                             ; End line if the discovered tile blocks sight
                     lda iconprops, y
                     and #%01000000
                     cmp #%01000000
                     bne lineWalked
 
-                    inx
+                    inx                             ; Continue looping if we haven't reached the last line segment
                     cpx lineLength
                     bne walkSegmentsLoop
 
 lineWalked          inc currentLine
                     ldy currentLine
-                    cpy #$0c                  ; 0c for all lines, There are twelve lines to a sector
+                    cpy #$0c                        ; 0c for all lines, There are twelve lines to a sector
                     bne prepareNextLine
 
                     inc fovSectorDir
                     lda fovSectorDir
-                    cmp #$05
+                    cmp #$04
                     beq endOfFov
                     jmp walkFOVSector
 endOfFov
                     rts
 
 prepareNextLine
-                    lda fovSectorDir
-                    cmp #$01                ; Prepare next FOV line
-                    beq prepNFOVStep
-                    cmp #$02
-                    beq prepSFOVStep
-                    cmp #$03
-                    beq prepWFOVStep
-prepEFOVStep:
-                    lda #20
-                    jmp prepareLoop
-prepWFOVStep:
-                    lda #236
-                    jmp prepareLoop
-prepNFOVStep:
-                    lda #1
-                    jmp prepareLoop
-prepSFOVStep:
-                    lda #255
-prepareLoop
+                    ldx fovSectorDir                ; Set up segments modifiers for next round
+                    lda dirMods, x
                     sta modVal
                     ldy currentLine
                     ldx #$00
 
-modSegmentLoop      clc                 ; Set up segment modifiers for next round
-                    lda fovLineTable, y ; Check if fovTable dictates seg mod
+modSegmentLoop      clc                             ; Check if fovTable dictates seg mod
+                    lda fovLineTable, y
                     and segMasks, x
                     cmp segMasks, x
                     bne noSegMod
 
-modSegmentOffset    lda segmentOffsets, x
+modSegmentOffset    lda segmentOffsets, x           ; Apply segmod to segments
                     clc
                     adc modVal
                     sta segmentOffsets, x
 noSegMod
-                    inx
+                    inx                             ; Walk next line
                     cpx #$05
                     bne modSegmentLoop
                     ldx currentLine
@@ -2073,12 +1970,53 @@ dungeonTilesetPropsTable:
 ;; MATH
 ;; ----------------------
 
-tmpPtr1     .byte $00, $00
-tmpPtr2     .byte $00, $00
-tmpPtr3     .byte $00, $00
+powersOf2     .byte $00 ;0
+              .byte $02 ;1
+              .byte $04 ;2
+              .byte $06 ;3
+              .byte $08 ;4
+              .byte $0a ;5
 
-num1        .byte $00                ; Math input #1
-num2        .byte $00                ; Math input #2
+powersOf16    .byte $00 ;0
+              .byte $10 ;1
+              .byte $20 ;2
+              .byte $30 ;3
+              .byte $40 ;4
+              .byte $50 ;5
+              .byte $60 ;6
+              .byte $70 ;7
+              .byte $80 ;8
+              .byte $90 ;9
+              .byte $a0 ;10
+              .byte $b0 ;11
+              .byte $c0 ;12
+              .byte $d0 ;13
+              .byte $e0 ;14
+              .byte $f0 ;15
+              .byte $00 ;16
+              .byte $10 ;17
+              .byte $20 ;18
+              .byte $30 ;19
+
+
+powersOf20    .byte $00 ;0
+              .byte $14 ;1
+              .byte $28 ;2
+              .byte $3c ;3
+              .byte $50 ;4
+              .byte $64 ;5
+              .byte $78 ;6
+              .byte $8c ;7
+              .byte $a0 ;8
+              .byte $b4 ;9
+              .byte $c8 ;10
+
+tmpPtr1       .byte $00, $00
+tmpPtr2       .byte $00, $00
+tmpPtr3       .byte $00, $00
+
+num1          .byte $00                ; Math input #1
+num2          .byte $00                ; Math input #2
 
 ;--------
 
