@@ -17,42 +17,42 @@
      lda #$05           ; Set screen background color
      sta $d021
      sta sceneColBg
-     
+
      lda #$09           ; Set character set color
      sta $d022
      lda #$1d
      sta $d023
-          
+
      lda $d018          ; Remap character set
      ora #%00001110
      sta $d018
 
      lda #$18           ; Char multicolour mode on 
-     sta $d016    
+     sta $d016
 
      lda #$00
      sta $fb            ; raster counter
-     
+
      lda #$81          ; Set player sprite pointers
      sta $07f8
      lda #$80          ; Set player sprite pointers
      sta $07f9
-     
+
      lda #%00000011     ; Enable player sprites
      sta $d015
 
      lda #$10           ; Set up sprite colors
      sta $d027
-     
+
      lda #$08
      sta $d028
-     
-     lda #$0e      
+
+     lda #$0e
      sta $d025
 
-     lda #$0f     
+     lda #$0f
      sta $d026
-     
+
      lda #$a4           ; Set player sprite coords
      sta $d000
      sta $d002
@@ -68,21 +68,21 @@
 
      lda #%01111111     ; Disable CIA interrupts
      sta $dC0d
-     
+
      and $d011          ; Clear highest bit in raster register
      sta $d011
-     
+
      lda #$d3           ; Set raster line for irq
-     sta $d012 
-     
+     sta $d012
+
      lda #<enterstatusirq    ; Interrupt vector
      sta $0314
      lda #>enterstatusirq
      sta $0315
-     
+
      lda #%00000001     ; Enable raster interrupt signals
      sta $d01a
-     
+
      ldx playerX
      ldy playerY
      jsr attemptMove
@@ -90,9 +90,8 @@
      jsr drawlevel
 
      jmp mainloop
-     
-     
-text_HP     .text "HP:  012/014"    
+
+text_HP     .text "HP:  012/014"
 text_EXP    .text "EXP: 050/100"
 
 enterstatusirq   nop
@@ -104,7 +103,7 @@ enterstatusirq   nop
                  nop
                  lda #$00
                  sta $d021
-                 
+
                  lda #%00001000 ; Disable multicolor text mode
                  sta $d016
 
@@ -112,27 +111,27 @@ enterstatusirq   nop
                  sta $0314
                  lda #>leavestatusirq
                  sta $0315
-                 
+
                  lda #$ff           ; Set raster line for irq
-                 sta $d012 
-                        
+                 sta $d012
+
                  asl $d019
-                 
+
                  inc $fb      ; wait for anim/delay counter to loop
                  lda #$20
                  cmp $fb
-                 bne exitenterirq  
+                 bne exitenterirq
 
                  lda #$00     ; reset anim/delay counter
                  sta $fb
 
                  jsr animatechars
-                 
+
 exitenterirq     jmp $ea31
 
 leavestatusirq   lda sceneColBg
                  sta $d021
-                 
+
                  lda #%00011000 ; Enable multicolor text mode
                  sta $d016
 
@@ -140,11 +139,11 @@ leavestatusirq   lda sceneColBg
                  sta $0314
                  lda #>enterstatusirq
                  sta $0315
-                 
-                 lda #$d2          ; Set raster line for next irq
-                 sta $d012 
 
-                 
+                 lda #$d2          ; Set raster line for next irq
+                 sta $d012
+
+
                  asl $d019
                  jmp $ea81
 
@@ -155,25 +154,25 @@ leavestatusirq   lda sceneColBg
 ;; |                                  |
 ;; +----------------------------------+
 *=5000
-mainloop            
+mainloop
                     jsr readKey
 
 mlcont              lda #$15     ; wait for raster retrace
-                    cmp $d012  
+                    cmp $d012
                     bne mlcont
 
                     lda screenDirty
                     cmp #$00
                     beq mainloop
-                    
+
                     lda #$00
                     sta screenDirty
-                    
+
                     jsr updateSprites
                     jsr drawlevel
-                    
+
                     jmp mainloop
-    
+
 ;; +----------------------------------+
 ;; |                                  |
 ;; |    KEY INPUT                     |
@@ -199,13 +198,13 @@ readKey
                     ldy playerY
 
                     cmp key_UP
-                    beq move_up                    
+                    beq move_up
 
                     cmp key_LEFT
                     beq move_left
 
                     cmp key_DOWN
-                    beq move_down                  
+                    beq move_down
 
                     cmp key_RIGHT
                     beq move_right
@@ -226,16 +225,16 @@ readKey
                     beq toggleFOV
 
                     jmp endReadKey
-                    
+
 move_up             dey
                     jmp attemptMove
-                    
+
 move_left           dex
                     jmp attemptMove
-                    
+
 move_down           iny
                     jmp attemptMove
-                    
+
 move_right          inx
                     jmp attemptMove
 
@@ -262,9 +261,9 @@ toggleFOV           lda areaMode
                     ldy playerY
                     jmp attemptMove
 
-movePerformed                    
-                    inc screenDirty     
-endReadKey                   
+movePerformed
+                    inc screenDirty
+endReadKey
                     rts
 
 currentTileProps    .byte %00000000
@@ -278,7 +277,7 @@ currentTileProps    .byte %00000000
 attemptMove:        ; In parameters: target x, y in X and Y registers
                     jsr getTileAt           ; Look up tile at x, y
                     tax                     ; check if passable by comparing with tile table
-                    lda iconprops, x
+                    lda tileProps, x
                     sta currentTileProps    ; Keep icon properties for later use
                     and #%10000000
                     cmp #%10000000
@@ -290,6 +289,8 @@ performMove         ldx tmpX
                     stx playerX
                     sty playerY
                     inc screenDirty
+
+                    jsr prepareScreenBuffer
 
                     clc
                     lda areaMode
@@ -466,9 +467,9 @@ loadTileset           lda #$01
                       sta $20
                       lda tmpPtr1+1
                       sta $21
-                      lda #<icons
+                      ;lda #<icons
                       sta $22
-                      lda #>icons
+                      ;lda #>icons
                       sta $23
                       lda #$04
                       sta memcpy_rowSize
@@ -478,9 +479,9 @@ loadTileset           lda #$01
                       sta $20
                       lda tmpPtr2+1
                       sta $21
-                      lda #<iconcols
+                      ;lda #<iconcols
                       sta $22
-                      lda #>iconcols
+                      ;lda #>iconcols
                       sta $23
                       jsr memcpy
 
@@ -488,9 +489,9 @@ loadTileset           lda #$01
                       sta $20
                       lda tmpPtr3+1
                       sta $21
-                      lda #<iconprops
+                      ;lda #<iconprops
                       sta $22
-                      lda #>iconprops
+                      ;lda #>iconprops
                       sta $23
                       lda #$01
                       sta memcpy_rowSize
@@ -774,7 +775,6 @@ fovLineTable .byte %00000011  ; A-1     - 1
 ; Walk FOV lines, sector by sector
 updateFOVLines:
                     jsr clearFOVBuffer
-                    jsr prepareScreenBuffer
 
 revealPlayerTile    lda screenBuffer+109            ; Reveal tile player is standing on
                     sta fovBuffer+109
@@ -806,7 +806,7 @@ walkSegmentsLoop    ldy segmentOffsets, x           ; Copy tile to target fovBuf
                     sta fovBuffer, y
 
                     tay                             ; End line if the discovered tile blocks sight
-                    lda iconprops, y
+                    lda tileProps, y
                     and #%01000000
                     cmp #%01000000
                     bne lineWalked
@@ -867,7 +867,7 @@ activeSpriteOffsetY     .byte $00, $00, $00, $00, $00, $00
 updateSprites:
                    lda noofActiveSprites
 
-                   lda #%00000111
+                   lda #%00000011
                    sta spritePrepMask
                    ldx #$00
                    cpx noofActiveSprites
@@ -946,66 +946,26 @@ drawlevel;
                    lda #$04 ; Screen offset
                    sta $21
                    lda #$00
-                   sta $20  
+                   sta $20
 
                    lda #$d8 ; Color RAM offset
                    sta $25
                    lda #$00
                    sta $24
 
+                   lda #$14
+                   sta inc22ModVal
+
                    lda areaMode             ; Jump to FOV mode setup of offsets and level data if FOV is on
                    and #%10000000
                    bne prepareFOVMode
                    sec                      ; Need to set carry after this operation. Not sure why
-     
-                   lda currentAreaHeight
-                   sta drawBufferHeight
-                   lda currentAreaWidth
-                   sta drawBufferWidth
 
-                   lda #>currentArea ; Level area offset in memory
+                   lda #>screenBuffer        ; Screen buffer offset in memory
                    sta $23
-                   lda #<currentArea
+                   lda #<screenBuffer
                    sta $22
-                   
-                   lda playerY                    ; set up area offset relative to player coordinates
-                   sbc #$05
-                   sta currentAreaOffsetY
-
-                   clc
-                   lda playerX
-                   sbc #$08
-                   sta currentAreaOffsetX
-
-                   lda currentAreaOffsetY         ; Set up counter for area row to be drawn
-                   sta areaRow
-     
-                   ldx #$00                       ; Now offset pointer to the area data according to the screenOffsetY. 
-dlOffsetLoop       cpx currentAreaOffsetY         ; Move level area offset pointers in $22, $23 according currentAreaOffsetY
-                   beq dlOffsetCalculated         ; Nothing to do if Y is 0
-
-                   lda currentAreaOffsetY         ; Now inc or dec offset counter until it matches the Y offset
-                   cmp #$80
-                   bcc dlOffsetPositive
-
-dlOffsetNegative    dex
-                    lda $22
-                    sbc currentAreaWidth
-                    sta $22
-                    bcs dlOffsetLoop
-                    dec $23
-                    jmp dlOffsetLoop 
-                    jmp dlOffsetCalculated
-
-
-dlOffsetPositive    inx
-                    lda $22
-                    adc currentAreaWidth
-                    sta $22
-                    bcc dlOffsetLoop
-                    inc $23
-                    jmp dlOffsetLoop
-                    jmp dlOffsetCalculated
+                   jmp dlOffsetCalculated
 
 prepareFOVMode
                    lda #>fovBuffer ; Level area offset in memory
@@ -1013,158 +973,120 @@ prepareFOVMode
                    lda #<fovBuffer
                    sta $22
 
-                   lda #$00
-                   sta currentAreaOffsetX
-                   sta currentAreaOffsetY
-                   clc
-
-                   lda #$14
-                   sta drawBufferWidth
-                   lda #$0a
-                   sta drawBufferHeight
-                   clc
-                   lda #$00
-                   sta areaRow
-
 dlOffsetCalculated  lda #$00                   ; Set counters to zero
                     sta crsr
                     sta iter
                     sta drawat
-          
-                    clc
-                    lda #$14                   ; Set lineEnd to current area X offset + screen width in tiles
-                    adc currentAreaOffsetX     ; to indicate that we are one with a line when crsr has reached
-                    sta lineEnd                ; that X position of level data
-     
+
 drawlevelloop
-     inc iter
-     ldx iter
+                    inc iter
+;                    inc $d020
 
-     jsr drawline
+                    jsr drawline
+                    jsr incscreenoffset
 
-     jsr incleveloffset
-     jsr incscreenoffset
-     inc areaRow
+                    lda #$0a
+                    cmp iter
+                    bne drawlevelloop
 
-     ldx iter
-     cpx #$0a
-     bne drawlevelloop
+                    lda spritePrepMask
+                    sta $d015
 
-     lda spritePrepMask
-     sta $d015
+                    lda #$00
+                    sta $d020
 
-     lda #$18               ; Output Player X Coordinate to status area
-     sta $0749
-     lda #<$074b
-     sta print_target
-     lda #>$074b
-     sta print_target+1
-     ldx playerX
-     jsr print_decimal
+                    lda #$18               ; Output Player X Coordinate to status area
+                    sta $0749
+                    lda #<$074b
+                    sta print_target
+                    lda #>$074b
+                    sta print_target+1
+                    ldx playerX
+                    jsr print_decimal
 
-     lda #$19               ; Output Player Y Coordinate to status area
-     sta $0771
-     lda #<$0773
-     sta print_target
-     lda #>$0773
-     sta print_target+1
-     ldx playerY
-     jsr print_decimal
+                    lda #$19               ; Output Player Y Coordinate to status area
+                    sta $0771
+                    lda #<$0773
+                    sta print_target
+                    lda #>$0773
+                    sta print_target+1
+                    ldx playerY
+                    jsr print_decimal
 
-     rts
-     
+                    rts
+
 incscreenoffset
-     lda $20
-     clc
-     adc #$50
-     bcc screennocarry
-     inc $21
-     inc $25
+                    lda $20
+                    clc
+                    adc #$50
+                    bcc screennocarry
+                    inc $21
+                    inc $25
 screennocarry
-     sta $20
-     sta $24
-     rts     
- 
+                    sta $20
+                    sta $24
+                    rts
+
 incleveloffset
-     lda $22     
-     clc
-     adc drawBufferWidth
-     bcc levelnocarry
-     inc $23
+                    lda $22
+                    clc
+                    adc drawBufferWidth
+                    bcc levelnocarry
+                    inc $23
 levelnocarry
-     sta $22
-     rts
-     
+                    sta $22
+                    rts
+
 drawline
-     lda currentAreaOffsetX         ; Set up counter for area col to be drawn
-     sta areaCol
-     sta crsr
-     lda #$00
-     sta drawat
+                    ldy #$00
+                    sty drawat
+                    clc
 
 drawlineloop
-     lda areaRow
-     cmp drawBufferHeight
-     bcs loademptytile     
-     lda areaCol
-     cmp drawBufferWidth
-     bcs loademptytile     
-     jmp loadtile
-loademptytile     lda #$00
-                  jmp loadtilea
+                    ldy crsr
+                    lda ($22), y
+                    tax
+drawtile
+                    ldy drawat
+                    lda tileChar1, x        ; Draw upper row of tile chars to screen
+                    sta ($20), y
+                    lda tileCharColor1, x
+                    sta ($24), y
 
-loadtile    ldy crsr       ; Load source block index
-            lda ($22), y
+                    iny
+                    lda tileChar2, x
+                    sta ($20), y
+                    lda tileCharColor2, x
+                    sta ($24), y
 
-loadtilea   sta num1       ; Multiply by 4 to jump to source block data and put start pos in X
-            lda #$04
-            sta num2
-            jsr multiply
-            tax
- 
-drawtile     
-     ldy drawat     ; Draw to screen     
+                    tya                     ; Forward to lower row
+                    adc #$27
+                    tay
 
-     jsr drawchar
-     iny
-     inx
-     jsr drawchar
-     inx
-     
-     tya
-     adc #$27
-     tay
-     
-     jsr drawchar
-     iny
-     inx
+                    lda tileChar3, x        ; Draw lower row of tile chars to screen 
+                    sta ($20), y
+                    lda tileCharColor3, x
+                    sta ($24), y
 
-     jsr drawchar     
-     
-     ldy drawat     
-     iny
-     iny
-     sty drawat
-     
-     ldy crsr
-     iny
-     sty crsr
-     
-     inc areaCol
-     
-     cpy lineEnd
-     bne drawlineloop
+                    iny
+                    lda tileChar4, x
+                    sta ($20), y
+                    lda tileCharColor4, x
+                    sta ($24), y
 
-     rts
+                    ldy drawat
+                    iny
+                    iny
+                    sty drawat
 
-drawchar
-     lda icons, x
-     sta ($20), y
-     lda iconcols, x         
-     sta ($24), y
-     rts
+                    inc crsr
 
-iter 
+                    cpy #$28
+                    bne drawlineloop
+
+                    rts
+
+iter
     .byte $00
 
 drawat
@@ -1172,9 +1094,9 @@ drawat
 
 crsr
     .byte $00
-    
+
 areaRow .byte $00
-areaCol .byte $00 
+areaCol .byte $00
 
 lineEnd .byte $14
 
@@ -1268,23 +1190,23 @@ horlineloop     sta $0721, x
                 inx
                 cpx #$26
                 bne horlineloop
-                
+
                 lda #$1d
-vertlineloop    sta $0748        
-                sta $076f        
-                sta $0770        
+vertlineloop    sta $0748
+                sta $076f
+                sta $0770
                 sta $0797
                 sta $0798
                 sta $07bf
 
                 lda #$01
-                ldx #$00                                
-                
+                ldx #$00
+
 colloop         sta $db20, x
                 inx
                 cpx #$c8
                 bne colloop
-                
+
                 lda #$0f
                 sta $db62
                 sta $db63
@@ -1293,15 +1215,15 @@ colloop         sta $db20, x
                 sta $db8a
                 sta $db8b
                 sta $db8c
-                
+
                 sta $db6a
                 sta $db92
-                
+
                 lda #<text_HP
                 sta print_source
                 lda #>text_HP
                 sta print_source+1
-                
+
                 lda #<$0762
                 sta print_target
                 lda #>$0762
@@ -1314,7 +1236,7 @@ colloop         sta $db20, x
                 sta print_source
                 lda #>text_EXP
                 sta print_source+1
-                
+
                 lda #<$078a
                 sta print_target
                 lda #>$078a
@@ -1334,12 +1256,12 @@ animatechars
     ; anim water
     lda #$3a
     sta $2e
-    
+
     lda #$31
     sta $2d
     jsr leftshift_2d
     jsr leftshift_2d
-    
+
     lda #$32
     sta $2d
     jsr leftshift_2d
@@ -1349,14 +1271,14 @@ animatechars
     sta $2d
     jsr rightshift_2d
     jsr rightshift_2d
-    
+
     lda #$36
     sta $2d
     jsr rightshift_2d
     jsr rightshift_2d
-    
+
     rts
-    
+
 ;; ----------------------
 ;; UTILITIES
 ;; ----------------------
@@ -1370,15 +1292,15 @@ print_string            ldy #$00
 print_string_loop       lda ($fb), y
                         and #$3f
                         sta ($fd), y
-                        iny      
+                        iny
                         cpy print_source_length
                         bne print_string_loop
                         rts
 
 leftshift_2d            ldy #$00                    ; Rotate Left/Bit-shift with wrap
                         lda ($2d),y                 ; Operates on the value in zero-page adress $2d
-                        asl    
-                        bcc leftshift_2d_nocarry        
+                        asl
+                        bcc leftshift_2d_nocarry
                         ora #$01
 leftshift_2d_nocarry    sta ($2d),y
                         rts
@@ -1387,22 +1309,20 @@ leftshift_2d_nocarry    sta ($2d),y
 rightshift_2d           ldy #$00                    ; Rotate Right/Bit-shift with wrap
                         lda ($2d),y                 ; Operates on the value in zero-page adress $2d
                         lsr
-                        bcc rightshift_2d_nocarry        
+                        bcc rightshift_2d_nocarry
                         ora #$80
 rightshift_2d_nocarry
                         sta ($2d),y
                         rts
-    
 
-    
 
 clearscreen      lda #$20     ; #$20 is the spacebar Screen Code
-                 sta $0400,x  
-                 sta $0500,x 
-                 sta $0600,x 
-                 sta $06e8,x 
-                 lda #$00     ; set foreground to black in Color Ram 
-                 sta $d800,x  
+                 sta $0400,x
+                 sta $0500,x
+                 sta $0600,x
+                 sta $06e8,x
+                 lda #$00     ; set foreground to black in Color Ram
+                 sta $d800,x
                  sta $d900,x
                  sta $da00,x
                  sta $dae8,x
@@ -1745,79 +1665,291 @@ screenBuffer
 ;; +----------------------------------+
 
 *=$4000
-icons:
-     .byte $48, $48, $48, $48 ;; Nothing/Black   $00
-     .byte $47, $20, $20, $47 ;; Rocks           $01
-     .byte $46, $46, $46, $46 ;; Water           $02
-     .byte $44, $45, $45, $44 ;; Road            $03
-     .text "    "             ;; Background      $04
-     .byte $43, $42, $40, $41 ;; Tree            $05
-     .byte $4b, $4c, $49, $4a ;; Dead tree       $06
-     .byte $4d, $4d, $4d, $4d ;; Red wall        $07
-     .byte $4e, $4e, $4e, $4e ;; Red roof        $08
-     .byte $51, $52, $4f, $50 ;; Door            $09
-     .byte $45, $44, $44, $45 ;; RoadInverse     $0a
-     .byte $20, $53, $54, $20 ;; Grass Half 1    $0b
-     .byte $54, $53, $53, $54 ;; Grass Half 2    $0c
-     .byte $54, $20, $20, $53 ;; Grass Half 1    $0d
-     .byte $53, $54, $54, $53 ;; Grass Half 2    $0e
-     .byte $20, $56, $20, $55 ;; Flowers Red     $0f
-     .byte $56, $20, $55, $20 ;; Flowers Yellow  $10
-     .byte $57, $58, $40, $41 ;; Tree Variant    $11
-     .byte $59, $59, $59, $59 ;; Bridge          $12
-     .byte $00, $00, $00, $00 ;;                 $13
-     .byte $00, $00, $00, $00 ;;                 $14
-     .byte $00, $00, $00, $00 ;;                 $15
-     .byte $00, $00, $00, $00 ;;                 $16
-     .byte $00, $00, $00, $00 ;;                 $17
-     .byte $00, $00, $00, $00 ;;                 $18
-     .byte $00, $00, $00, $00 ;;                 $19
-     .byte $00, $00, $00, $00 ;;                 $1a
-     .byte $00, $00, $00, $00 ;;                 $1b
-     .byte $00, $00, $00, $00 ;;                 $1c
-     .byte $00, $00, $00, $00 ;;                 $1d
-     .byte $00, $00, $00, $00 ;;                 $1e
-     .byte $00, $00, $00, $00 ;;                 $1f
-npctiles:
-     .byte $80, $81, $a0, $a1 ;; Rat             $20
+tileChar1
+     .byte $48   ;; Nothing/Black   $00
+     .byte $47   ;; Rocks           $01
+     .byte $46   ;; Water           $02
+     .byte $44   ;; Road            $03
+     .text " "   ;; Background      $04
+     .byte $43   ;; Tree            $05
+     .byte $4b   ;; Dead tree       $06
+     .byte $4d   ;; Red wall        $07
+     .byte $4e   ;; Red roof        $08
+     .byte $51   ;; Door            $09
+     .byte $45   ;; RoadInverse     $0a
+     .byte $20   ;; Grass Half 1    $0b
+     .byte $54   ;; Grass Half 2    $0c
+     .byte $54   ;; Grass Half 1    $0d
+     .byte $53   ;; Grass Half 2    $0e
+     .byte $20   ;; Flowers Red     $0f
+     .byte $56   ;; Flowers Yellow  $10
+     .byte $57   ;; Tree Variant    $11
+     .byte $59   ;; Bridge          $12
+     .byte $00   ;;                 $13
+     .byte $00   ;;                 $14
+     .byte $00   ;;                 $15
+     .byte $00   ;;                 $16
+     .byte $00   ;;                 $17
+     .byte $00   ;;                 $18
+     .byte $00   ;;                 $19
+     .byte $00   ;;                 $1a
+     .byte $00   ;;                 $1b
+     .byte $00   ;;                 $1c
+     .byte $00   ;;                 $1d
+     .byte $00   ;;                 $1e
+     .byte $00   ;;                 $1f
+; Npc Tiles
+     .byte $80   ;; Rat             $20
 
+tileChar2
+     .byte $48   ;; Nothing/Black   $00
+     .byte $20   ;; Rocks           $01
+     .byte $46   ;; Water           $02
+     .byte $45   ;; Road            $03
+     .text " "   ;; Background      $04
+     .byte $42   ;; Tree            $05
+     .byte $4c   ;; Dead tree       $06
+     .byte $4d   ;; Red wall        $07
+     .byte $4e   ;; Red roof        $08
+     .byte $52   ;; Door            $09
+     .byte $44   ;; RoadInverse     $0a
+     .byte $53   ;; Grass Half 1    $0b
+     .byte $53   ;; Grass Half 2    $0c
+     .byte $20   ;; Grass Half 1    $0d
+     .byte $54   ;; Grass Half 2    $0e
+     .byte $56   ;; Flowers Red     $0f
+     .byte $20   ;; Flowers Yellow  $10
+     .byte $58   ;; Tree Variant    $11
+     .byte $59   ;; Bridge          $12
+     .byte $00   ;;                 $13
+     .byte $00   ;;                 $14
+     .byte $00   ;;                 $15
+     .byte $00   ;;                 $16
+     .byte $00   ;;                 $17
+     .byte $00   ;;                 $18
+     .byte $00   ;;                 $19
+     .byte $00   ;;                 $1a
+     .byte $00   ;;                 $1b
+     .byte $00   ;;                 $1c
+     .byte $00   ;;                 $1d
+     .byte $00   ;;                 $1e
+     .byte $00   ;;                 $1f
+; Npc Tiles
+     .byte $81   ;; Rat             $20
 
-iconcols:
-     .byte $00, $00, $00, $00 ;; Nothing / Black
-     .byte $01, $01, $01, $01 ;; Rocks - Hires white
-     .byte $1e, $1e, $1e, $1e ;; Water - blue
-     .byte $1d, $1d, $1d, $1d ;; Road - green
-     .byte $1d, $1d, $1d, $1d ;; Background - N/A
-     .byte $1d, $1d, $1d, $1d ;; Tree - green
-     .byte $1a, $1a, $1a, $1a ;; Dead tree - red
-     .byte $1a, $1a, $1a, $1a ;; Red wall - red
-     .byte $1a, $1a, $1a, $1a ;; Red roof - red
-     .byte $08, $08, $08, $08 ;; Door
-     .byte $1d, $1d, $1d, $1d ;; Road - green
-     .byte $00, $00, $00, $00 ;; Grass
-     .byte $00, $00, $00, $00 ;; Grass
-     .byte $00, $00, $00, $00 ;; Grass
-     .byte $00, $00, $00, $00 ;; Grass
-     .byte $00, $02, $00, $00 ;; Flowers Yellow
-     .byte $07, $00, $00, $00 ;; Flowers Red
-     .byte $1d, $1d, $1d, $1d ;; Tree variant
-     .byte $08, $08, $08, $08 ;; Bridge
-     .byte $00, $00, $00, $00 ;;                 $13
-     .byte $00, $00, $00, $00 ;;                 $14
-     .byte $00, $00, $00, $00 ;;                 $15
-     .byte $00, $00, $00, $00 ;;                 $16
-     .byte $00, $00, $00, $00 ;;                 $17
-     .byte $00, $00, $00, $00 ;;                 $18
-     .byte $00, $00, $00, $00 ;;                 $19
-     .byte $00, $00, $00, $00 ;;                 $1a
-     .byte $00, $00, $00, $00 ;;                 $1b
-     .byte $00, $00, $00, $00 ;;                 $1c
-     .byte $00, $00, $00, $00 ;;                 $1d
-     .byte $00, $00, $00, $00 ;;                 $1e
-     .byte $00, $00, $00, $00 ;;                 $1f
-     .byte $1a, $1a, $1a, $1a ;; Rat             $20
-     
-iconprops:
+tileChar3
+     .byte $48 	 ;; Nothing/Black   $00
+	   .byte $20   ;; Rocks           $01
+     .byte $46   ;; Water           $02
+     .byte $45   ;; Road            $03
+     .text " "   ;; Background      $04
+     .byte $40   ;; Tree            $05
+     .byte $49   ;; Dead tree       $06
+     .byte $4d   ;; Red wall        $07
+     .byte $4e   ;; Red roof        $08
+     .byte $4f   ;; Door            $09
+     .byte $44   ;; RoadInverse     $0a
+     .byte $54   ;; Grass Half 1    $0b
+     .byte $53   ;; Grass Half 2    $0c
+     .byte $20   ;; Grass Half 1    $0d
+     .byte $54   ;; Grass Half 2    $0e
+     .byte $20   ;; Flowers Red     $0f
+     .byte $55   ;; Flowers Yellow  $10
+     .byte $40   ;; Tree Variant    $11
+     .byte $59   ;; Bridge          $12
+     .byte $00   ;;                 $13
+     .byte $00   ;;                 $14
+     .byte $00   ;;                 $15
+     .byte $00   ;;                 $16
+     .byte $00   ;;                 $17
+     .byte $00   ;;                 $18
+     .byte $00   ;;                 $19
+     .byte $00   ;;                 $1a
+     .byte $00   ;;                 $1b
+     .byte $00   ;;                 $1c
+     .byte $00   ;;                 $1d
+     .byte $00   ;;                 $1e
+     .byte $00   ;;                 $1f
+; Npc Tiles
+     .byte $a0   ;; Rat             $20
+
+tileChar4
+     .byte $48   ;; Nothing/Black   $00
+     .byte $47   ;; Rocks           $01
+     .byte $46   ;; Water           $02
+     .byte $44   ;; Road            $03
+     .text " "   ;; Background      $04
+     .byte $41   ;; Tree            $05
+     .byte $4a   ;; Dead tree       $06
+     .byte $4d   ;; Red wall        $07
+     .byte $4e   ;; Red roof        $08
+     .byte $50   ;; Door            $09
+     .byte $45   ;; RoadInverse     $0a
+     .byte $20   ;; Grass Half 1    $0b
+     .byte $54   ;; Grass Half 2    $0c
+     .byte $53   ;; Grass Half 1    $0d
+     .byte $53   ;; Grass Half 2    $0e
+     .byte $55   ;; Flowers Red     $0f
+     .byte $20   ;; Flowers Yellow  $10
+     .byte $41   ;; Tree Variant    $11
+     .byte $59   ;; Bridge          $12
+     .byte $00   ;;                 $13
+     .byte $00   ;;                 $14
+     .byte $00   ;;                 $15
+     .byte $00   ;;                 $16
+     .byte $00   ;;                 $17
+     .byte $00   ;;                 $18
+     .byte $00   ;;                 $19
+     .byte $00   ;;                 $1a
+     .byte $00   ;;                 $1b
+     .byte $00   ;;                 $1c
+     .byte $00   ;;                 $1d
+     .byte $00   ;;                 $1e
+     .byte $00   ;;                 $1f
+	; Npc Tiles
+     .byte $a1   ;; Rat             $20
+
+tileCharColor1
+     .byte $00   ;; Nothing / Black
+     .byte $01   ;; Rocks - Hires white
+     .byte $1e   ;; Water - blue
+     .byte $1d   ;; Road - green
+     .byte $1d   ;; Background - N/A
+     .byte $1d   ;; Tree - green
+     .byte $1a   ;; Dead tree - red
+     .byte $1a   ;; Red wall - red
+     .byte $1a   ;; Red roof - red
+     .byte $08   ;; Door
+     .byte $1d   ;; Road - green
+     .byte $00   ;; Grass
+     .byte $00   ;; Grass
+     .byte $00   ;; Grass
+     .byte $00   ;; Grass
+     .byte $00   ;; Flowers Yellow
+     .byte $07   ;; Flowers Red
+     .byte $1d   ;; Tree variant
+     .byte $08   ;; Bridge
+     .byte $00   ;;                 $13
+     .byte $00   ;;                 $14
+     .byte $00   ;;                 $15
+     .byte $00   ;;                 $16
+     .byte $00   ;;                 $17
+     .byte $00   ;;                 $18
+     .byte $00   ;;                 $19
+     .byte $00   ;;                 $1a
+     .byte $00   ;;                 $1b
+     .byte $00   ;;                 $1c
+     .byte $00   ;;                 $1d
+     .byte $00   ;;                 $1e
+     .byte $00   ;;                 $1f
+     .byte $1a   ;; Rat             $20
+
+tileCharColor2
+     .byte $00   ;; Nothing / Black
+     .byte $01   ;; Rocks - Hires white
+     .byte $1e   ;; Water - blue
+     .byte $1d   ;; Road - green
+     .byte $1d   ;; Background - N/A
+     .byte $1d   ;; Tree - green
+     .byte $1a   ;; Dead tree - red
+     .byte $1a   ;; Red wall - red
+     .byte $1a   ;; Red roof - red
+     .byte $08   ;; Door
+     .byte $1d   ;; Road - green
+     .byte $00   ;; Grass
+     .byte $00   ;; Grass
+     .byte $00   ;; Grass
+     .byte $00   ;; Grass
+     .byte $02   ;; Flowers Yellow
+     .byte $00   ;; Flowers Red
+     .byte $1d   ;; Tree variant
+     .byte $08   ;; Bridge
+     .byte $00   ;;                 $13
+     .byte $00   ;;                 $14
+     .byte $00   ;;                 $15
+     .byte $00   ;;                 $16
+     .byte $00   ;;                 $17
+     .byte $00   ;;                 $18
+     .byte $00   ;;                 $19
+     .byte $00   ;;                 $1a
+     .byte $00   ;;                 $1b
+     .byte $00   ;;                 $1c
+     .byte $00   ;;                 $1d
+     .byte $00   ;;                 $1e
+     .byte $00   ;;                 $1f
+     .byte $1a   ;; Rat             $20
+
+tileCharColor3
+     .byte $00   ;; Nothing / Black
+     .byte $01   ;; Rocks - Hires white
+     .byte $1e   ;; Water - blue
+     .byte $1d   ;; Road - green
+     .byte $1d   ;; Background - N/A
+     .byte $1d   ;; Tree - green
+     .byte $1a   ;; Dead tree - red
+     .byte $1a   ;; Red wall - red
+     .byte $1a   ;; Red roof - red
+     .byte $08   ;; Door
+     .byte $1d   ;; Road - green
+     .byte $00   ;; Grass
+     .byte $00   ;; Grass
+     .byte $00   ;; Grass
+     .byte $00   ;; Grass
+     .byte $00   ;; Flowers Yellow
+     .byte $00   ;; Flowers Red
+     .byte $1d   ;; Tree variant
+     .byte $08   ;; Bridge
+     .byte $00   ;;                 $13
+     .byte $00   ;;                 $14
+     .byte $00   ;;                 $15
+     .byte $00   ;;                 $16
+     .byte $00   ;;                 $17
+     .byte $00   ;;                 $18
+     .byte $00   ;;                 $19
+     .byte $00   ;;                 $1a
+     .byte $00   ;;                 $1b
+     .byte $00   ;;                 $1c
+     .byte $00   ;;                 $1d
+     .byte $00   ;;                 $1e
+     .byte $00   ;;                 $1f
+     .byte $1a   ;; Rat             $20
+
+tileCharColor4
+     .byte $00   ;; Nothing / Black
+     .byte $01   ;; Rocks - Hires white
+     .byte $1e   ;; Water - blue
+     .byte $1d   ;; Road - green
+     .byte $1d   ;; Background - N/A
+     .byte $1d   ;; Tree - green
+     .byte $1a   ;; Dead tree - red
+     .byte $1a   ;; Red wall - red
+     .byte $1a   ;; Red roof - red
+     .byte $08   ;; Door
+     .byte $1d   ;; Road - green
+     .byte $00   ;; Grass
+     .byte $00   ;; Grass
+     .byte $00   ;; Grass
+     .byte $00   ;; Grass
+     .byte $00   ;; Flowers Yellow
+     .byte $00   ;; Flowers Red
+     .byte $1d   ;; Tree variant
+     .byte $08   ;; Bridge
+     .byte $00   ;;                 $13
+     .byte $00   ;;                 $14
+     .byte $00   ;;                 $15
+     .byte $00   ;;                 $16
+     .byte $00   ;;                 $17
+     .byte $00   ;;                 $18
+     .byte $00   ;;                 $19
+     .byte $00   ;;                 $1a
+     .byte $00   ;;                 $1b
+     .byte $00   ;;                 $1c
+     .byte $00   ;;                 $1d
+     .byte $00   ;;                 $1e
+     .byte $00   ;;                 $1f
+     .byte $1a   ;; Rat             $20
+
+tileProps:
      .byte %00000000          ;; Nothing / Black. Not passable.    Block Sight
      .byte %11000000          ;; Rocks.           Passable         See-through
      .byte %01000000          ;; Water            Not passable     See-through
