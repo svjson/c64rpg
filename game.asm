@@ -169,6 +169,7 @@ mlcont              lda #$15     ; wait for raster retrace
                     lda #$00
                     sta screenDirty
                     
+                    jsr updateSprites
                     jsr drawlevel
                     
                     jmp mainloop
@@ -636,15 +637,13 @@ psbOutTile           ldy crsr
                      rts
 
 applyNpcs:
-                     lda #%00000011
-                     sta spritePrepMask
-
                      lda #>npcs
                      sta $25
                      lda #<npcs
                      sta $24
 
                      ldx #$00
+                     stx noofActiveSprites
 npcPosLoop           ldy #$00
                      lda ($24), y          ; Load npc status flag
                      and #%10000000
@@ -684,52 +683,33 @@ npcPosLoop           ldy #$00
                      lda ($24), y
                      ldy npcOffset
                      sta screenBuffer, y
-                     jsr npcSpritesTempRoutine
+                     tya
+                     ldy noofActiveSprites
+                     sta activeSpriteTileOffsets, y
+
+                     ldy #$04           ; Set sprite pointer
+                     lda ($24), y
+                     ldy noofActiveSprites
+                     sta activeSpritePtrs, y
+
+                     lda tmpX
+                     sta activeSpriteOffsetX, y
+                     lda tmpY
+                     sta activeSpriteOffsetY, y
+
+                     inc noofActiveSprites
                      jmp npcChecked
 noNpc:
 npcChecked:
                      inx
                      cpx #$08
                      bne prepNextNpcLoop
-                     lda spritePrepMask
-                     sta $d015
                      rts
 prepNextNpcLoop
                      lda $24
                      adc #$05
                      sta $24
                      jmp npcPosLoop
-
-npcSpritesTempRoutine
-                     ldy #$04           ; Set sprite pointer
-                     lda ($24), y
-                     lda #$89
-                     sta $07fa, x
-
-                     ldy tmpX
-                     lda powersOf16, y
-                     sta tmpX
-                     ldy tmpY
-                     lda powersOf16, y
-                     sta tmpY
-
-                     lda tmpX
-                     adc #$18
-                     ldy powersOf2, x
-                     sta $d004, y
-                     lda tmpY
-                     adc #$32
-                     ldy powersOf2, x
-                     iny
-                     sta $d004, y
-
-                     lda npcSpriteMasks, x
-                     ora spritePrepMask
-                     sta spritePrepMask
-                     lda #$00
-                     sta $d029, x
-
-                     rts
 
 npcOffset
     .byte $00
@@ -872,9 +852,95 @@ noSegMod
                     ldx currentLine
                     jmp walkFOVLine
 
-;; ----------------------
-;; LEVEL DRAWING ROUTINES
-;; ----------------------
+;; +----------------------------------+
+;; |                                  |
+;; |    SPRITE POSITIONING ROUTINES   |
+;; |                                  |
+;; +----------------------------------+
+noofActiveSprites .byte $00
+
+activeSpriteTileOffsets .byte $00, $00, $00, $00, $00, $00
+activeSpritePtrs        .byte $00, $00, $00, $00, $00, $00
+activeSpriteOffsetX     .byte $00, $00, $00, $00, $00, $00
+activeSpriteOffsetY     .byte $00, $00, $00, $00, $00, $00
+
+updateSprites:
+                   lda noofActiveSprites
+
+                   lda #%00000111
+                   sta spritePrepMask
+                   ldx #$00
+                   cpx noofActiveSprites
+                   beq spritesUpdated
+spriteUpdateLoop:
+                   lda activeSpritePtrs, x      ; Set sprite pointer
+                   sta $07fa, x
+
+                   ldy activeSpriteOffsetX, x
+                   lda powersOf16, y
+                   sta tmpX
+                   ldy activeSpriteOffsetY, x
+                   lda powersOf16, y
+                   sta tmpY
+
+                   lda tmpX
+                   adc #$18                     ; Add border padding
+                   ldy powersOf2, x
+                   sta $d004, y
+                   lda tmpY
+                   adc #$32                     ; Add border padding
+                   ldy powersOf2, x
+                   iny
+                   sta $d004, y
+
+                   lda npcSpriteMasks, x        ; Activate sprite
+                   ora spritePrepMask
+                   sta spritePrepMask
+                   lda #$00
+                   sta $d029, x
+
+                   inx
+                   cpx noofActiveSprites
+                   bne spriteUpdateLoop
+spritesUpdated:
+                   rts
+
+npcSpritesTempRoutine
+                     ldy #$04           ; Set sprite pointer
+                     lda ($24), y
+                     lda #$89
+                     sta $07fa, x
+
+                     ldy tmpX
+                     lda powersOf16, y
+                     sta tmpX
+                     ldy tmpY
+                     lda powersOf16, y
+                     sta tmpY
+
+                     lda tmpX
+                     adc #$18
+                     ldy powersOf2, x
+                     sta $d004, y
+                     lda tmpY
+                     adc #$32
+                     ldy powersOf2, x
+                     iny
+                     sta $d004, y
+
+                     lda npcSpriteMasks, x
+                     ora spritePrepMask
+                     sta spritePrepMask
+                     lda #$00
+                     sta $d029, x
+
+                     rts
+
+;; +----------------------------------+
+;; |                                  |
+;; |    LEVEL DRAWING ROUTINES        |
+;; |                                  |
+;; +----------------------------------+
 
 drawlevel;
                    lda #$04 ; Screen offset
@@ -973,7 +1039,7 @@ dlOffsetCalculated  lda #$00                   ; Set counters to zero
 drawlevelloop
      inc iter
      ldx iter
-     
+
      jsr drawline
 
      jsr incleveloffset
@@ -983,6 +1049,9 @@ drawlevelloop
      ldx iter
      cpx #$0a
      bne drawlevelloop
+
+     lda spritePrepMask
+     sta $d015
 
      lda #$18               ; Output Player X Coordinate to status area
      sta $0749
@@ -1425,6 +1494,7 @@ playerY .byte $09
 
 screenDirty .byte $00
 
+
 ;; +----------------------------------+
 ;; |                                  |
 ;; |    CURRENT AREA DATA             |
@@ -1496,35 +1566,35 @@ npcs
      .byte %10000000
      .byte $0f, $08         ;; X and Y pos
      .byte $20              ;; Tile ID
-     .byte $8a              ;; Sprite pointer   $00 = off
+     .byte $89              ;; Sprite pointer   $00 = off
      .byte %10000000
      .byte $04, $04         ;; X and Y pos
      .byte $20              ;; Tile ID
-     .byte $8a              ;; Sprite pointer   $00 = off
+     .byte $89              ;; Sprite pointer   $00 = off
      .byte %10000000
      .byte $12, $09         ;; X and Y pos
      .byte $20              ;; Tile ID
-     .byte $8a              ;; Sprite pointer   $00 = off
+     .byte $89              ;; Sprite pointer   $00 = off
      .byte %10000000
      .byte $0e, $13         ;; X and Y pos
      .byte $20              ;; Tile ID
-     .byte $8a              ;; Sprite pointer   $00 = off
+     .byte $89              ;; Sprite pointer   $00 = off
      .byte %00000000
      .byte $0f, $08         ;; X and Y pos
      .byte $20              ;; Tile ID
-     .byte $8a              ;; Sprite pointer   $00 = off
+     .byte $89              ;; Sprite pointer   $00 = off
      .byte %00000000
      .byte $0f, $08         ;; X and Y pos
      .byte $20              ;; Tile ID
-     .byte $8a              ;; Sprite pointer   $00 = off
+     .byte $89              ;; Sprite pointer   $00 = off
      .byte %00000000
      .byte $0f, $08         ;; X and Y pos
      .byte $20              ;; Tile ID
-     .byte $8a              ;; Sprite pointer   $00 = off
+     .byte $89              ;; Sprite pointer   $00 = off
      .byte %00000000
      .byte $0f, $08         ;; X and Y pos
      .byte $20              ;; Tile ID
-     .byte $8a              ;; Sprite pointer   $00 = off
+     .byte $89              ;; Sprite pointer   $00 = off
 
 ;; +----------------------------------+
 ;; |                                  |
