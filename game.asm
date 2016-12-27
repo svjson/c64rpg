@@ -416,82 +416,75 @@ loadIndoorsTiles      lda #<indoorsTileset
                       sta tmpPtr1
                       lda #>indoorsTileset
                       sta tmpPtr1+1
-
-                      lda #<indoorsTilesetColorTable
-                      sta tmpPtr2
-                      lda #>indoorsTilesetColorTable
-                      sta tmpPtr2+1
-
-                      lda #<indoorsTilesetPropsTable
-                      sta tmpPtr3
-                      lda #>indoorsTilesetPropsTable+1
-                      sta tmpPtr3+1
                       jmp loadTileset
 
 loadOutdoorsTiles     lda #<outdoorsTileset
                       sta tmpPtr1
                       lda #>outdoorsTileset
                       sta tmpPtr1+1
-
-                      lda #<outdoorsTilesetColorTable
-                      sta tmpPtr2
-                      lda #>outdoorsTilesetColorTable
-                      sta tmpPtr2+1
-
-                      lda #<outdoorsTilesetPropsTable
-                      sta tmpPtr3
-                      lda #>outdoorsTilesetPropsTable+1
-                      sta tmpPtr3+1
                       jmp loadTileset
-
 
 loadDungeonTiles      lda #<dungeonTileset
                       sta tmpPtr1
                       lda #>dungeonTileset
                       sta tmpPtr1+1
-
-                      lda #<dungeonTilesetColorTable
-                      sta tmpPtr2
-                      lda #>dungeonTilesetColorTable
-                      sta tmpPtr2+1
-
-                      lda #<dungeonTilesetPropsTable
-                      sta tmpPtr3
-                      lda #>dungeonTilesetPropsTable+1
-                      sta tmpPtr3+1
                       jmp loadTileset
-
 
 loadTileset           lda #$01
                       lda tmpPtr1
                       sta $20
                       lda tmpPtr1+1
                       sta $21
-                      ;lda #<icons
-                      sta $22
-                      ;lda #>icons
-                      sta $23
+
+                      ldy #$00            ; Read number of rows from source mem area
+                      lda ($20), y
+                      sta memcpy_rows     ; Store number of rows to read in memcpy_rows. Needed for tileProps
+                      lda #$01
+                      sta inc20ModVal
+                      jsr inc20Ptr
                       lda #$04
-                      sta memcpy_rowSize
-                      jsr memcpy_readRowsByte
+                      sta inc20ModVal
 
-                      lda tmpPtr2
-                      sta $20
-                      lda tmpPtr2+1
-                      sta $21
-                      ;lda #<iconcols
-                      sta $22
-                      ;lda #>iconcols
-                      sta $23
-                      jsr memcpy
+                      ldx #$00
+copyTileCharLoop      ldy #$00
+                      lda ($20), y
+                      sta tileChar1, x
+                      iny
+                      lda ($20), y
+                      sta tileChar2, x
+                      iny
+                      lda ($20), y
+                      sta tileChar3, x
+                      iny
+                      lda ($20), y
+                      sta tileChar4, x
+                      jsr inc20Ptr
+                      inx
+                      cpx memcpy_rows
+                      bne copyTileCharLoop
 
-                      lda tmpPtr3
-                      sta $20
-                      lda tmpPtr3+1
-                      sta $21
-                      ;lda #<iconprops
+                      ldx #$00
+copyTileColorLoop     ldy #$00
+                      lda ($20), y
+                      sta tileCharColor1, x
+                      iny
+                      lda ($20), y
+                      sta tileCharColor2, x
+                      iny
+                      lda ($20), y
+                      sta tileCharColor3, x
+                      iny
+                      lda ($20), y
+                      sta tileCharColor4, x
+                      jsr inc20Ptr
+                      inx
+                      cpx memcpy_rows
+                      bne copyTileColorLoop
+
+copyTileProps
+                      lda #<tileProps
                       sta $22
-                      ;lda #>iconprops
+                      lda #>tileProps
                       sta $23
                       lda #$01
                       sta memcpy_rowSize
@@ -2253,8 +2246,6 @@ powersOf20    .byte $00 ;0
               .byte $c8 ;10
 
 tmpPtr1       .byte $00, $00
-tmpPtr2       .byte $00, $00
-tmpPtr3       .byte $00, $00
 
 num1          .byte $00                ; Math input #1
 num2          .byte $00                ; Math input #2
