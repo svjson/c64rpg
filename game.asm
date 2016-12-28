@@ -409,10 +409,21 @@ attackNPC:
                     lda #%00000000
                     ldy #$00
                     sta ($20), y
-                    ldx tmpX
-                    ldy tmpY
-                    jmp movePerformed
 
+                    lda #<text_YOU_KILLED_THE
+                    sta $20
+                    lda #>text_YOU_KILLED_THE
+                    sta $21
+                    jsr addToMessageBuffer
+
+                    lda #<npcname_GIANT_RAT
+                    sta $20
+                    lda #>text_YOU_KILLED_THE
+                    sta $21
+                    jsr addToMessageBuffer
+
+                    jsr addMessage
+                    jmp movePerformed
 
 ;; +----------------------------------+
 ;; |                                  |
@@ -1212,7 +1223,88 @@ resolveTile
 ;; |                                  |
 ;; +----------------------------------+
 
-messageLineLength = #$17
+messageLineLength = #$19
+
+messageRow1 = $0749
+messageRow2 = $0771
+messageRow3 = $0799
+
+.enc petscii	;define an ascii->petscii encoding
+.cdef " @", 32  ;characters
+.cdef "AZ", $01
+.cdef "az", $01
+
+text_YOU_KILLED_THE .byte 15
+                    .text "YOU KILLED THE "
+npcname_GIANT_RAT   .byte 09
+                    .text "GIANT RAT"
+
+messageBufferLength .byte $00
+messageBuffer .text "ABC                                                        "
+
+addToMessageBuffer:
+                    clc
+                    lda #<messageBuffer
+                    adc messageBufferLength
+                    sta $22
+                    lda #>messageBuffer
+                    sta $23
+                    ldy #$00
+                    lda ($20), y
+                    sta memcpy_rowSize
+                    lda #$01
+                    sta memcpy_rows
+                    inc $20
+                    jsr memcpy
+                    lda messageBufferLength
+                    clc
+                    adc memcpy_rowSize
+                    sta messageBufferLength
+                    rts
+
+addMessage:
+                    jsr rollMessages
+                    lda #$01
+                    sta memcpy_rows
+                    lda messageBufferLength
+                    sta memcpy_rowSize
+                    lda #<messageBuffer
+                    sta $20
+                    lda #>messageBuffer
+                    sta $21
+                    lda #<messageRow3
+                    sta $22
+                    lda #>messageRow3
+                    sta $23
+                    jsr memcpy
+                    lda #$00
+                    sta messageBufferLength
+                    rts
+
+rollMessages:
+                    lda messageLineLength
+                    sta memcpy_rowSize
+                    lda #$01
+                    sta memcpy_rows
+                    lda #<messageRow1
+                    sta $22
+                    lda #>messageRow1
+                    sta $23
+                    lda #<messageRow2
+                    sta $20
+                    lda #>messageRow2
+                    sta $21
+                    jsr memcpy
+                    lda #<messageRow2
+                    sta $22
+                    lda #>messageRow2
+                    sta $23
+                    lda #<messageRow3
+                    sta $20
+                    lda #>messageRow3
+                    sta $21
+                    jsr memcpy
+                    rts
 
 clearMessageRoll:
                     lda #>$0749
