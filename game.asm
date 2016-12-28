@@ -261,8 +261,6 @@ toggleFOV           lda areaMode
                     ldy playerY
                     jmp attemptMove
 
-movePerformed
-                    inc screenDirty
 endReadKey
                     rts
 
@@ -281,17 +279,26 @@ attemptMove:        ; In parameters: target x, y in X and Y registers
                     sta currentTileProps    ; Keep icon properties for later use
                     and #%10000000
                     cmp #%10000000
-                    beq performMove
-                    rts
+                    bne endAttemptMove
+
+                    jsr getNPCAt            ; Check for NPCs at target position
+                    cmp #$ff
+                    sec
+                    bne interactNPC
+
+                    jmp performMove
+endAttemptMove      rts
+
+interactNPC         jmp attackNPC
 
 performMove         ldx tmpX
                     ldy tmpY
                     stx playerX
                     sty playerY
-                    inc screenDirty
+
+movePerformed       inc screenDirty
 
                     jsr prepareScreenBuffer
-
                     clc
                     lda areaMode
                     and #%10000000
@@ -344,6 +351,55 @@ executeTrigger      inx
 
 nextTrigger         iny
                     jmp triggerIterLoop
+
+;; +----------------------------------+
+;; |                                  |
+;; |    NPC/MONSTER ROUTINES          |
+;; |                                  |
+;; +----------------------------------+
+
+getNPCAt:
+                    ldx #$00
+                    cpx npcTableSize
+                    beq endGetNPCAt
+                    lda #>npcTable
+                    sta $21
+                    lda #<npcTable
+                    sta $20
+                    lda npcTableRowSize
+                    sta inc20ModVal
+                    ldy #$00
+getNPCAtLoop        lda ($20), y
+                    and #%10000000
+                    cmp #%10000000
+                    bne getNPCNextIter
+                    iny
+                    lda ($20), y
+                    cmp tmpX
+                    bne getNPCNextIter
+                    iny
+                    lda ($20), y
+                    cmp tmpY
+                    bne getNPCNextIter
+                    txa
+                    rts
+getNPCNextIter      inx
+                    cpx npcTableSize
+                    beq endGetNPCAt
+                    ldy #$00
+                    jsr inc20Ptr
+                    jmp getNPCAtLoop
+endGetNPCAt         lda #$ff            ; Return $ff(= no match) in A
+                    rts
+
+attackNPC:
+                    lda #%00000000
+                    ldy #$00
+                    sta ($20), y
+                    ldx tmpX
+                    ldy tmpY
+                    jmp movePerformed
+
 
 ;; +----------------------------------+
 ;; |                                  |
