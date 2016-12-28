@@ -387,24 +387,27 @@ enterArea:
                     sta $22
                     lda #>currentArea
                     sta $23
-
                     jsr memcpy
-                    ldy #$00             ; Memcpy will have left the pointer in $20 right where we want it to start reading the trigger table
-loadAreaTriggerTable lda ($20), y
+
+loadAreaTriggerTable lda triggerTableRowSize
+                     sta memcpy_rowSize
+                     lda #<triggerTable
+                     sta $22
+                     lda #>triggerTable
+                     sta $23
+                     jsr memcpy_readRowsByte
+                     lda memcpy_rows
                      sta triggerTableSize   ; Trigger table size
 
-                     sta num1
-                     lda #$07
-                     sta num2
-                     jsr multiply
-                     sta num1
-                     inc num1
-                     iny
-copyTriggerTableLoop  lda ($20), y
-                      sta triggerTableSize, y
-                      iny
-                      cpy num1
-                      bne copyTriggerTableLoop
+loadAreaNpcTable      lda npcTableRowSize
+                      sta memcpy_rowSize
+                      lda #<npcTable
+                      sta $22
+                      lda #>npcTable
+                      sta $23
+                      jsr memcpy_readRowsByte
+                      lda memcpy_rows
+                      sta npcTableSize
 
 selectTileSet         lda tilesetMask
                       cmp #%00001110
@@ -631,13 +634,15 @@ psbOutTile           ldy crsr
                      rts
 
 applyNpcs:
-                     lda #>npcs
+                     lda #>npcTable
                      sta $25
-                     lda #<npcs
+                     lda #<npcTable
                      sta $24
 
                      ldx #$00
                      stx noofActiveSprites
+                     cpx npcTableSize
+                     beq npcPrepEnd
 npcPosLoop           ldy #$00
                      lda ($24), y          ; Load npc status flag
                      and #%10000000
@@ -696,9 +701,9 @@ npcPosLoop           ldy #$00
 noNpc:
 npcChecked:
                      inx
-                     cpx #$08
+                     cpx npcTableSize
                      bne prepNextNpcLoop
-                     rts
+npcPrepEnd           rts
 prepNextNpcLoop
                      lda $24
                      adc #$05
@@ -1456,6 +1461,7 @@ currentArea
      .byte $04, $05, $01, $02, $02, $04, $04, $04, $04, $0d, $04, $04, $04, $11, $04, $0e, $0c, $04, $05, $01, $04, $04, $04, $04, $0b, $0c, $0c, $0e, $04, $05, $04, $04, $04, $04, $05, $04, $05, $04, $04, $04
      .byte $04, $04, $04, $02, $02, $04, $04, $04, $04, $04, $04, $04, $05, $04, $04, $04, $0d, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04
 
+triggerTableRowSize = #$07
 triggerTableSize
      .byte $01
 triggerTable
@@ -1474,8 +1480,9 @@ triggerTable
      .byte $04
      .byte $06
 
-
-npcs
+npcTableRowSize = #$05
+npcTableSize .byte $00
+npcTable
      .byte %10000000
      .byte $0f, $08         ;; X and Y pos
      .byte $20              ;; Tile ID
@@ -1544,7 +1551,9 @@ outsidearea
      .byte $0d, $04, $04, $02, $02, $04, $04, $0d, $0e, $0c, $05, $05, $05, $04, $05, $0b, $0f, $10, $04, $04, $05, $04, $05, $04, $04, $0b, $0e, $0d, $05, $06, $04, $0f, $04, $05, $04, $05, $05, $04, $05, $04
      .byte $04, $05, $01, $02, $02, $04, $04, $04, $04, $0d, $04, $04, $04, $11, $04, $0e, $0c, $04, $05, $01, $04, $04, $04, $04, $0b, $0c, $0c, $0e, $04, $05, $04, $04, $04, $04, $05, $04, $05, $04, $04, $04
      .byte $04, $04, $04, $02, $02, $04, $04, $04, $04, $04, $04, $04, $05, $04, $04, $04, $0d, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04
-     .byte $01
+     ;---
+     .byte $01 ; - Number of triggers
+     ;---
      .byte $1d  ; Trigger X
      .byte $10  ; Trigger Y
      .byte $01  ; Trigger Type (01 = Teleport to new area)
@@ -1552,6 +1561,8 @@ outsidearea
      .byte >(houseArea)
      .byte $04
      .byte $06
+     ;---
+     .byte $00 ; NPC table size
 
 dungeoncellar
      .byte $21  ; width
@@ -1582,14 +1593,34 @@ dungeoncellar
      .byte $0d, $0d, $05, $01, $02, $03, $01, $01, $10, $01, $08, $09, $01, $0b, $0a, $0a, $0d, $0d, $0d, $0a, $0a, $0d, $0d, $0c, $02, $03, $03, $02, $10, $02, $03, $02, $06
      .byte $0d, $0d, $0d, $0a, $0a, $0a, $0c, $01, $10, $01, $03, $01, $02, $06, $0d, $0d, $0d, $0d, $0d, $0d, $0d, $0d, $0d, $0d, $0c, $01, $01, $01, $10, $01, $01, $0b, $0d
      .byte $0d, $0d, $0d, $0d, $0d, $0d, $0d, $0a, $0d, $0a, $0a, $0a, $0a, $0d, $0d, $0d, $0d, $0d, $0d, $0d, $0d, $0d, $0d, $0d, $0d, $0a, $0a, $0a, $0d, $0a, $0a, $0d, $0d
-     .byte $01
-     .byte $0e  ; Trigger 2 X
-     .byte $0a  ; Trigger 2 Y
+     ;---
+     .byte $01 ; - Number of triggers
+     ;---
+     .byte $0e  ; Trigger X
+     .byte $0a  ; Trigger Y
      .byte $01  ; trigger type
      .byte <(houseArea)
      .byte >(houseArea)
      .byte $05  ; Target X
      .byte $01  ; Target Y
+     ;---
+     .byte $04  ; Number of npcs
+     .byte %10000000
+     .byte $0f, $08         ;; X and Y pos
+     .byte $20              ;; Tile ID
+     .byte $89              ;; Sprite pointer   $00 = off
+     .byte %10000000
+     .byte $04, $04         ;; X and Y pos
+     .byte $20              ;; Tile ID
+     .byte $89              ;; Sprite pointer   $00 = off
+     .byte %10000000
+     .byte $12, $09         ;; X and Y pos
+     .byte $20              ;; Tile ID
+     .byte $89              ;; Sprite pointer   $00 = off
+     .byte %10000000
+     .byte $0e, $13         ;; X and Y pos
+     .byte $20              ;; Tile ID
+     .byte $89              ;; Sprite pointer   $00 = off
 
 houseArea
      .byte $08 ; Area width
@@ -1605,7 +1636,9 @@ houseArea
      .byte $00, $03, $01, $0e, $0d, $0f, $01, $04
      .byte $00, $03, $01, $01, $01, $01, $01, $04
      .byte $00, $05, $02, $02, $0b, $02, $02, $08
+     ;---
      .byte $02  ; Trigger table size
+     ;---
      .byte $04  ; Trigger 1 X
      .byte $07  ; Trigger 1 Y
      .byte $01  ; trigger type
@@ -1613,6 +1646,7 @@ houseArea
      .byte >(outsidearea)
      .byte $1d  ; Target X
      .byte $11  ; Target Y
+     ;---
      .byte $06  ; Trigger 2 X
      .byte $01  ; Trigger 2 Y
      .byte $01  ; trigger type
@@ -1620,6 +1654,8 @@ houseArea
      .byte >(dungeoncellar)
      .byte $0f  ; Target X
      .byte $0a  ; Target Y
+     ;---
+     .byte $00  ; NPC table size
 
 ;; +----------------------------------+
 ;; |                                  |
