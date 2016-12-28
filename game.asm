@@ -1170,9 +1170,11 @@ lineEnd .byte $14
 tmpX = $0802
 tmpY = $0803
 
-;; ----------------------
-;; AREA FUNCTIONS
-;; ----------------------
+;; +----------------------------------+
+;; |                                  |
+;; |    AREA FUNCTIONS                |
+;; |                                  |
+;; +----------------------------------+
 
 ; Input: coords in X and Y. Return tile byte as A
 getTileAt:
@@ -1202,40 +1204,6 @@ resolveTile
                     ldy tmpY
                     ldx tmpX
                     rts
-
-; Input: coords in X and Y. Return tile byte as A
-;getTileAt:
-                    ;jsr resolveTileRowPointer
-                    ldy tmpX
-                    lda ($24), y
-                    ldy tmpY
-                    ldx tmpX
-                    rts
-
-;; Input: coords in X and Y
-;; Return: Pointer to tile in level memory at $24, $25
-resolveTileRowPointer:
-                    stx tmpX
-                    sty tmpY
-
-                    ldy #$00
-                    lda #>currentArea
-                    sta $25
-                    lda #<currentArea
-                    sta $24
-
-getTileYPtrLoop     cpy tmpY
-                    bne contTilePtrLoop
-                    rts
-contTilePtrLoop     iny
-                    lda $24
-                    clc
-                    adc currentAreaWidth
-                    sta $24
-                    bcc getTileYPtrLoop
-                    inc $25
-                    jmp getTileYPtrLoop
-
 
 ;; ----------------------
 ;; STATUS AREA ROUTINES
