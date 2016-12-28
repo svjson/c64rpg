@@ -710,16 +710,7 @@ prepNextNpcLoop
                      sta $24
                      jmp npcPosLoop
 
-npcOffset
-    .byte $00
-spritePrepMask .byte %00000011
-
-npcSpriteMasks  .byte %00000100
-                .byte %00001000
-                .byte %00010000
-                .byte %00100000
-                .byte %01000000
-                .byte %10000000
+npcOffset .byte $00
 
 ;; +----------------------------------+
 ;; |                                  |
@@ -862,19 +853,38 @@ activeSpritePtrs        .byte $00, $00, $00, $00, $00, $00
 activeSpriteOffsetX     .byte $00, $00, $00, $00, $00, $00
 activeSpriteOffsetY     .byte $00, $00, $00, $00, $00, $00
 
+sprite9thBitMask .byte %00000000
+spritePrepMask  .byte %00000011
+npcSpriteMasks  .byte %00000100
+                .byte %00001000
+                .byte %00010000
+                .byte %00100000
+                .byte %01000000
+                .byte %10000000
+
+
 updateSprites:
                    lda noofActiveSprites
-
+                   lda #%00000000
+                   sta sprite9thBitMask
                    lda #%00000011
                    sta spritePrepMask
                    ldx #$00
                    cpx noofActiveSprites
                    beq spritesUpdated
+
 spriteUpdateLoop:
                    lda activeSpritePtrs, x      ; Set sprite pointer
                    sta $07fa, x
 
                    ldy activeSpriteOffsetX, x
+                   cpy #$0f
+                   bcc setSpriteCoords
+                   lda npcSpriteMasks, x
+                   ora sprite9thBitMask
+                   sta sprite9thBitMask
+
+setSpriteCoords    clc
                    lda powersOf16, y
                    sta tmpX
                    ldy activeSpriteOffsetY, x
@@ -885,6 +895,7 @@ spriteUpdateLoop:
                    adc #$18                     ; Add border padding
                    ldy powersOf2, x
                    sta $d004, y
+                   clc
                    lda tmpY
                    adc #$32                     ; Add border padding
                    ldy powersOf2, x
@@ -987,6 +998,8 @@ drawlevelloop
                     cmp iter
                     bne drawlevelloop
 
+                    lda sprite9thBitMask
+                    sta $d010
                     lda spritePrepMask
                     sta $d015
 
