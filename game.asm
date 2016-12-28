@@ -406,19 +406,27 @@ endGetNPCAt         lda #$ff            ; Return $ff(= no match) in A
                     rts
 
 attackNPC:
-                    lda #%00000000
+                    lda #%00000000      ; Set NPC to OFF
                     ldy #$00
                     sta ($20), y
 
-                    lda #<text_YOU_KILLED_THE
+                    ldy #$05            ; Store name pointer hi byte in tmpPtr1
+                    lda ($20), y
+                    sta tmpPtr1
+
+                    iny                 ; Store name pointer lo byte in tmpPtr1
+                    lda ($20), y
+                    sta tmpPtr1+1
+
+                    lda #<text_YOU_KILLED_THE   ; Add message to buffer
                     sta $20
                     lda #>text_YOU_KILLED_THE
                     sta $21
                     jsr addToMessageBuffer
 
-                    lda #<npcname_GIANT_RAT
+                    lda tmpPtr1
                     sta $20
-                    lda #>text_YOU_KILLED_THE
+                    lda tmpPtr1+1
                     sta $21
                     jsr addToMessageBuffer
 
@@ -786,7 +794,7 @@ npcChecked:
 npcPrepEnd           rts
 prepNextNpcLoop
                      lda $24
-                     adc #$05
+                     adc npcTableRowSize
                      sta $24
                      jmp npcPosLoop
 
@@ -1236,11 +1244,15 @@ messageRow3 = $0799
 
 text_YOU_KILLED_THE .byte 15
                     .text "YOU KILLED THE "
-npcname_GIANT_RAT   .byte 09
-                    .text "GIANT RAT"
+
+npcname_GIANT_RAT           .byte 09
+                            .text "GIANT RAT"
+npcname_SKELETON_WARRIOR    .byte 16
+                            .text "SKELETON WARRIOR"
 
 messageBufferLength .byte $00
 messageBuffer .text "ABC                                                        "
+linesWritten .byte $00
 
 addToMessageBuffer:
                     clc
@@ -1264,22 +1276,69 @@ addToMessageBuffer:
 
 addMessage:
                     jsr rollMessages
-                    lda #$01
-                    sta memcpy_rows
-                    lda messageBufferLength
-                    sta memcpy_rowSize
+                    lda #$00
+                    sta linesWritten
                     lda #<messageBuffer
                     sta $20
+                    sta $24
                     lda #>messageBuffer
                     sta $21
+                    sta $25
+
+outputLine          clc
+                    lda messageBufferLength
+                    sta memcpy_rowSize
+                    cmp messageLineLength
+                    bcc outputMessage
+                    ldy messageLineLength
+findPrevSpaceLoop   lda ($20), y
+                    cmp #$20
+                    beq spaceFound
+                    dey
+                    jmp findPrevSpaceLoop
+spaceFound
+                    sty memcpy_rowSize
+outputMessage
+                    lda #$01
+                    sta memcpy_rows
                     lda #<messageRow3
                     sta $22
                     lda #>messageRow3
                     sta $23
                     jsr memcpy
-                    lda #$00
+
+                    lda memcpy_rowSize
+                    cmp messageLineLength
+                    bcs lineWritten
+
+                    ldy memcpy_rowSize
+                    lda #$20
+clearRestLoop       sta messageRow3, y
+                    iny
+                    cpy messageLineLength
+                    bne clearRestLoop
+
+lineWritten         inc linesWritten
+                    sec
+                    lda messageBufferLength
+                    sbc memcpy_rowSize
                     sta messageBufferLength
-                    rts
+                    cmp #$00
+                    beq endAddMessage
+                    inc messageBufferLength
+
+                    jsr rollMessages
+                    dec memcpy_rowSize
+                    lda memcpy_rowSize
+                    sta inc20ModVal
+                    lda $24
+                    sta $20
+                    lda $25
+                    sta $21
+                    jsr inc20Ptr
+                    jmp outputLine
+
+endAddMessage       rts
 
 rollMessages:
                     lda messageLineLength
@@ -1665,41 +1724,49 @@ triggerTable
      .byte $04
      .byte $06
 
-npcTableRowSize = #$05
+npcTableRowSize = #$07
 npcTableSize .byte $00
 npcTable
      .byte %10000000
      .byte $0f, $08         ;; X and Y pos
      .byte $20              ;; Tile ID
      .byte $89              ;; Sprite pointer   $00 = off
+     .byte $00, $00         ;; Name pointer
      .byte %10000000
      .byte $04, $04         ;; X and Y pos
      .byte $20              ;; Tile ID
      .byte $89              ;; Sprite pointer   $00 = off
+     .byte $00, $00         ;; Name pointer
      .byte %10000000
      .byte $12, $09         ;; X and Y pos
      .byte $20              ;; Tile ID
      .byte $89              ;; Sprite pointer   $00 = off
+     .byte $00, $00         ;; Name pointer
      .byte %10000000
      .byte $0e, $13         ;; X and Y pos
      .byte $20              ;; Tile ID
      .byte $89              ;; Sprite pointer   $00 = off
+     .byte $00, $00         ;; Name pointer
      .byte %00000000
      .byte $0f, $08         ;; X and Y pos
      .byte $20              ;; Tile ID
      .byte $89              ;; Sprite pointer   $00 = off
+     .byte $00, $00         ;; Name pointer
      .byte %00000000
      .byte $0f, $08         ;; X and Y pos
      .byte $20              ;; Tile ID
      .byte $89              ;; Sprite pointer   $00 = off
+     .byte $00, $00         ;; Name pointer
      .byte %00000000
      .byte $0f, $08         ;; X and Y pos
      .byte $20              ;; Tile ID
      .byte $89              ;; Sprite pointer   $00 = off
+     .byte $00, $00         ;; Name pointer
      .byte %00000000
      .byte $0f, $08         ;; X and Y pos
      .byte $20              ;; Tile ID
      .byte $89              ;; Sprite pointer   $00 = off
+     .byte $00, $00         ;; Name pointer
 
 ;; +----------------------------------+
 ;; |                                  |
@@ -1789,23 +1856,32 @@ dungeoncellar
      .byte $05  ; Target X
      .byte $01  ; Target Y
      ;---
-     .byte $04  ; Number of npcs
+     .byte $05  ; Number of npcs
      .byte %10000000
      .byte $0f, $08         ;; X and Y pos
      .byte $20              ;; Tile ID
      .byte $89              ;; Sprite pointer   $00 = off
+     .word npcname_GIANT_RAT ;; Name pointer
      .byte %10000000
      .byte $04, $04         ;; X and Y pos
      .byte $20              ;; Tile ID
      .byte $89              ;; Sprite pointer   $00 = off
+     .word npcname_GIANT_RAT ;; Name pointer
      .byte %10000000
      .byte $12, $09         ;; X and Y pos
      .byte $20              ;; Tile ID
      .byte $89              ;; Sprite pointer   $00 = off
+     .word npcname_GIANT_RAT ;; Name pointer
      .byte %10000000
      .byte $0e, $13         ;; X and Y pos
      .byte $20              ;; Tile ID
      .byte $89              ;; Sprite pointer   $00 = off
+     .word npcname_GIANT_RAT ;; Name pointer
+     .byte %10000000
+     .byte 27, 8            ;; X and Y pos
+     .byte $21              ;; Tile ID
+     .byte $8b              ;; Sprite pointer   $00 = off
+     .word npcname_SKELETON_WARRIOR ;; Name pointer
 
 houseArea
      .byte $08 ; Area width
@@ -1914,6 +1990,7 @@ tileChar1
      .byte $00   ;;                 $1f
 ; Npc Tiles
      .byte $80   ;; Rat             $20
+     .byte $82   ;; Skeleton        $21
 
 tileChar2
      .byte $48   ;; Nothing/Black   $00
@@ -1950,6 +2027,7 @@ tileChar2
      .byte $00   ;;                 $1f
 ; Npc Tiles
      .byte $81   ;; Rat             $20
+     .byte $83   ;; Skeleton        $21
 
 tileChar3
      .byte $48 	 ;; Nothing/Black   $00
@@ -1986,6 +2064,8 @@ tileChar3
      .byte $00   ;;                 $1f
 ; Npc Tiles
      .byte $a0   ;; Rat             $20
+     .byte $a2   ;; Rat             $20
+     
 
 tileChar4
      .byte $48   ;; Nothing/Black   $00
@@ -2022,6 +2102,7 @@ tileChar4
      .byte $00   ;;                 $1f
 	; Npc Tiles
      .byte $a1   ;; Rat             $20
+     .byte $a3   ;; Skeleton        $21
 
 tileCharColor1
      .byte $00   ;; Nothing / Black
@@ -2057,6 +2138,7 @@ tileCharColor1
      .byte $00   ;;                 $1e
      .byte $00   ;;                 $1f
      .byte $1a   ;; Rat             $20
+     .byte $09   ;; Skeleton        $20
 
 tileCharColor2
      .byte $00   ;; Nothing / Black
@@ -2092,6 +2174,7 @@ tileCharColor2
      .byte $00   ;;                 $1e
      .byte $00   ;;                 $1f
      .byte $1a   ;; Rat             $20
+     .byte $01   ;; Skeleton        $20
 
 tileCharColor3
      .byte $00   ;; Nothing / Black
@@ -2127,6 +2210,7 @@ tileCharColor3
      .byte $00   ;;                 $1e
      .byte $00   ;;                 $1f
      .byte $1a   ;; Rat             $20
+     .byte $09   ;; Skeleton        $20
 
 tileCharColor4
      .byte $00   ;; Nothing / Black
@@ -2162,6 +2246,7 @@ tileCharColor4
      .byte $00   ;;                 $1e
      .byte $00   ;;                 $1f
      .byte $1a   ;; Rat             $20
+     .byte $01   ;; Skeleton        $20
 
 tileProps:
      .byte %00000000          ;; Nothing / Black. Not passable.    Block Sight
@@ -2196,6 +2281,7 @@ tileProps:
      .byte %00000000
      .byte %00000000
      .byte %00000000
+     .byte %11000000
      .byte %11000000
 
 ;; +----------------------------------+
