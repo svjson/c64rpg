@@ -224,6 +224,9 @@ readKey
                     cmp #$06
                     beq toggleFOV
 
+                    cmp #$21
+                    beq toggleDebugOrMessages
+
                     jmp endReadKey
 
 move_up             dey
@@ -261,6 +264,16 @@ toggleFOV           lda areaMode
                     ldy playerY
                     jmp attemptMove
 
+toggleDebugOrMessages
+                    lda debugMode
+                    ldx #$01
+                    cmp #$00
+                    beq setDebugMode
+                    ldx #$00
+setDebugMode        stx debugMode
+                    jsr clearMessageRoll
+                    jsr refreshMessageArea
+                    rts
 endReadKey
                     rts
 
@@ -1062,25 +1075,13 @@ drawlevelloop
                     lda #$00
                     sta $d020
 
-                    lda #$18               ; Output Player X Coordinate to status area
-                    sta $0749
-                    lda #<$074b
-                    sta print_target
-                    lda #>$074b
-                    sta print_target+1
-                    ldx playerX
-                    jsr print_decimal
+                    lda debugMode
+                    cmp #$01
+                    bne endDrawLevel
 
-                    lda #$19               ; Output Player Y Coordinate to status area
-                    sta $0771
-                    lda #<$0773
-                    sta print_target
-                    lda #>$0773
-                    sta print_target+1
-                    ldx playerY
-                    jsr print_decimal
+                    jsr refreshMessageArea
 
-                    rts
+endDrawLevel        rts
 
 incscreenoffset
                     lda $20
@@ -1205,11 +1206,66 @@ resolveTile
                     ldx tmpX
                     rts
 
-;; ----------------------
-;; STATUS AREA ROUTINES
-;; ----------------------
+;; +----------------------------------+
+;; |                                  |
+;; |    STATUS BAR ROUTINES           |
+;; |                                  |
+;; +----------------------------------+
 
-initStatusArea  lda #$00
+messageLineLength = #$17
+
+clearMessageRoll:
+                    lda #>$0749
+                    sta $21
+                    lda #<$0749
+                    sta $20
+                    lda #$28
+                    sta inc20ModVal
+
+                    ldx #$00
+clearMsgAreaRowLoop lda #$20
+                    ldy #$00
+clearMsgAreaColLoop sta ($20), y
+                    iny
+                    cpy messageLineLength
+                    bne clearMsgAreaColLoop
+                    inx
+                    cpx #$03
+                    beq endClearMessageRoll
+                    jsr inc20Ptr
+                    jmp clearMsgAreaRowLoop
+
+endClearMessageRoll
+                    rts
+
+refreshMessageArea:
+                lda debugMode
+                cmp #$01
+                beq outputPlayerCoordinates
+                rts
+
+outputPlayerCoordinates
+                    lda #$18               ; Output Player X Coordinate to status area
+                    sta $0749
+                    lda #<$074b
+                    sta print_target
+                    lda #>$074b
+                    sta print_target+1
+                    ldx playerX
+                    jsr print_decimal
+
+                    lda #$19               ; Output Player Y Coordinate to status area
+                    sta $0771
+                    lda #<$0773
+                    sta print_target
+                    lda #>$0773
+                    sta print_target+1
+                    ldx playerY
+                    jsr print_decimal
+                    rts
+
+initStatusArea:
+                lda #$00
                 sta $0720
                 lda #$1c
                 sta $0747
@@ -1448,7 +1504,7 @@ playerX .byte $09
 playerY .byte $09
 
 screenDirty .byte $00
-
+debugMode .byte $00
 
 ;; +----------------------------------+
 ;; |                                  |
