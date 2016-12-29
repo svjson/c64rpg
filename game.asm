@@ -286,6 +286,8 @@ currentTileProps    .byte %00000000
 ;; +----------------------------------+
 
 attemptMove:        ; In parameters: target x, y in X and Y registers
+                    stx tmpX                ; Preserve X
+                    sty tmpY                ; Preserve Y
                     jsr getTileAt           ; Look up tile at x, y
                     tax                     ; check if passable by comparing with tile table
                     lda tileProps, x
@@ -296,7 +298,6 @@ attemptMove:        ; In parameters: target x, y in X and Y registers
 
                     jsr getNPCAt            ; Check for NPCs at target position
                     cmp #$ff
-                    sec
                     bne interactNPC
 
                     jmp performMove
@@ -311,6 +312,7 @@ performMove         ldx tmpX
 
 movePerformed       inc screenDirty
 
+                    jsr npcMoves
                     jsr prepareScreenBuffer
                     clc
                     lda areaMode
@@ -371,6 +373,14 @@ nextTrigger         iny
 ;; |                                  |
 ;; +----------------------------------+
 
+dirX    .byte $00, $01, $01, $01, $00, $ff, $ff, $ff
+dirY    .byte $ff, $ff, $00, $01, $01, $01, $00, $fe
+
+iterX .byte $00
+iterY .byte $00
+
+attempts .byte $00
+
 getNPCAt:
                     ldx #$00
                     cpx npcTableSize
@@ -404,6 +414,90 @@ getNPCNextIter      inx
                     jmp getNPCAtLoop
 endGetNPCAt         lda #$ff            ; Return $ff(= no match) in A
                     rts
+
+prepareNPCIter:
+                    lda #>npcTable
+                    sta $21
+                    lda #<npcTable
+                    sta $20
+                    lda npcTableRowSize
+                    sta inc20ModVal
+                    ldy #$00
+                    rts
+
+npcMoves:
+                    ldx #$00
+                    cpx npcTableSize
+                    beq endNPCMoves
+                    jsr prepareNPCIter
+                    stx iterX
+                    stx attempts
+
+npcMoveLoop         lda ($20), y
+                    ldx iterX
+                    and #%10000000
+                    cmp #%10000000
+                    bne npcMoveNextIter
+                    iny
+                    lda ($20), y
+                    sta tmpX
+                    iny
+                    lda ($20), y
+                    sta tmpY
+
+                    jsr rndNum
+                    sta num1
+                    lda #32
+                    sta num2
+                    lda #$07
+                    sta num3
+                    jsr divide_rndup
+
+                    tax
+                    lda tmpX
+                    clc
+                    adc dirX, x
+                    sta tmpX
+                    clc
+                    lda tmpY
+                    adc dirY, x
+                    sta tmpY
+
+                    ldx tmpX
+                    ldy tmpY
+                    jsr getTileAt
+                    tay
+                    lda tileProps, y
+                    and #%10000000
+                    cmp #%10000000
+                    bne retryNPCMove
+
+                    lda tmpX
+                    ldy #$01
+                    sta ($20), y
+                    lda tmpY
+                    iny
+                    sta ($20), y
+                    jmp npcMoveNextIter
+
+endNPCMoves         rts
+
+retryNPCMove        lda #$05
+                    cmp attempts
+                    beq npcMoveNextIter
+                    ;inc attempts
+                    ldy #$00
+                    jmp npcMoveLoop
+
+npcMoveNextIter
+                    inc iterX
+                    ldx iterX
+                    cpx npcTableSize
+                    beq endNPCMoves
+                    ldy #$00
+                    sty attempts
+                    jsr inc20Ptr
+                    jmp npcMoveLoop
 
 attackNPC:
                     lda #%00000000      ; Set NPC to OFF
@@ -628,8 +722,9 @@ prepareScreenBuffer:
                    lda currentAreaWidth
                    sta drawBufferWidth
 
+                   clc
                    lda playerY                    ; set up area offset relative to player coordinates
-                   sbc #$05
+                   sbc #$04
                    sta currentAreaOffsetY
 
                    clc
@@ -1056,7 +1151,6 @@ drawlevel;
                    lda areaMode             ; Jump to FOV mode setup of offsets and level data if FOV is on
                    and #%10000000
                    bne prepareFOVMode
-                   sec                      ; Need to set carry after this operation. Not sure why
 
                    lda #>screenBuffer        ; Screen buffer offset in memory
                    sta $23
@@ -1198,9 +1292,6 @@ tmpY = $0803
 
 ; Input: coords in X and Y. Return tile byte as A
 getTileAt:
-                    stx tmpX
-                    sty tmpY
-
                     ldy #$00
                     lda #>currentArea
                     sta $25
@@ -1221,8 +1312,6 @@ getTileYOffLoop     cpy tmpY
 resolveTile
                     ldy tmpX
                     lda ($24), y
-                    ldy tmpY
-                    ldx tmpX
                     rts
 
 ;; +----------------------------------+
@@ -1249,6 +1338,8 @@ npcname_GIANT_RAT           .byte 09
                             .text "GIANT RAT"
 npcname_SKELETON_WARRIOR    .byte 16
                             .text "SKELETON WARRIOR"
+npcname_KOBOLD              .byte 6
+                            .text "KOBOLD"
 
 messageBufferLength .byte $00
 messageBuffer .text "ABC                                                        "
@@ -1856,7 +1947,7 @@ dungeoncellar
      .byte $05  ; Target X
      .byte $01  ; Target Y
      ;---
-     .byte $05  ; Number of npcs
+     .byte $08 ; Number of npcs
      .byte %10000000
      .byte $0f, $08         ;; X and Y pos
      .byte $20              ;; Tile ID
@@ -1882,6 +1973,21 @@ dungeoncellar
      .byte $21              ;; Tile ID
      .byte $8b              ;; Sprite pointer   $00 = off
      .word npcname_SKELETON_WARRIOR ;; Name pointer
+     .byte %10000000
+     .byte 30, 19           ;; X and Y pos
+     .byte $22              ;; Tile ID
+     .byte $8d              ;; Sprite pointer   $00 = off
+     .word npcname_KOBOLD   ;; Name pointer
+     .byte %10000000
+     .byte 30, 20           ;; X and Y pos
+     .byte $22              ;; Tile ID
+     .byte $8d              ;; Sprite pointer   $00 = off
+     .word npcname_KOBOLD   ;; Name pointer
+     .byte %10000000
+     .byte 25, 19           ;; X and Y pos
+     .byte $22              ;; Tile ID
+     .byte $8d              ;; Sprite pointer   $00 = off
+     .word npcname_KOBOLD   ;; Name pointer
 
 houseArea
      .byte $08 ; Area width
@@ -1991,6 +2097,7 @@ tileChar1
 ; Npc Tiles
      .byte $80   ;; Rat             $20
      .byte $82   ;; Skeleton        $21
+     .byte $84   ;; Kobold          $22
 
 tileChar2
      .byte $48   ;; Nothing/Black   $00
@@ -2028,10 +2135,11 @@ tileChar2
 ; Npc Tiles
      .byte $81   ;; Rat             $20
      .byte $83   ;; Skeleton        $21
+     .byte $85   ;; Kobold          $22
 
 tileChar3
      .byte $48 	 ;; Nothing/Black   $00
-	   .byte $20   ;; Rocks           $01
+	 .byte $20   ;; Rocks           $01
      .byte $46   ;; Water           $02
      .byte $45   ;; Road            $03
      .text " "   ;; Background      $04
@@ -2064,7 +2172,8 @@ tileChar3
      .byte $00   ;;                 $1f
 ; Npc Tiles
      .byte $a0   ;; Rat             $20
-     .byte $a2   ;; Rat             $20
+     .byte $a2   ;; Skeleton        $21
+     .byte $a4   ;; Kobold          $22
      
 
 tileChar4
@@ -2103,6 +2212,7 @@ tileChar4
 	; Npc Tiles
      .byte $a1   ;; Rat             $20
      .byte $a3   ;; Skeleton        $21
+     .byte $a5   ;; Kobold          $22
 
 tileCharColor1
      .byte $00   ;; Nothing / Black
@@ -2138,7 +2248,8 @@ tileCharColor1
      .byte $00   ;;                 $1e
      .byte $00   ;;                 $1f
      .byte $1a   ;; Rat             $20
-     .byte $09   ;; Skeleton        $20
+     .byte $09   ;; Skeleton        $21
+     .byte $0d   ;; Kobold          $22
 
 tileCharColor2
      .byte $00   ;; Nothing / Black
@@ -2174,7 +2285,8 @@ tileCharColor2
      .byte $00   ;;                 $1e
      .byte $00   ;;                 $1f
      .byte $1a   ;; Rat             $20
-     .byte $01   ;; Skeleton        $20
+     .byte $01   ;; Skeleton        $21
+     .byte $0d   ;; Kobold          $22
 
 tileCharColor3
      .byte $00   ;; Nothing / Black
@@ -2210,7 +2322,8 @@ tileCharColor3
      .byte $00   ;;                 $1e
      .byte $00   ;;                 $1f
      .byte $1a   ;; Rat             $20
-     .byte $09   ;; Skeleton        $20
+     .byte $09   ;; Skeleton        $21
+     .byte $0d   ;; Kobold          $22
 
 tileCharColor4
      .byte $00   ;; Nothing / Black
@@ -2247,6 +2360,7 @@ tileCharColor4
      .byte $00   ;;                 $1f
      .byte $1a   ;; Rat             $20
      .byte $01   ;; Skeleton        $20
+     .byte $0d   ;; Kobold          $22
 
 tileProps:
      .byte %00000000          ;; Nothing / Black. Not passable.    Block Sight
@@ -2281,6 +2395,7 @@ tileProps:
      .byte %00000000
      .byte %00000000
      .byte %00000000
+     .byte %11000000
      .byte %11000000
      .byte %11000000
 
@@ -2554,8 +2669,23 @@ powersOf20    .byte $00 ;0
 
 tmpPtr1       .byte $00, $00
 
+seed          .byte $01
+
+rndNum:
+        lda seed
+        beq doEor
+        asl
+        beq noEor ;if the input was $80, skip the EOR
+        bcc noEor
+doEor:  eor #$1d
+noEor:  sta seed
+        rts
+
+;--------
+
 num1          .byte $00                ; Math input #1
 num2          .byte $00                ; Math input #2
+num3          .byte $00                ; Math input #3
 
 ;--------
 
@@ -2569,6 +2699,23 @@ mply_loop        asl num1
 mply_enterLoop   lsr num2
                  bcs mply_doAdd
                  bne mply_loop
+                 rts
+; num1 - input number
+; num2 - divide by factor X ( X = 256 / num2 )
+; num3 - X
+divide_rndup:
+                 ldy #$00   ; loop counter
+                 lda num2   ; testreg
+divrndup_loop    cmp num1
+                 bcs divrndup_end
+                 clc
+                 adc num2
+                 iny
+                 cpy num3
+                 beq divrndup_end
+                 jmp divrndup_loop
+
+divrndup_end     tya
                  rts
 
 ;--------
