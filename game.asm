@@ -91,8 +91,8 @@
 
      jmp mainloop
 
-text_HP     .text "HP:  012/014"
-text_EXP    .text "EXP: 050/100"
+text_HPDUMMY     .text "HP:  012/014"
+text_EXPDUMMY    .text "EXP: 050/100"
 
 enterstatusirq   nop
                  nop
@@ -499,7 +499,87 @@ npcMoveNextIter
                     jsr inc20Ptr
                     jmp npcMoveLoop
 
+damageInflicted   .byte $00
+
+; $20-21 - Pointer to NPC being attacked
 attackNPC:
+                    jsr rndNum          ; Simple calc, arbitrary random damage (1-6)+2
+                    sta num1
+                    lda #64
+                    sta num2
+                    lda #04
+                    sta num3
+                    jsr divide_rndup
+
+                    clc
+                    adc #$02
+                    sta damageInflicted
+
+                    lda $20             ; Save NPC pointer
+                    sta tmpPtr2
+                    lda $21
+                    sta tmpPtr2+1
+
+                    ldy #$05            ; Store name pointer hi byte in tmpPtr1
+                    lda ($20), y
+                    sta tmpPtr1
+
+                    iny                 ; Store name pointer lo byte in tmpPtr1
+                    lda ($20), y
+                    sta tmpPtr1+1
+
+                    lda #<text_YOU_HIT_THE
+                    sta $20
+                    lda #>text_YOU_HIT_THE
+                    sta $21
+                    jsr addToMessageBuffer
+
+                    lda tmpPtr1
+                    sta $20
+                    lda tmpPtr1+1
+                    sta $21
+                    jsr addToMessageBuffer
+
+                    lda #$20
+                    jsr addCharToMessageBuffer
+
+                    lda #<text_FOR
+                    sta $20
+                    lda #>text_FOR
+                    sta $21
+                    jsr addToMessageBuffer
+
+                    ldx damageInflicted
+                    jsr byte_to_decimal
+                    jsr addToMessageBuffer
+
+                    lda #$20
+                    jsr addCharToMessageBuffer
+
+                    lda #<text_HP
+                    sta $20
+                    lda #>text_HP
+                    sta $21
+                    jsr addToMessageBuffer
+                    jsr addMessage
+
+                    lda tmpPtr2
+                    sta $20
+                    lda tmpPtr2+1
+                    sta $21
+
+                    clc
+                    ldy #$07
+                    lda damageInflicted
+                    cmp ($20), y
+                    bcs npcKilled
+
+                    lda ($20), y
+                    sbc damageInflicted
+                    sta ($20), y
+                    jmp movePerformed
+
+npcKilled:
                     lda #%00000000      ; Set NPC to OFF
                     ldy #$00
                     sta ($20), y
@@ -1320,7 +1400,7 @@ resolveTile
 ;; |                                  |
 ;; +----------------------------------+
 
-messageLineLength = #$19
+messageLineLength = #24
 
 messageRow1 = $0749
 messageRow2 = $0771
@@ -1333,6 +1413,12 @@ messageRow3 = $0799
 
 text_YOU_KILLED_THE .byte 15
                     .text "YOU KILLED THE "
+text_YOU_HIT_THE    .byte 12
+                    .text "YOU HIT THE "
+text_FOR            .byte 4
+                    .text "FOR "
+text_HP             .byte 2
+                    .text "HP"
 
 npcname_GIANT_RAT           .byte 09
                             .text "GIANT RAT"
@@ -1345,13 +1431,21 @@ messageBufferLength .byte $00
 messageBuffer .text "ABC                                                        "
 linesWritten .byte $00
 
+addCharToMessageBuffer:
+                    ldx messageBufferLength
+                    sta messageBuffer, x
+                    inc messageBufferLength
+                    rts
+
 addToMessageBuffer:
                     clc
                     lda #<messageBuffer
-                    adc messageBufferLength
                     sta $22
                     lda #>messageBuffer
                     sta $23
+                    lda messageBufferLength
+                    sta inc22ModVal
+                    jsr inc22Ptr
                     ldy #$00
                     lda ($20), y
                     sta memcpy_rowSize
@@ -1366,6 +1460,7 @@ addToMessageBuffer:
                     rts
 
 addMessage:
+                    lda messageBufferLength
                     jsr rollMessages
                     lda #$00
                     sta linesWritten
@@ -1377,9 +1472,9 @@ addMessage:
                     sta $25
 
 outputLine          clc
-                    lda messageBufferLength
-                    sta memcpy_rowSize
-                    cmp messageLineLength
+                    ldy messageBufferLength
+                    sty memcpy_rowSize
+                    cpy messageLineLength
                     bcc outputMessage
                     ldy messageLineLength
 findPrevSpaceLoop   lda ($20), y
@@ -1389,6 +1484,9 @@ findPrevSpaceLoop   lda ($20), y
                     jmp findPrevSpaceLoop
 spaceFound
                     sty memcpy_rowSize
+                    lda messageLineLength
+                    cmp memcpy_rowSize
+                    bcc findPrevSpaceLoop
 outputMessage
                     lda #$01
                     sta memcpy_rows
@@ -1398,30 +1496,31 @@ outputMessage
                     sta $23
                     jsr memcpy
 
-                    lda memcpy_rowSize
-                    cmp messageLineLength
-                    bcs lineWritten
-
                     ldy memcpy_rowSize
                     lda #$20
-clearRestLoop       sta messageRow3, y
+clearRestLoop       cpy messageLineLength
+                    beq lineWritten
+                    sta messageRow3, y
                     iny
-                    cpy messageLineLength
-                    bne clearRestLoop
+                    jmp clearRestLoop
 
 lineWritten         inc linesWritten
-                    sec
+                    clc
                     lda messageBufferLength
                     sbc memcpy_rowSize
                     sta messageBufferLength
+                    inc messageBufferLength
+                    lda messageBufferLength
                     cmp #$00
                     beq endAddMessage
-                    inc messageBufferLength
-
-                    jsr rollMessages
-                    dec memcpy_rowSize
                     lda memcpy_rowSize
+                    sta num1
+                    jsr rollMessages
+                    lda num1
+                    sta memcpy_rowSize
                     sta inc20ModVal
+                    inc inc20ModVal             ; Get rid of the space that broke the line
+                    dec messageBufferLength      ;
                     lda $24
                     sta $20
                     lda $25
@@ -1429,7 +1528,9 @@ lineWritten         inc linesWritten
                     jsr inc20Ptr
                     jmp outputLine
 
-endAddMessage       rts
+endAddMessage       lda #$00
+                    sta messageBufferLength
+                    rts
 
 rollMessages:
                     lda messageLineLength
@@ -1552,9 +1653,9 @@ colloop         sta $db20, x
                 sta $db6a
                 sta $db92
 
-                lda #<text_HP
+                lda #<text_HPDUMMY
                 sta print_source
-                lda #>text_HP
+                lda #>text_HPDUMMY
                 sta print_source+1
 
                 lda #<$0762
@@ -1565,9 +1666,9 @@ colloop         sta $db20, x
                 sta print_source_length
                 jsr print_string
 
-                lda #<text_EXP
+                lda #<text_EXPDUMMY
                 sta print_source
-                lda #>text_EXP
+                lda #>text_EXPDUMMY
                 sta print_source+1
 
                 lda #<$078a
@@ -1662,6 +1763,35 @@ clearscreen      lda #$20     ; #$20 is the spacebar Screen Code
                  inx
                  bne clearscreen
                  rts
+
+decBuffer       .byte $03
+decBufferValue  .byte $00, $00, $00
+
+byte_to_decimal:
+                     lda #<decBufferValue
+                     sta print_target
+                     sta $20
+                     lda #>decBufferValue
+                     sta print_target+1
+                     sta $21
+
+                     jsr print_decimal
+                     dec $20
+
+                     ldx #$03
+byte_to_decimal_loop lda decBufferValue
+                     cmp #$30
+                     bne byte_to_decimal_end
+                     lda decBufferValue+1
+                     sta decBufferValue
+                     lda decBufferValue+2
+                     sta decBufferValue+1
+                     dex
+                     cpx #$01
+                     bne byte_to_decimal_loop
+byte_to_decimal_end
+                     stx decBuffer
+                     rts
 
 print_decimal:
          stx div_lo
@@ -1815,7 +1945,7 @@ triggerTable
      .byte $04
      .byte $06
 
-npcTableRowSize = #$07
+npcTableRowSize = #$08
 npcTableSize .byte $00
 npcTable
      .byte %10000000
@@ -1823,41 +1953,49 @@ npcTable
      .byte $20              ;; Tile ID
      .byte $89              ;; Sprite pointer   $00 = off
      .byte $00, $00         ;; Name pointer
+     .byte $12              ;; HP
      .byte %10000000
      .byte $04, $04         ;; X and Y pos
      .byte $20              ;; Tile ID
      .byte $89              ;; Sprite pointer   $00 = off
      .byte $00, $00         ;; Name pointer
+     .byte $12              ;; HP
      .byte %10000000
      .byte $12, $09         ;; X and Y pos
      .byte $20              ;; Tile ID
      .byte $89              ;; Sprite pointer   $00 = off
      .byte $00, $00         ;; Name pointer
+     .byte $12              ;; HP
      .byte %10000000
      .byte $0e, $13         ;; X and Y pos
      .byte $20              ;; Tile ID
      .byte $89              ;; Sprite pointer   $00 = off
      .byte $00, $00         ;; Name pointer
+     .byte $12              ;; HP
      .byte %00000000
      .byte $0f, $08         ;; X and Y pos
      .byte $20              ;; Tile ID
      .byte $89              ;; Sprite pointer   $00 = off
      .byte $00, $00         ;; Name pointer
+     .byte $12              ;; HP
      .byte %00000000
      .byte $0f, $08         ;; X and Y pos
      .byte $20              ;; Tile ID
      .byte $89              ;; Sprite pointer   $00 = off
      .byte $00, $00         ;; Name pointer
+     .byte $12              ;; HP
      .byte %00000000
      .byte $0f, $08         ;; X and Y pos
      .byte $20              ;; Tile ID
      .byte $89              ;; Sprite pointer   $00 = off
      .byte $00, $00         ;; Name pointer
+     .byte $12              ;; HP
      .byte %00000000
      .byte $0f, $08         ;; X and Y pos
      .byte $20              ;; Tile ID
      .byte $89              ;; Sprite pointer   $00 = off
      .byte $00, $00         ;; Name pointer
+     .byte $12              ;; HP
 
 ;; +----------------------------------+
 ;; |                                  |
@@ -1953,41 +2091,49 @@ dungeoncellar
      .byte $20              ;; Tile ID
      .byte $89              ;; Sprite pointer   $00 = off
      .word npcname_GIANT_RAT ;; Name pointer
+     .byte $0c              ;; HP
      .byte %10000000
      .byte $04, $04         ;; X and Y pos
      .byte $20              ;; Tile ID
      .byte $89              ;; Sprite pointer   $00 = off
      .word npcname_GIANT_RAT ;; Name pointer
+     .byte $0c              ;; HP
      .byte %10000000
      .byte $12, $09         ;; X and Y pos
      .byte $20              ;; Tile ID
      .byte $89              ;; Sprite pointer   $00 = off
      .word npcname_GIANT_RAT ;; Name pointer
+     .byte $0c              ;; HP
      .byte %10000000
      .byte $0e, $13         ;; X and Y pos
      .byte $20              ;; Tile ID
      .byte $89              ;; Sprite pointer   $00 = off
      .word npcname_GIANT_RAT ;; Name pointer
+     .byte $0c              ;; HP
      .byte %10000000
      .byte 27, 8            ;; X and Y pos
      .byte $21              ;; Tile ID
      .byte $8b              ;; Sprite pointer   $00 = off
      .word npcname_SKELETON_WARRIOR ;; Name pointer
+     .byte $12              ;; HP
      .byte %10000000
      .byte 30, 19           ;; X and Y pos
      .byte $22              ;; Tile ID
      .byte $8d              ;; Sprite pointer   $00 = off
      .word npcname_KOBOLD   ;; Name pointer
+     .byte $06              ;; HP
      .byte %10000000
      .byte 30, 20           ;; X and Y pos
      .byte $22              ;; Tile ID
      .byte $8d              ;; Sprite pointer   $00 = off
      .word npcname_KOBOLD   ;; Name pointer
+     .byte $06              ;; HP
      .byte %10000000
      .byte 25, 19           ;; X and Y pos
      .byte $22              ;; Tile ID
      .byte $8d              ;; Sprite pointer   $00 = off
      .word npcname_KOBOLD   ;; Name pointer
+     .byte $06              ;; HP
 
 houseArea
      .byte $08 ; Area width
@@ -2668,6 +2814,7 @@ powersOf20    .byte $00 ;0
               .byte $c8 ;10
 
 tmpPtr1       .byte $00, $00
+tmpPtr2       .byte $00, $00
 
 seed          .byte $01
 
