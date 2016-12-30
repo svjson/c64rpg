@@ -374,7 +374,7 @@ nextTrigger         iny
 ;; +----------------------------------+
 
 dirX    .byte $00, $01, $01, $01, $00, $ff, $ff, $ff
-dirY    .byte $ff, $ff, $00, $01, $01, $01, $00, $fe
+dirY    .byte $ff, $ff, $00, $01, $01, $01, $00, $ff
 
 iterX .byte $00
 iterY .byte $00
@@ -385,13 +385,7 @@ getNPCAt:
                     ldx #$00
                     cpx npcTableSize
                     beq endGetNPCAt
-                    lda #>npcTable
-                    sta $21
-                    lda #<npcTable
-                    sta $20
-                    lda npcTableRowSize
-                    sta inc20ModVal
-                    ldy #$00
+                    jsr prepareNPCIter
 getNPCAtLoop        lda ($20), y
                     and #%10000000
                     cmp #%10000000
@@ -438,14 +432,87 @@ npcMoveLoop         lda ($20), y
                     and #%10000000
                     cmp #%10000000
                     bne npcMoveNextIter
-                    iny
+
+                    iny                        ; Load up NPC position into tmpX, tmpY
                     lda ($20), y
                     sta tmpX
                     iny
                     lda ($20), y
                     sta tmpY
 
-                    jsr rndNum
+                    ldy var_npcMode            ; Check NPC current mode
+                    lda ($20), y
+                    cmp #$01
+                    beq npcMoveRandomJmp
+                    cmp #$02
+                    beq npcFollowPlayer
+                    jmp npcMoveNextIter
+
+npcMoveRandomJmp    jmp npcMoveRandom
+
+npcMoveNextIter
+                    inc iterX
+                    ldx iterX
+                    cpx npcTableSize
+                    beq endNPCMoves
+                    ldy #$00
+                    sty attempts
+                    jsr inc20Ptr
+                    jmp npcMoveLoop
+
+endNPCMoves         rts
+
+testX .byte $00
+testY .byte $00
+
+npcFollowPlayer:
+                    lda tmpX
+                    sta testX
+                    lda tmpY
+                    sta testY
+npcFollowCheckHor   lda playerX
+                    cmp tmpX
+                    beq npcFollowCheckVert
+                    bcc npcFollowLeft
+npcFollowRight      inc testX
+                    jmp npcFollowCheckVert
+npcFollowLeft       dec testX
+npcFollowCheckVert  lda playerY
+                    cmp tmpY
+                    beq npcFollowTryMove
+                    bcs npcFollowDown
+npcFollowUp         dec testY
+                    jmp npcFollowTryMove
+npcFollowDown       inc testY
+npcFollowTryMove    lda testX
+                    sta tmpX
+                    lda testY
+                    sta tmpY
+
+                    cmp playerY
+                    bne npcFollowTryMove2
+
+                    lda testX
+                    cmp playerX
+                    bne npcFollowTryMove2
+                    jmp npcAttackPlayer
+
+npcFollowTryMove2   jsr getTileAt
+                    tay
+                    lda tileProps, y
+                    and #%10000000
+                    cmp #%10000000
+                    bne npcMoveNextIter
+                    jmp npcPerformMove
+
+retryNPCMove        lda #$05
+                    cmp attempts
+                    beq npcMoveNextIter
+                    ;inc attempts
+                    ldy #$00
+                    jmp npcMoveLoop
+
+npcMoveRandom:      jsr rndNum
                     sta num1
                     lda #32
                     sta num2
@@ -472,7 +539,7 @@ npcMoveLoop         lda ($20), y
                     cmp #%10000000
                     bne retryNPCMove
 
-                    lda tmpX
+npcPerformMove      lda tmpX
                     ldy #$01
                     sta ($20), y
                     lda tmpY
@@ -480,29 +547,58 @@ npcMoveLoop         lda ($20), y
                     sta ($20), y
                     jmp npcMoveNextIter
 
-endNPCMoves         rts
+npcAttackPlayer:
+                    lda $20             ; Save NPC pointer
+                    sta tmpPtr2
+                    lda $21
+                    sta tmpPtr2+1
 
-retryNPCMove        lda #$05
-                    cmp attempts
-                    beq npcMoveNextIter
-                    ;inc attempts
-                    ldy #$00
-                    jmp npcMoveLoop
+                    ldy #$05            ; Store name pointer hi byte in tmpPtr1
+                    lda ($20), y
+                    sta tmpPtr1
 
-npcMoveNextIter
-                    inc iterX
-                    ldx iterX
-                    cpx npcTableSize
-                    beq endNPCMoves
-                    ldy #$00
-                    sty attempts
-                    jsr inc20Ptr
-                    jmp npcMoveLoop
+                    iny                 ; Store name pointer lo byte in tmpPtr1
+                    lda ($20), y
+                    sta tmpPtr1+1
+
+                    lda #<text_THE
+                    sta $20
+                    lda #>text_THE
+                    sta $21
+                    jsr addToMessageBuffer
+
+                    lda tmpPtr1
+                    sta $20
+                    lda tmpPtr1+1
+                    sta $21
+                    jsr addToMessageBuffer
+
+                    lda #$20
+                    jsr addCharToMessageBuffer
+
+                    lda #<text_HITS_YOU
+                    sta $20
+                    lda #>text_HITS_YOU
+                    sta $21
+                    jsr addToMessageBuffer
+                    jsr addMessage
+
+                    lda tmpPtr1
+                    sta $20
+                    lda tmpPtr1+1
+                    sta $21
+
+                    jmp npcMoveNextIter
+
 
 damageInflicted   .byte $00
 
 ; $20-21 - Pointer to NPC being attacked
 attackNPC:
+                    ldy var_npcMode     ; NPC is being attacked, so now hostile
+                    lda #$02
+                    sta ($20), y
+
                     jsr rndNum          ; Simple calc, arbitrary random damage (1-6)+2
                     sta num1
                     lda #64
@@ -1415,8 +1511,12 @@ text_YOU_KILLED_THE .byte 15
                     .text "YOU KILLED THE "
 text_YOU_HIT_THE    .byte 12
                     .text "YOU HIT THE "
+text_HITS_YOU       .byte 9
+                    .text "HITS YOU "
 text_FOR            .byte 4
                     .text "FOR "
+text_THE            .byte 4
+                    .text "THE "
 text_HP             .byte 2
                     .text "HP"
 
@@ -1713,156 +1813,7 @@ animatechars
 
     rts
 
-;; ----------------------
-;; UTILITIES
-;; ----------------------
 
-print_source = $fb
-print_source_length = $02
-print_target = $fd
-
-
-print_string            ldy #$00
-print_string_loop       lda ($fb), y
-                        and #$3f
-                        sta ($fd), y
-                        iny
-                        cpy print_source_length
-                        bne print_string_loop
-                        rts
-
-leftshift_2d            ldy #$00                    ; Rotate Left/Bit-shift with wrap
-                        lda ($2d),y                 ; Operates on the value in zero-page adress $2d
-                        asl
-                        bcc leftshift_2d_nocarry
-                        ora #$01
-leftshift_2d_nocarry    sta ($2d),y
-                        rts
-
-
-rightshift_2d           ldy #$00                    ; Rotate Right/Bit-shift with wrap
-                        lda ($2d),y                 ; Operates on the value in zero-page adress $2d
-                        lsr
-                        bcc rightshift_2d_nocarry
-                        ora #$80
-rightshift_2d_nocarry
-                        sta ($2d),y
-                        rts
-
-
-clearscreen      lda #$20     ; #$20 is the spacebar Screen Code
-                 sta $0400,x
-                 sta $0500,x
-                 sta $0600,x
-                 sta $06e8,x
-                 lda #$00     ; set foreground to black in Color Ram
-                 sta $d800,x
-                 sta $d900,x
-                 sta $da00,x
-                 sta $dae8,x
-                 inx
-                 bne clearscreen
-                 rts
-
-decBuffer       .byte $03
-decBufferValue  .byte $00, $00, $00
-
-byte_to_decimal:
-                     lda #<decBufferValue
-                     sta print_target
-                     sta $20
-                     lda #>decBufferValue
-                     sta print_target+1
-                     sta $21
-
-                     jsr print_decimal
-                     dec $20
-
-                     ldx #$03
-byte_to_decimal_loop lda decBufferValue
-                     cmp #$30
-                     bne byte_to_decimal_end
-                     lda decBufferValue+1
-                     sta decBufferValue
-                     lda decBufferValue+2
-                     sta decBufferValue+1
-                     dex
-                     cpx #$01
-                     bne byte_to_decimal_loop
-byte_to_decimal_end
-                     stx decBuffer
-                     rts
-
-print_decimal:
-         stx div_lo
-         ldy #$00
-         sty div_hi
-
-         ldy #$02
-nextdec  jsr divideby10
-         ora #$30
-         sta (print_target),y
-         dey
-         bpl nextdec
-         rts
-
-div_lo = $0800
-div_hi = $0801
-
-divideby10:
-            ldx #$11
-            lda #$00
-            clc
-div10loop   rol
-            cmp #$0A
-            bcc div10skip
-            sbc #$0A
-div10skip   rol div_lo
-            rol div_hi
-            dex
-            bne div10loop
-            rts
-
-memcpy_rowSize .byte $00        ; Size of each row of mem to copy (in bytes)
-memcpy_rows    .byte $00        ; Number of rows to copy
-
-memcpy_readRowsByte:
-            ldy #$00            ; Read number of rows from source mem area
-            lda ($20), y
-            sta memcpy_rows
-            lda $20
-            clc                 ; Move ptr to data
-            adc #$01
-            sta $20
-            bcc memcpy
-            inc $21
-
-; Source ptr at $20-21, Target ptr at $22-23
-memcpy:
-               ldx #$00
-memcpyrowloop  cpx memcpy_rows
-               beq end_memcpy
-               ldy #$00
-memcpycolloop  lda ($20), y
-               sta ($22), y
-               iny
-               cpy memcpy_rowSize
-               bne memcpycolloop
-               inx
-incSrcPtr      lda $20
-               clc
-               adc memcpy_rowSize
-               sta $20
-               bcc incTrgPtr
-               inc $21
-incTrgPtr      lda $22
-               clc
-               adc memcpy_rowSize
-               sta $22
-               bcc memcpyrowloop
-               inc $23
-               jmp memcpyrowloop
-end_memcpy     rts
 
 ;; +----------------------------------+
 ;; |                                  |
@@ -1884,7 +1835,7 @@ debugMode .byte $00
 ;; |                                  |
 ;; +----------------------------------+
 
-*=$7000
+*=$C000
 currentAreaWidth .byte $28
 currentAreaHeight .byte $17
 
@@ -1945,7 +1896,32 @@ triggerTable
      .byte $04
      .byte $06
 
-npcTableRowSize = #$08
+; npcBits
+; 0
+; 1
+; 2
+; 3
+; 4
+; 5
+; 6 - Hostile On/Off
+; 7 - NPC On/Off
+
+var_npcModes     = #$00
+var_npcXPos      = #$01
+var_npcYPos      = #$02
+var_npcTileID    = #$03
+var_npcSpritePtr = #$04
+var_npcNamePtrLo = #$05
+var_npcNamePtrHi = #$06
+var_npcCurrentHP = #$07
+var_npcMode      = #$08 ; 00 = Wait
+                        ; 01 = Random Walk
+                        ; 02 = Follow/Attack Player
+                        ; 03 = Avoid Player
+var_npcTargetX   = #$09
+var_npcTargetY   = #$0a
+
+npcTableRowSize = #$0b
 npcTableSize .byte $00
 npcTable
      .byte %10000000
@@ -1954,48 +1930,71 @@ npcTable
      .byte $89              ;; Sprite pointer   $00 = off
      .byte $00, $00         ;; Name pointer
      .byte $12              ;; HP
+     .byte $01              ;; Mode
+     .byte 0, 0             ;; Target X and Y pos
+
      .byte %10000000
      .byte $04, $04         ;; X and Y pos
      .byte $20              ;; Tile ID
      .byte $89              ;; Sprite pointer   $00 = off
      .byte $00, $00         ;; Name pointer
      .byte $12              ;; HP
+     .byte $01              ;; Mode
+     .byte 0, 0             ;; Target X and Y pos
+
      .byte %10000000
      .byte $12, $09         ;; X and Y pos
      .byte $20              ;; Tile ID
      .byte $89              ;; Sprite pointer   $00 = off
      .byte $00, $00         ;; Name pointer
      .byte $12              ;; HP
+     .byte $00              ;; Mode
+     .byte 0, 0             ;; Target X and Y pos
+
      .byte %10000000
      .byte $0e, $13         ;; X and Y pos
      .byte $20              ;; Tile ID
      .byte $89              ;; Sprite pointer   $00 = off
      .byte $00, $00         ;; Name pointer
      .byte $12              ;; HP
+     .byte $00              ;; Mode
+     .byte 0, 0             ;; Target X and Y pos
+
      .byte %00000000
      .byte $0f, $08         ;; X and Y pos
      .byte $20              ;; Tile ID
      .byte $89              ;; Sprite pointer   $00 = off
      .byte $00, $00         ;; Name pointer
      .byte $12              ;; HP
+     .byte $00              ;; Mode
+     .byte 0, 0             ;; Target X and Y pos
+
      .byte %00000000
      .byte $0f, $08         ;; X and Y pos
      .byte $20              ;; Tile ID
      .byte $89              ;; Sprite pointer   $00 = off
      .byte $00, $00         ;; Name pointer
      .byte $12              ;; HP
+     .byte $00              ;; Mode
+     .byte 0, 0             ;; Target X and Y pos
+
      .byte %00000000
      .byte $0f, $08         ;; X and Y pos
      .byte $20              ;; Tile ID
      .byte $89              ;; Sprite pointer   $00 = off
      .byte $00, $00         ;; Name pointer
      .byte $12              ;; HP
+     .byte $00              ;; Mode
+     .byte 0, 0             ;; Target X and Y pos
+
      .byte %00000000
      .byte $0f, $08         ;; X and Y pos
      .byte $20              ;; Tile ID
      .byte $89              ;; Sprite pointer   $00 = off
      .byte $00, $00         ;; Name pointer
      .byte $12              ;; HP
+     .byte $00              ;; Mode
+     .byte 0, 0             ;; Target X and Y pos
 
 ;; +----------------------------------+
 ;; |                                  |
@@ -2086,54 +2085,78 @@ dungeoncellar
      .byte $01  ; Target Y
      ;---
      .byte $08 ; Number of npcs
+
      .byte %10000000
      .byte $0f, $08         ;; X and Y pos
      .byte $20              ;; Tile ID
      .byte $89              ;; Sprite pointer   $00 = off
      .word npcname_GIANT_RAT ;; Name pointer
      .byte $0c              ;; HP
+     .byte $01              ;; Mode
+     .byte 0, 0             ;; Target X and Y pos
+
      .byte %10000000
      .byte $04, $04         ;; X and Y pos
      .byte $20              ;; Tile ID
      .byte $89              ;; Sprite pointer   $00 = off
      .word npcname_GIANT_RAT ;; Name pointer
      .byte $0c              ;; HP
+     .byte $01              ;; Mode
+     .byte 0, 0             ;; Target X and Y pos
+
      .byte %10000000
      .byte $12, $09         ;; X and Y pos
      .byte $20              ;; Tile ID
      .byte $89              ;; Sprite pointer   $00 = off
      .word npcname_GIANT_RAT ;; Name pointer
      .byte $0c              ;; HP
+     .byte $01              ;; Mode
+     .byte 0, 0             ;; Target X and Y pos
+
      .byte %10000000
      .byte $0e, $13         ;; X and Y pos
      .byte $20              ;; Tile ID
      .byte $89              ;; Sprite pointer   $00 = off
      .word npcname_GIANT_RAT ;; Name pointer
      .byte $0c              ;; HP
+     .byte $01              ;; Mode
+     .byte 0, 0             ;; Target X and Y pos
+
      .byte %10000000
      .byte 27, 8            ;; X and Y pos
      .byte $21              ;; Tile ID
      .byte $8b              ;; Sprite pointer   $00 = off
      .word npcname_SKELETON_WARRIOR ;; Name pointer
      .byte $12              ;; HP
+     .byte $01              ;; Mode
+     .byte 0, 0             ;; Target X and Y pos
+
      .byte %10000000
      .byte 30, 19           ;; X and Y pos
      .byte $22              ;; Tile ID
      .byte $8d              ;; Sprite pointer   $00 = off
      .word npcname_KOBOLD   ;; Name pointer
      .byte $06              ;; HP
+     .byte $01              ;; Mode
+     .byte 0, 0             ;; Target X and Y pos
+
      .byte %10000000
      .byte 30, 20           ;; X and Y pos
      .byte $22              ;; Tile ID
      .byte $8d              ;; Sprite pointer   $00 = off
      .word npcname_KOBOLD   ;; Name pointer
      .byte $06              ;; HP
+     .byte $01              ;; Mode
+     .byte 0, 0             ;; Target X and Y pos
+
      .byte %10000000
      .byte 25, 19           ;; X and Y pos
      .byte $22              ;; Tile ID
      .byte $8d              ;; Sprite pointer   $00 = off
      .word npcname_KOBOLD   ;; Name pointer
      .byte $06              ;; HP
+     .byte $01              ;; Mode
+     .byte 0, 0             ;; Target X and Y pos
 
 houseArea
      .byte $08 ; Area width
@@ -2932,6 +2955,157 @@ dec22Ptr:           ; Helper subroutine for decreasing 16-bit buffer value at $2
                     rts
 dec22Carry          dec $23
                     rts
+
+;; ----------------------
+;; UTILITIES
+;; ----------------------
+
+print_source = $fb
+print_source_length = $02
+print_target = $fd
+
+
+print_string            ldy #$00
+print_string_loop       lda ($fb), y
+                        and #$3f
+                        sta ($fd), y
+                        iny
+                        cpy print_source_length
+                        bne print_string_loop
+                        rts
+
+leftshift_2d            ldy #$00                    ; Rotate Left/Bit-shift with wrap
+                        lda ($2d),y                 ; Operates on the value in zero-page adress $2d
+                        asl
+                        bcc leftshift_2d_nocarry
+                        ora #$01
+leftshift_2d_nocarry    sta ($2d),y
+                        rts
+
+
+rightshift_2d           ldy #$00                    ; Rotate Right/Bit-shift with wrap
+                        lda ($2d),y                 ; Operates on the value in zero-page adress $2d
+                        lsr
+                        bcc rightshift_2d_nocarry
+                        ora #$80
+rightshift_2d_nocarry
+                        sta ($2d),y
+                        rts
+
+
+clearscreen      lda #$20     ; #$20 is the spacebar Screen Code
+                 sta $0400,x
+                 sta $0500,x
+                 sta $0600,x
+                 sta $06e8,x
+                 lda #$00     ; set foreground to black in Color Ram
+                 sta $d800,x
+                 sta $d900,x
+                 sta $da00,x
+                 sta $dae8,x
+                 inx
+                 bne clearscreen
+                 rts
+
+decBuffer       .byte $03
+decBufferValue  .byte $00, $00, $00
+
+byte_to_decimal:
+                     lda #<decBufferValue
+                     sta print_target
+                     sta $20
+                     lda #>decBufferValue
+                     sta print_target+1
+                     sta $21
+
+                     jsr print_decimal
+                     dec $20
+
+                     ldx #$03
+byte_to_decimal_loop lda decBufferValue
+                     cmp #$30
+                     bne byte_to_decimal_end
+                     lda decBufferValue+1
+                     sta decBufferValue
+                     lda decBufferValue+2
+                     sta decBufferValue+1
+                     dex
+                     cpx #$01
+                     bne byte_to_decimal_loop
+byte_to_decimal_end
+                     stx decBuffer
+                     rts
+
+print_decimal:
+         stx div_lo
+         ldy #$00
+         sty div_hi
+
+         ldy #$02
+nextdec  jsr divideby10
+         ora #$30
+         sta (print_target),y
+         dey
+         bpl nextdec
+         rts
+
+div_lo = $0800
+div_hi = $0801
+
+divideby10:
+            ldx #$11
+            lda #$00
+            clc
+div10loop   rol
+            cmp #$0A
+            bcc div10skip
+            sbc #$0A
+div10skip   rol div_lo
+            rol div_hi
+            dex
+            bne div10loop
+            rts
+
+memcpy_rowSize .byte $00        ; Size of each row of mem to copy (in bytes)
+memcpy_rows    .byte $00        ; Number of rows to copy
+
+memcpy_readRowsByte:
+            ldy #$00            ; Read number of rows from source mem area
+            lda ($20), y
+            sta memcpy_rows
+            lda $20
+            clc                 ; Move ptr to data
+            adc #$01
+            sta $20
+            bcc memcpy
+            inc $21
+
+; Source ptr at $20-21, Target ptr at $22-23
+memcpy:
+               ldx #$00
+memcpyrowloop  cpx memcpy_rows
+               beq end_memcpy
+               ldy #$00
+memcpycolloop  lda ($20), y
+               sta ($22), y
+               iny
+               cpy memcpy_rowSize
+               bne memcpycolloop
+               inx
+incSrcPtr      lda $20
+               clc
+               adc memcpy_rowSize
+               sta $20
+               bcc incTrgPtr
+               inc $21
+incTrgPtr      lda $22
+               clc
+               adc memcpy_rowSize
+               sta $22
+               bcc memcpyrowloop
+               inc $23
+               jmp memcpyrowloop
+end_memcpy     rts
 
 ;; +----------------------------------+
 ;; |                                  |
