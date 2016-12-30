@@ -311,6 +311,8 @@ performMove         ldx tmpX
                     sty playerY
 
 movePerformed       inc screenDirty
+                    lda #$0a
+                    sta playerTurnCost
 
                     jsr npcMoves
                     jsr prepareScreenBuffer
@@ -387,6 +389,9 @@ dirXMod .byte $00
 dirYMod .byte $00
 dirMod  .byte $00
 
+npcAP   .byte $00
+npcCost .byte $00
+
 getNPCAt:
                     ldx #$00
                     cpx npcTableSize
@@ -432,15 +437,36 @@ npcMoves:
                     jsr prepareNPCIter
                     stx iterX
                     stx attempts
-
-npcMoveLoop         lda ($20), y
-                    ldx iterX
+npcTurnBegin
+                    lda ($20), y
                     and #%10000000
                     cmp #%10000000
                     bne npcMoveNextIter
 
-                    iny                        ; Load up NPC position into tmpX, tmpY
+                    clc
+                    ldy var_npcCurrentAP        ; Add cost of players last move to current NPCs AP
                     lda ($20), y
+                    adc playerTurnCost
+                    sta ($20), y
+                    sta npcAP
+
+                    ldy var_npcMoveCost         ; Check if current AP is enough for move
+                    lda ($20), y
+                    sta npcCost
+                    cmp npcAP
+                    bcs npcMoveNextIter
+
+                    clc                         ; Deduct NPCs cost of move from AP
+                    lda npcAP
+                    sbc npcCost
+                    ldy var_npcCurrentAP
+                    sta ($20), y
+
+                    ldy var_npcXPos
+npcMoveLoop
+                    ldx iterX
+
+                    lda ($20), y               ; Load up NPC position into tmpX, tmpY
                     sta tmpX
                     iny
                     lda ($20), y
@@ -464,7 +490,7 @@ npcMoveNextIter
                     ldy #$00
                     sty attempts
                     jsr inc20Ptr
-                    jmp npcMoveLoop
+                    jmp npcTurnBegin
 
 endNPCMoves         rts
 
@@ -581,7 +607,7 @@ retryNPCMove        lda #$05
                     cmp attempts
                     beq jmpNpcMoveNextIter
                     ;inc attempts
-                    ldy #$00
+                    ldy var_npcXPos
                     jmp npcMoveLoop
 
 npcMoveRandom:      jsr rndNum          ; Select a random dir
@@ -1889,6 +1915,7 @@ currentAreaOffsetY  .byte $04
 
 playerX .byte $09
 playerY .byte $09
+playerTurnCost .byte $00
 
 screenDirty .byte $00
 debugMode .byte $00
@@ -1984,8 +2011,10 @@ var_npcMode      = #$08 ; 00 = Wait
                         ; 03 = Avoid Player
 var_npcTargetX   = #$09
 var_npcTargetY   = #$0a
+var_npcMoveCost  = #$0b
+var_npcCurrentAP = #$0c
 
-npcTableRowSize = #$0b
+npcTableRowSize = #$0d
 npcTableSize .byte $00
 npcTable
      .byte %10000000
@@ -1996,6 +2025,8 @@ npcTable
      .byte $12              ;; HP
      .byte $01              ;; Mode
      .byte 0, 0             ;; Target X and Y pos
+     .byte 11               ;; Movement Cost
+     .byte 11               ;; AP
 
      .byte %10000000
      .byte $04, $04         ;; X and Y pos
@@ -2005,6 +2036,8 @@ npcTable
      .byte $12              ;; HP
      .byte $01              ;; Mode
      .byte 0, 0             ;; Target X and Y pos
+     .byte 11               ;; Movement Cost
+     .byte 11               ;; AP
 
      .byte %10000000
      .byte $12, $09         ;; X and Y pos
@@ -2014,6 +2047,8 @@ npcTable
      .byte $12              ;; HP
      .byte $00              ;; Mode
      .byte 0, 0             ;; Target X and Y pos
+     .byte 11               ;; Movement Cost
+     .byte 11               ;; AP
 
      .byte %10000000
      .byte $0e, $13         ;; X and Y pos
@@ -2023,6 +2058,8 @@ npcTable
      .byte $12              ;; HP
      .byte $00              ;; Mode
      .byte 0, 0             ;; Target X and Y pos
+     .byte 11               ;; Movement Cost
+     .byte 11               ;; AP
 
      .byte %00000000
      .byte $0f, $08         ;; X and Y pos
@@ -2032,6 +2069,8 @@ npcTable
      .byte $12              ;; HP
      .byte $00              ;; Mode
      .byte 0, 0             ;; Target X and Y pos
+     .byte 11               ;; Movement Cost
+     .byte 11               ;; AP
 
      .byte %00000000
      .byte $0f, $08         ;; X and Y pos
@@ -2041,6 +2080,8 @@ npcTable
      .byte $12              ;; HP
      .byte $00              ;; Mode
      .byte 0, 0             ;; Target X and Y pos
+     .byte 11               ;; Movement Cost
+     .byte 11               ;; AP
 
      .byte %00000000
      .byte $0f, $08         ;; X and Y pos
@@ -2050,6 +2091,8 @@ npcTable
      .byte $12              ;; HP
      .byte $00              ;; Mode
      .byte 0, 0             ;; Target X and Y pos
+     .byte 11               ;; Movement Cost
+     .byte 11               ;; AP
 
      .byte %00000000
      .byte $0f, $08         ;; X and Y pos
@@ -2059,6 +2102,8 @@ npcTable
      .byte $12              ;; HP
      .byte $00              ;; Mode
      .byte 0, 0             ;; Target X and Y pos
+     .byte 11               ;; Movement Cost
+     .byte 11               ;; AP
 
 ;; +----------------------------------+
 ;; |                                  |
@@ -2158,6 +2203,8 @@ dungeoncellar
      .byte $0c              ;; HP
      .byte $01              ;; Mode
      .byte 0, 0             ;; Target X and Y pos
+     .byte 15
+     .byte 0
 
      .byte %10000000
      .byte $04, $04         ;; X and Y pos
@@ -2167,6 +2214,8 @@ dungeoncellar
      .byte $0c              ;; HP
      .byte $01              ;; Mode
      .byte 0, 0             ;; Target X and Y pos
+     .byte 15
+     .byte 0
 
      .byte %10000000
      .byte $12, $09         ;; X and Y pos
@@ -2176,6 +2225,8 @@ dungeoncellar
      .byte $0c              ;; HP
      .byte $01              ;; Mode
      .byte 0, 0             ;; Target X and Y pos
+     .byte 15
+     .byte 0
 
      .byte %10000000
      .byte $0e, $13         ;; X and Y pos
@@ -2185,6 +2236,8 @@ dungeoncellar
      .byte $0c              ;; HP
      .byte $01              ;; Mode
      .byte 0, 0             ;; Target X and Y pos
+     .byte 15
+     .byte 0
 
      .byte %10000000
      .byte 27, 8            ;; X and Y pos
@@ -2194,6 +2247,8 @@ dungeoncellar
      .byte $12              ;; HP
      .byte $01              ;; Mode
      .byte 0, 0             ;; Target X and Y pos
+     .byte 20
+     .byte 0
 
      .byte %10000000
      .byte 30, 19           ;; X and Y pos
@@ -2203,6 +2258,8 @@ dungeoncellar
      .byte $06              ;; HP
      .byte $01              ;; Mode
      .byte 0, 0             ;; Target X and Y pos
+     .byte 11
+     .byte 0
 
      .byte %10000000
      .byte 30, 20           ;; X and Y pos
@@ -2212,6 +2269,8 @@ dungeoncellar
      .byte $06              ;; HP
      .byte $01              ;; Mode
      .byte 0, 0             ;; Target X and Y pos
+     .byte 11
+     .byte 0
 
      .byte %10000000
      .byte 25, 19           ;; X and Y pos
@@ -2221,6 +2280,8 @@ dungeoncellar
      .byte $06              ;; HP
      .byte $01              ;; Mode
      .byte 0, 0             ;; Target X and Y pos
+     .byte 11
+     .byte 0
 
 houseArea
      .byte $08 ; Area width
