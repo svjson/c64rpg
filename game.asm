@@ -373,13 +373,19 @@ nextTrigger         iny
 ;; |                                  |
 ;; +----------------------------------+
 
-dirX    .byte $00, $01, $01, $01, $00, $ff, $ff, $ff
-dirY    .byte $ff, $ff, $00, $01, $01, $01, $00, $ff
-
 iterX .byte $00
 iterY .byte $00
 
 attempts .byte $00
+
+testX .byte $00
+testY .byte $00
+
+dirX    .byte $00, $01, $01, $01, $00, $ff, $ff, $ff
+dirY    .byte $ff, $ff, $00, $01, $01, $01, $00, $ff
+dirXMod .byte $00
+dirYMod .byte $00
+dirMod  .byte $00
 
 getNPCAt:
                     ldx #$00
@@ -462,37 +468,58 @@ npcMoveNextIter
 
 endNPCMoves         rts
 
-testX .byte $00
-testY .byte $00
-
 npcFollowPlayer:
+                    lda #$00
+                    sta dirXMod
+                    sta dirYMod
+                    sta iter
                     lda tmpX
                     sta testX
                     lda tmpY
                     sta testY
-npcFollowCheckHor   lda playerX
+npcFollowCheckHor
+                    lda playerX
                     cmp tmpX
                     beq npcFollowCheckVert
                     bcc npcFollowLeft
-npcFollowRight      inc testX
+npcFollowRight      lda #$01
+                    sta dirXMod
                     jmp npcFollowCheckVert
-npcFollowLeft       dec testX
+npcFollowLeft       lda #$ff
+                    sta dirXMod
+
 npcFollowCheckVert  lda playerY
                     cmp tmpY
                     beq npcFollowTryMove
-                    bcs npcFollowDown
-npcFollowUp         dec testY
-                    jmp npcFollowTryMove
-npcFollowDown       inc testY
-npcFollowTryMove    lda testX
-                    sta tmpX
-                    lda testY
-                    sta tmpY
+                    bcc npcFollowUp
 
+npcFollowDown       lda #$01
+                    sta dirYMod
+                    jmp npcFollowTryMove
+
+npcFollowUp         lda #$ff
+                    sta dirYMod
+
+npcFollowTryMove    ldx #$00
+npcFollowFindDirMod lda dirXMod
+                    cmp dirX, x
+                    bne npcFollowFindDirNxt
+                    lda dirYMod
+                    cmp dirY, x
+                    bne npcFollowFindDirNxt
+                    jmp npcFollowTryDir
+npcFollowFindDirNxt inx
+                    jmp npcFollowFindDirMod
+npcFollowTryDir
+                    txa
+                    sta dirMod
+                    jsr applyDirMod
+
+                    lda tmpY
                     cmp playerY
                     bne npcFollowTryMove2
 
-                    lda testX
+                    lda tmpX
                     cmp playerX
                     bne npcFollowTryMove2
                     jmp npcAttackPlayer
@@ -502,25 +529,44 @@ npcFollowTryMove2   jsr getTileAt
                     lda tileProps, y
                     and #%10000000
                     cmp #%10000000
-                    bne npcMoveNextIter
+                    bne npcFollowNextAttempt
                     jmp npcPerformMove
 
-retryNPCMove        lda #$05
-                    cmp attempts
-                    beq npcMoveNextIter
-                    ;inc attempts
-                    ldy #$00
-                    jmp npcMoveLoop
+npcFollowNextAttempt inc iter
+                     lda #$03
+                     cmp iter
+                     beq jmpNpcMoveNextIter
+                     lda #$01
+                     cmp iter
+                     bne npcFollowLastAttempt
+                     dec dirMod
+                     jmp npcFollowRetry
+npcFollowLastAttempt inc dirMod
+                     inc dirMod
+npcFollowRetry       lda testX
+                     sta tmpX
+                     lda testY
+                     sta tmpY
+                     jsr wrapDirMod
+                     ldx dirMod
+                     jmp npcFollowTryDir
 
-npcMoveRandom:      jsr rndNum
-                    sta num1
-                    lda #32
-                    sta num2
-                    lda #$07
-                    sta num3
-                    jsr divide_rndup
+wrapDirMod           lda dirMod
+                     cmp #$08
+                     beq highWrap
+                     cmp #$ff
+                     beq lowWrap
+                     rts
+highWrap             lda #$00
+                     sta dirMod
+                     rts
+lowWrap              lda #$07
+                     sta dirMod
+                     rts
 
-                    tax
+jmpNpcMoveNextIter  jmp npcMoveNextIter
+
+applyDirMod         tax                 ; Apply dir to tmpX/tmpY
                     lda tmpX
                     clc
                     adc dirX, x
@@ -529,8 +575,26 @@ npcMoveRandom:      jsr rndNum
                     lda tmpY
                     adc dirY, x
                     sta tmpY
+                    rts
 
-                    ldx tmpX
+retryNPCMove        lda #$05
+                    cmp attempts
+                    beq jmpNpcMoveNextIter
+                    ;inc attempts
+                    ldy #$00
+                    jmp npcMoveLoop
+
+npcMoveRandom:      jsr rndNum          ; Select a random dir
+                    sta num1
+                    lda #32
+                    sta num2
+                    lda #$07
+                    sta num3
+                    jsr divide_rndup
+
+                    jsr applyDirMod
+
+                    ldx tmpX            ; Evaluate target position
                     ldy tmpY
                     jsr getTileAt
                     tay
