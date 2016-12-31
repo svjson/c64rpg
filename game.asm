@@ -1591,12 +1591,14 @@ resolveTile
 ;; |    STATUS BAR ROUTINES           |
 ;; |                                  |
 ;; +----------------------------------+
-
 messageLineLength = #24
 
 messageRow1 = $0749
 messageRow2 = $0771
 messageRow3 = $0799
+messageRowCol1 = $db49
+messageRowCol2 = $db71
+messageRowCol3 = $db99
 
 .enc petscii	;define an ascii->petscii encoding
 .cdef " @", 32  ;characters
@@ -1683,6 +1685,12 @@ spaceFound
                     lda messageLineLength
                     cmp memcpy_rowSize
                     bcc findPrevSpaceLoop
+                    ldy #$00
+                    lda #$00
+blackOutLoop        sta $db99, y
+                    iny
+                    cpy #$22
+                    bne blackOutLoop
 outputMessage
                     lda #$01
                     sta memcpy_rows
@@ -1726,7 +1734,56 @@ lineWritten         inc linesWritten
 
 endAddMessage       lda #$00
                     sta messageBufferLength
-                    rts
+                    sta rastCtr
+
+                    ldx #$00
+fadeInNewMsg        lda #$15     ; wait for raster retrace
+                    cmp $d012
+                    bne fadeInNewMsg
+                    inc rastCtr
+                    lda rastCtr
+                    cmp #$05
+                    bne fadeInNewMsg
+
+                    lda #$00
+                    sta fadeLine
+                    cpx #08
+                    beq msgRts
+                    lda #<messageRowCol3
+                    sta $20
+                    lda #>messageRowCol3
+                    sta $21
+                    ldy #$00
+                    lda fadeColors, x
+fadeInLine          sta ($20), y
+                    iny
+                    cpy messageLineLength
+                    bne fadeInLine
+
+                    inc fadeLine
+                    ldy fadeLine
+                    cpy linesWritten
+                    bne prepNextFadeLine
+nextIter            inx
+                    lda #$00
+                    sta fadeLine
+                    sta rastCtr
+                    jmp fadeInNewMsg
+
+msgRts              rts
+
+prepNextFadeLine
+                   lda $20
+                   clc
+                   sbc #$27
+                   sta $20
+                   ldy #$00
+                   lda fadeColors, x
+                   jmp fadeInLine
+
+rastCtr .byte $00
+fadeLine .byte $00
+fadeColors .byte $00, $0b, $06, $0c, $0e, $0f, $03, $01
 
 rollMessages:
                     lda messageLineLength
@@ -1742,6 +1799,27 @@ rollMessages:
                     lda #>messageRow2
                     sta $21
                     jsr memcpy
+
+                    lda #<messageRowCol1
+                    sta $22
+                    lda #>messageRowCol1
+                    sta $23
+                    lda #<messageRowCol2
+                    sta $20
+                    lda #>messageRowCol2
+                    sta $21
+                    jsr memcpy
+
+                    lda #<messageRowCol2
+                    sta $22
+                    lda #>messageRowCol2
+                    sta $23
+                    lda #<messageRowCol3
+                    sta $20
+                    lda #>messageRowCol3
+                    sta $21
+                    jsr memcpy
+
                     lda #<messageRow2
                     sta $22
                     lda #>messageRow2
@@ -1751,6 +1829,7 @@ rollMessages:
                     lda #>messageRow3
                     sta $21
                     jsr memcpy
+
                     rts
 
 clearMessageRoll:
@@ -1777,6 +1856,8 @@ clearMsgAreaColLoop sta ($20), y
 endClearMessageRoll
                     rts
 
+
+*=$1150
 refreshMessageArea:
                 lda debugMode
                 cmp #$01
@@ -1875,13 +1956,11 @@ colloop         sta $db20, x
                 sta print_source_length
                 jsr print_string
 
-
                 rts
 
 ;; ----------------------
 ;; ANIMATE LEVEL CHARS
 ;; ----------------------
-
 animatechars
     ; anim water
     lda #$3a
@@ -1909,13 +1988,12 @@ animatechars
 
     rts
 
-
-
 ;; +----------------------------------+
 ;; |                                  |
 ;; |    CURRENT AREA STATE            |
 ;; |                                  |
 ;; +----------------------------------+
+*=$C000
 currentAreaOffsetX  .byte $00
 currentAreaOffsetY  .byte $04
 
@@ -1932,7 +2010,6 @@ debugMode .byte $00
 ;; |                                  |
 ;; +----------------------------------+
 
-*=$C000
 currentAreaWidth .byte $28
 currentAreaHeight .byte $17
 
