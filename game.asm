@@ -487,9 +487,11 @@ npcMoveNextIter
                     ldx iterX
                     cpx npcTableSize
                     beq endNPCMoves
+                    lda npcTableRowSize
+                    sta inc20ModVal
+                    jsr inc20Ptr
                     ldy #$00
                     sty attempts
-                    jsr inc20Ptr
                     jmp npcTurnBegin
 
 endNPCMoves         rts
@@ -673,9 +675,9 @@ npcAttackPlayer:
                     jsr addToMessageBuffer
                     jsr addMessage
 
-                    lda tmpPtr1
+                    lda tmpPtr2
                     sta $20
-                    lda tmpPtr1+1
+                    lda tmpPtr2+1
                     sta $21
 
                     jmp npcMoveNextIter
@@ -1154,9 +1156,13 @@ npcChecked:
                      bne prepNextNpcLoop
 npcPrepEnd           rts
 prepNextNpcLoop
+                     clc
                      lda $24
                      adc npcTableRowSize
                      sta $24
+                     bcc nextNpcNoCarry
+                     inc $25
+nextNpcNoCarry
                      jmp npcPosLoop
 
 npcOffset .byte $00
@@ -2105,6 +2111,17 @@ npcTable
      .byte 11               ;; Movement Cost
      .byte 11               ;; AP
 
+     .byte %00000000
+     .byte $0f, $08         ;; X and Y pos
+     .byte $20              ;; Tile ID
+     .byte $89              ;; Sprite pointer   $00 = off
+     .byte $00, $00         ;; Name pointer
+     .byte $12              ;; HP
+     .byte $00              ;; Mode
+     .byte 0, 0             ;; Target X and Y pos
+     .byte 11               ;; Movement Cost
+     .byte 11               ;; AP
+
 ;; +----------------------------------+
 ;; |                                  |
 ;; |    TEST AREAS                    |
@@ -2193,7 +2210,7 @@ dungeoncellar
      .byte $05  ; Target X
      .byte $01  ; Target Y
      ;---
-     .byte $08 ; Number of npcs
+     .byte $09 ; Number of npcs
 
      .byte %10000000
      .byte $0f, $08         ;; X and Y pos
@@ -2282,6 +2299,18 @@ dungeoncellar
      .byte 0, 0             ;; Target X and Y pos
      .byte 11
      .byte 0
+
+     .byte %10000000
+     .byte $05, $08         ;; X and Y pos
+     .byte $21              ;; Tile ID
+     .byte $8b              ;; Sprite pointer   $00 = off
+     .word npcname_SKELETON_WARRIOR ;; Name pointer
+     .byte $12              ;; HP
+     .byte $01              ;; Mode
+     .byte 0, 0             ;; Target X and Y pos
+     .byte 20
+     .byte 0
+
 
 houseArea
      .byte $08 ; Area width
