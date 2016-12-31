@@ -631,6 +631,14 @@ npcMoveRandom:      jsr rndNum          ; Select a random dir
                     cmp #%10000000
                     bne retryNPCMove
 
+                    lda playerX
+                    cmp tmpX
+                    bne npcPerformMove
+
+                    lda playerY
+                    cmp tmpY
+                    beq retryNPCMove
+
 npcPerformMove      lda tmpX
                     ldy #$01
                     sta ($20), y
