@@ -1,6 +1,6 @@
 *=$0801
 .byte $0c, $08, $0a, $00, $9e, $20
-.byte $34, $30, $39, $36, $00, $00
+.byte $32, $30, $36, $34, $00, $00
 .byte $00
 
 ;; +----------------------------------+
@@ -8,7 +8,7 @@
 ;; |    INIT ROUTINE                  |
 ;; |                                  |
 ;; +----------------------------------+
-*=$1000
+*=$810
 
      jsr clearscreen
 
@@ -867,6 +867,16 @@ loadAreaNpcTable      lda npcTableRowSize
                       lda memcpy_rows
                       sta npcTableSize
 
+loadAreaItemTable     lda itemTableRowSize
+                      sta memcpy_rowSize
+                      lda #<itemTable
+                      sta $22
+                      lda #>itemTable
+                      sta $23
+                      jsr memcpy_readRowsByte
+                      lda memcpy_rows
+                      sta itemTableSize
+
 selectTileSet         lda tilesetMask
                       cmp #%00001110
                       beq loadOutdoorsTiles
@@ -1162,7 +1172,7 @@ npcChecked:
                      inx
                      cpx npcTableSize
                      bne prepNextNpcLoop
-npcPrepEnd           rts
+npcPrepEnd           jmp applyItems
 prepNextNpcLoop
                      clc
                      lda $24
@@ -1174,6 +1184,71 @@ nextNpcNoCarry
                      jmp npcPosLoop
 
 npcOffset .byte $00
+
+applyItems:
+                     lda #>itemTable
+                     sta $25
+                     lda #<itemTable
+                     sta $24
+
+                     ldx #$00
+                     cpx itemTableSize
+                     beq itemPrepEnd
+itemPosLoop          ldy #$00
+                     lda ($24), y          ; Load npc status flag
+                     and #%10000000
+                     cmp #%10000000
+                     bne noItem
+                     iny
+
+                     clc
+                     lda ($24), y
+                     adc #$01
+                     sbc currentAreaOffsetX
+                     cmp #$00
+                     bmi noItem
+                     clc
+                     cmp #$14
+                     bpl noItem
+                     sta npcOffset
+                     sta tmpX
+                     iny
+
+                     clc
+                     lda ($24), y
+                     adc #$01
+                     sbc currentAreaOffsetY
+                     cmp #$00
+                     bmi noItem
+                     clc
+                     cmp #$0a
+                     bpl noItem
+                     sta tmpY
+                     tay
+                     lda powersOf20, y
+                     adc npcOffset
+                     sta npcOffset
+
+                     ldy #$03
+                     lda ($24), y
+                     ldy npcOffset
+                     sta screenBuffer, y
+
+                     jmp itemChecked
+noItem:
+itemChecked:
+                     inx
+                     cpx itemTableSize
+                     bne prepNextItemLoop
+itemPrepEnd          rts
+prepNextItemLoop
+                     clc
+                     lda $24
+                     adc itemTableRowSize
+                     sta $24
+                     bcc nextItemNoCarry
+                     inc $25
+nextItemNoCarry      jmp itemPosLoop
 
 ;; +----------------------------------+
 ;; |                                  |
@@ -1599,6 +1674,7 @@ resolveTile
 ;; |    STATUS BAR ROUTINES           |
 ;; |                                  |
 ;; +----------------------------------+
+*=$0915
 messageLineLength = #24
 
 messageRow1 = $0749
@@ -1625,6 +1701,13 @@ text_THE            .byte 4
                     .text "THE "
 text_HP             .byte 2
                     .text "HP"
+text_PICKED_UP      .byte 10
+                    .text "PICKED UP "
+
+itemname_SCROLL             .byte 05
+                            .text "SCROLL"
+itemname_PIECES_OF_GOLD     .byte 14
+                            .text "PIECES OF GOLD"
 
 npcname_GIANT_RAT           .byte 09
                             .text "GIANT RAT"
@@ -1865,7 +1948,6 @@ endClearMessageRoll
                     rts
 
 
-*=$1150
 refreshMessageArea:
                 lda debugMode
                 cmp #$01
@@ -2207,6 +2289,33 @@ npcTable
      .byte 11               ;; Movement Cost
      .byte 11               ;; AP
 
+itemTableRowSize .byte $07
+itemTableSize .byte $00
+itemTable
+     .byte %10100000
+     .byte $0e, $05         ;; X and Y pos
+     .byte $30              ;; Tile ID
+     .word itemname_SCROLL  ;; Name pointer
+     .byte $00              ;; Actual Type
+
+     .byte %11000000
+     .byte $17, $13                ;; X and Y pos
+     .byte $32                     ;; Tile ID
+     .word itemname_PIECES_OF_GOLD ;; Name pointer
+     .byte $15                     ;; Amount
+
+     .byte %11000000
+     .byte $18, $13         ;; X and Y pos
+     .byte $32              ;; Tile ID
+     .word itemname_PIECES_OF_GOLD ;; Name pointer
+     .byte $09                     ;; Amount
+
+     .byte %11000000
+     .byte $18, $14         ;; X and Y pos
+     .byte $32              ;; Tile ID
+     .word itemname_PIECES_OF_GOLD ;; Name pointer
+     .byte $19                     ;; Amount
+
 ;; +----------------------------------+
 ;; |                                  |
 ;; |    TEST AREAS                    |
@@ -2254,6 +2363,8 @@ outsidearea
      .byte $06
      ;---
      .byte $00 ; NPC table size
+     ;---
+     .byte $00 ; Item table size
 
 dungeoncellar
      .byte $21  ; width
@@ -2395,7 +2506,32 @@ dungeoncellar
      .byte 0, 0             ;; Target X and Y pos
      .byte 20
      .byte 0
+     ;---
+     .byte $04 ; Item table size
 
+     .byte %10100000
+     .byte $0e, $05         ;; X and Y pos
+     .byte $30              ;; Tile ID
+     .word itemname_SCROLL  ;; Name pointer
+     .byte $00              ;; Actual Type
+
+     .byte %11000000
+     .byte $17, $13                ;; X and Y pos
+     .byte $32                     ;; Tile ID
+     .word itemname_PIECES_OF_GOLD ;; Name pointer
+     .byte $15                     ;; Amount
+
+     .byte %11000000
+     .byte $18, $13         ;; X and Y pos
+     .byte $32              ;; Tile ID
+     .word itemname_PIECES_OF_GOLD ;; Name pointer
+     .byte $09                     ;; Amount
+
+     .byte %11000000
+     .byte $18, $14         ;; X and Y pos;
+     .byte $32              ;; Tile ID
+     .word itemname_PIECES_OF_GOLD ;; Name pointer
+     .byte $19                     ;; Amount
 
 houseArea
      .byte $08 ; Area width
@@ -2506,6 +2642,24 @@ tileChar1
      .byte $80   ;; Rat             $20
      .byte $82   ;; Skeleton        $21
      .byte $84   ;; Kobold          $22
+     .byte $00   ;; Unused monster  $23
+     .byte $00   ;; Unused monster  $24
+     .byte $00   ;; Unused monster  $25
+     .byte $00   ;; Unused monster  $26
+     .byte $00   ;; Unused monster  $27
+     .byte $00   ;; Unused monster  $28
+     .byte $00   ;; Unused monster  $29
+     .byte $00   ;; Unused monster  $2a
+     .byte $00   ;; Unused monster  $2b
+     .byte $00   ;; Unused monster  $2c
+     .byte $00   ;; Unused monster  $2d
+     .byte $00   ;; Unused monster  $2e
+     .byte $00   ;; Unused monster  $2f
+     .byte $c0   ;; Scroll          $30
+     .byte $c2   ;; Potion          $31
+     .byte $c4   ;; Coins           $32
+     .byte $c6   ;; Sword           $33
+     .byte $c8   ;; Armor           $34
 
 tileChar2
      .byte $48   ;; Nothing/Black   $00
@@ -2544,6 +2698,25 @@ tileChar2
      .byte $81   ;; Rat             $20
      .byte $83   ;; Skeleton        $21
      .byte $85   ;; Kobold          $22
+     .byte $00   ;; Unused monster  $23
+     .byte $00   ;; Unused monster  $24
+     .byte $00   ;; Unused monster  $25
+     .byte $00   ;; Unused monster  $26
+     .byte $00   ;; Unused monster  $27
+     .byte $00   ;; Unused monster  $28
+     .byte $00   ;; Unused monster  $29
+     .byte $00   ;; Unused monster  $2a
+     .byte $00   ;; Unused monster  $2b
+     .byte $00   ;; Unused monster  $2c
+     .byte $00   ;; Unused monster  $2d
+     .byte $00   ;; Unused monster  $2e
+     .byte $00   ;; Unused monster  $2f
+; Items
+     .byte $c1   ;; Scroll          $30
+     .byte $c3   ;; Potion          $31
+     .byte $c5   ;; Coins           $32
+     .byte $c7   ;; Sword           $33
+     .byte $c9   ;; Armor           $34
 
 tileChar3
      .byte $48 	 ;; Nothing/Black   $00
@@ -2582,7 +2755,25 @@ tileChar3
      .byte $a0   ;; Rat             $20
      .byte $a2   ;; Skeleton        $21
      .byte $a4   ;; Kobold          $22
-     
+     .byte $00   ;; Unused monster  $23
+     .byte $00   ;; Unused monster  $24
+     .byte $00   ;; Unused monster  $25
+     .byte $00   ;; Unused monster  $26
+     .byte $00   ;; Unused monster  $27
+     .byte $00   ;; Unused monster  $28
+     .byte $00   ;; Unused monster  $29
+     .byte $00   ;; Unused monster  $2a
+     .byte $00   ;; Unused monster  $2b
+     .byte $00   ;; Unused monster  $2c
+     .byte $00   ;; Unused monster  $2d
+     .byte $00   ;; Unused monster  $2e
+     .byte $00   ;; Unused monster  $2f
+; Items
+     .byte $e0   ;; Scroll          $30
+     .byte $e2   ;; Potion          $31
+     .byte $e4   ;; Coins           $32
+     .byte $e6   ;; Sword           $33
+     .byte $e8   ;; Armor           $34
 
 tileChar4
      .byte $48   ;; Nothing/Black   $00
@@ -2621,6 +2812,25 @@ tileChar4
      .byte $a1   ;; Rat             $20
      .byte $a3   ;; Skeleton        $21
      .byte $a5   ;; Kobold          $22
+     .byte $00   ;; Unused monster  $23
+     .byte $00   ;; Unused monster  $24
+     .byte $00   ;; Unused monster  $25
+     .byte $00   ;; Unused monster  $26
+     .byte $00   ;; Unused monster  $27
+     .byte $00   ;; Unused monster  $28
+     .byte $00   ;; Unused monster  $29
+     .byte $00   ;; Unused monster  $2a
+     .byte $00   ;; Unused monster  $2b
+     .byte $00   ;; Unused monster  $2c
+     .byte $00   ;; Unused monster  $2d
+     .byte $00   ;; Unused monster  $2e
+     .byte $00   ;; Unused monster  $2f
+     ; Items
+     .byte $e1   ;; Scroll          $30
+     .byte $e3   ;; Potion          $31
+     .byte $e5   ;; Coins           $32
+     .byte $e7   ;; Sword           $33
+     .byte $e9   ;; Armor           $34
 
 tileCharColor1
      .byte $00   ;; Nothing / Black
@@ -2658,6 +2868,25 @@ tileCharColor1
      .byte $1a   ;; Rat             $20
      .byte $09   ;; Skeleton        $21
      .byte $0d   ;; Kobold          $22
+     .byte $00   ;; Unused monster  $23
+     .byte $00   ;; Unused monster  $24
+     .byte $00   ;; Unused monster  $25
+     .byte $00   ;; Unused monster  $26
+     .byte $00   ;; Unused monster  $27
+     .byte $00   ;; Unused monster  $28
+     .byte $00   ;; Unused monster  $29
+     .byte $00   ;; Unused monster  $2a
+     .byte $00   ;; Unused monster  $2b
+     .byte $00   ;; Unused monster  $2c
+     .byte $00   ;; Unused monster  $2d
+     .byte $00   ;; Unused monster  $2e
+     .byte $00   ;; Unused monster  $2f
+; Items
+     .byte $0f   ;; Scroll          $30
+     .byte $0e   ;; Potion          $31
+     .byte $0f   ;; Coins           $32
+     .byte $0a   ;; Sword           $33
+     .byte $0a   ;; Armor           $34
 
 tileCharColor2
      .byte $00   ;; Nothing / Black
@@ -2695,6 +2924,25 @@ tileCharColor2
      .byte $1a   ;; Rat             $20
      .byte $01   ;; Skeleton        $21
      .byte $0d   ;; Kobold          $22
+     .byte $00   ;; Unused monster  $23
+     .byte $00   ;; Unused monster  $24
+     .byte $00   ;; Unused monster  $25
+     .byte $00   ;; Unused monster  $26
+     .byte $00   ;; Unused monster  $27
+     .byte $00   ;; Unused monster  $28
+     .byte $00   ;; Unused monster  $29
+     .byte $00   ;; Unused monster  $2a
+     .byte $00   ;; Unused monster  $2b
+     .byte $00   ;; Unused monster  $2c
+     .byte $00   ;; Unused monster  $2d
+     .byte $00   ;; Unused monster  $2e
+     .byte $00   ;; Unused monster  $2f
+; Items
+     .byte $0f   ;; Scroll          $30
+     .byte $0e   ;; Potion          $31
+     .byte $0f   ;; Coins           $32
+     .byte $0a   ;; Sword           $33
+     .byte $0a   ;; Armor           $34
 
 tileCharColor3
      .byte $00   ;; Nothing / Black
@@ -2732,6 +2980,25 @@ tileCharColor3
      .byte $1a   ;; Rat             $20
      .byte $09   ;; Skeleton        $21
      .byte $0d   ;; Kobold          $22
+     .byte $00   ;; Unused monster  $23
+     .byte $00   ;; Unused monster  $24
+     .byte $00   ;; Unused monster  $25
+     .byte $00   ;; Unused monster  $26
+     .byte $00   ;; Unused monster  $27
+     .byte $00   ;; Unused monster  $28
+     .byte $00   ;; Unused monster  $29
+     .byte $00   ;; Unused monster  $2a
+     .byte $00   ;; Unused monster  $2b
+     .byte $00   ;; Unused monster  $2c
+     .byte $00   ;; Unused monster  $2d
+     .byte $00   ;; Unused monster  $2e
+     .byte $00   ;; Unused monster  $2f
+; Items
+     .byte $0f   ;; Scroll          $30
+     .byte $0e   ;; Potion          $31
+     .byte $0f   ;; Coins           $32
+     .byte $0a   ;; Sword           $33
+     .byte $0a   ;; Armor           $34
 
 tileCharColor4
      .byte $00   ;; Nothing / Black
@@ -2769,6 +3036,25 @@ tileCharColor4
      .byte $1a   ;; Rat             $20
      .byte $01   ;; Skeleton        $20
      .byte $0d   ;; Kobold          $22
+     .byte $00   ;; Unused monster  $23
+     .byte $00   ;; Unused monster  $24
+     .byte $00   ;; Unused monster  $25
+     .byte $00   ;; Unused monster  $26
+     .byte $00   ;; Unused monster  $27
+     .byte $00   ;; Unused monster  $28
+     .byte $00   ;; Unused monster  $29
+     .byte $00   ;; Unused monster  $2a
+     .byte $00   ;; Unused monster  $2b
+     .byte $00   ;; Unused monster  $2c
+     .byte $00   ;; Unused monster  $2d
+     .byte $00   ;; Unused monster  $2e
+     .byte $00   ;; Unused monster  $2f
+; Items
+     .byte $0f   ;; Scroll          $30
+     .byte $0e   ;; Potion          $31
+     .byte $0f   ;; Coins           $32
+     .byte $0a   ;; Sword           $33
+     .byte $0a   ;; Armor           $34
 
 tileProps:
      .byte %00000000          ;; Nothing / Black. Not passable.    Block Sight
@@ -2803,6 +3089,24 @@ tileProps:
      .byte %00000000
      .byte %00000000
      .byte %00000000
+     .byte %11000000
+     .byte %11000000
+     .byte %11000000
+     .byte %00000000
+     .byte %00000000
+     .byte %00000000
+     .byte %00000000
+     .byte %00000000
+     .byte %00000000
+     .byte %00000000
+     .byte %00000000
+     .byte %00000000
+     .byte %00000000
+     .byte %00000000
+     .byte %00000000
+     .byte %00000000
+     .byte %11000000
+     .byte %11000000
      .byte %11000000
      .byte %11000000
      .byte %11000000
