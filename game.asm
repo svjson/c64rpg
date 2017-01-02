@@ -1168,7 +1168,7 @@ copyToScreenBufferLoop
                      ldx iter
                      cpx #$0a
                      bne copyToScreenBufferLoop
-                     jmp applyNpcs
+                     jmp applyItems
                      rts
 
 copyLineToScreenBuffer
@@ -1198,6 +1198,71 @@ psbOutTile           ldy crsr
                      cpy lineEnd
                      bne copyLineLoop
                      rts
+
+applyItems:
+                     lda #>itemTable
+                     sta $25
+                     lda #<itemTable
+                     sta $24
+
+                     ldx #$00
+                     cpx itemTableSize
+                     beq itemPrepEnd
+itemPosLoop          ldy #$00
+                     lda ($24), y          ; Load npc status flag
+                     and #%10000000
+                     cmp #%10000000
+                     bne noItem
+                     iny
+
+                     clc
+                     lda ($24), y
+                     adc #$01
+                     sbc currentAreaOffsetX
+                     cmp #$00
+                     bmi noItem
+                     clc
+                     cmp #$14
+                     bpl noItem
+                     sta npcOffset
+                     sta tmpX
+                     iny
+
+                     clc
+                     lda ($24), y
+                     adc #$01
+                     sbc currentAreaOffsetY
+                     cmp #$00
+                     bmi noItem
+                     clc
+                     cmp #$0a
+                     bpl noItem
+                     sta tmpY
+                     tay
+                     lda powersOf20, y
+                     adc npcOffset
+                     sta npcOffset
+
+                     ldy #$03
+                     lda ($24), y
+                     ldy npcOffset
+                     sta screenBuffer, y
+
+                     jmp itemChecked
+noItem:
+itemChecked:
+                     inx
+                     cpx itemTableSize
+                     bne prepNextItemLoop
+itemPrepEnd          jmp applyNpcs
+prepNextItemLoop
+                     clc
+                     lda $24
+                     adc itemTableRowSize
+                     sta $24
+                     bcc nextItemNoCarry
+                     inc $25
+nextItemNoCarry      jmp itemPosLoop
 
 applyNpcs:
                      lda #>npcTable
@@ -1269,7 +1334,7 @@ npcChecked:
                      inx
                      cpx npcTableSize
                      bne prepNextNpcLoop
-npcPrepEnd           jmp applyItems
+npcPrepEnd           rts
 prepNextNpcLoop
                      clc
                      lda $24
@@ -1281,71 +1346,6 @@ nextNpcNoCarry
                      jmp npcPosLoop
 
 npcOffset .byte $00
-
-applyItems:
-                     lda #>itemTable
-                     sta $25
-                     lda #<itemTable
-                     sta $24
-
-                     ldx #$00
-                     cpx itemTableSize
-                     beq itemPrepEnd
-itemPosLoop          ldy #$00
-                     lda ($24), y          ; Load npc status flag
-                     and #%10000000
-                     cmp #%10000000
-                     bne noItem
-                     iny
-
-                     clc
-                     lda ($24), y
-                     adc #$01
-                     sbc currentAreaOffsetX
-                     cmp #$00
-                     bmi noItem
-                     clc
-                     cmp #$14
-                     bpl noItem
-                     sta npcOffset
-                     sta tmpX
-                     iny
-
-                     clc
-                     lda ($24), y
-                     adc #$01
-                     sbc currentAreaOffsetY
-                     cmp #$00
-                     bmi noItem
-                     clc
-                     cmp #$0a
-                     bpl noItem
-                     sta tmpY
-                     tay
-                     lda powersOf20, y
-                     adc npcOffset
-                     sta npcOffset
-
-                     ldy #$03
-                     lda ($24), y
-                     ldy npcOffset
-                     sta screenBuffer, y
-
-                     jmp itemChecked
-noItem:
-itemChecked:
-                     inx
-                     cpx itemTableSize
-                     bne prepNextItemLoop
-itemPrepEnd          rts
-prepNextItemLoop
-                     clc
-                     lda $24
-                     adc itemTableRowSize
-                     sta $24
-                     bcc nextItemNoCarry
-                     inc $25
-nextItemNoCarry      jmp itemPosLoop
 
 ;; +----------------------------------+
 ;; |                                  |
@@ -1807,6 +1807,10 @@ itemname_SCROLL             .byte 06
                             .text "SCROLL"
 itemname_PIECES_OF_GOLD     .byte 14
                             .text "PIECES OF GOLD"
+itemname_POTION             .byte 06
+                            .text "POTION"
+itemname_LEATHER_ARMOR       .byte 13
+                            .text "LEATHER ARMOR"
 
 npcname_GIANT_RAT           .byte 09
                             .text "GIANT RAT"
@@ -2426,6 +2430,19 @@ itemTable
      .word itemname_PIECES_OF_GOLD ;; Name pointer
      .byte $19                     ;; Amount
 
+     .byte %11000000
+     .byte $18, $14         ;; X and Y pos
+     .byte $32              ;; Tile ID
+     .word itemname_PIECES_OF_GOLD ;; Name pointer
+     .byte $19                     ;; Amount
+
+     .byte %11000000
+     .byte $18, $14         ;; X and Y pos
+     .byte $32              ;; Tile ID
+     .word itemname_PIECES_OF_GOLD ;; Name pointer
+     .byte $19                     ;; Amount
+
+
 ;; +----------------------------------+
 ;; |                                  |
 ;; |    TEST AREAS                    |
@@ -2617,7 +2634,7 @@ dungeoncellar
      .byte 20
      .byte 0
      ;---
-     .byte $04 ; Item table size
+     .byte $06 ; Item table size
 
      .byte %10100000
      .byte $0e, $05         ;; X and Y pos
@@ -2642,6 +2659,19 @@ dungeoncellar
      .byte $32              ;; Tile ID
      .word itemname_PIECES_OF_GOLD ;; Name pointer
      .byte $19                     ;; Amount
+
+     .byte %10100000
+     .byte $07, $15         ;; X and Y pos;
+     .byte $31              ;; Tile ID
+     .word itemname_POTION  ;; Name pointer
+     .byte $01              ;; Actual Type
+
+     .byte %10000000
+     .byte $04, $04         ;; X and Y pos;
+     .byte $34              ;; Tile ID
+     .word itemname_LEATHER_ARMOR;; Name pointer
+     .byte $00              ;; Actual Type
+
 
 houseArea
      .byte $08 ; Area width
