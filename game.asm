@@ -189,6 +189,8 @@ key_UPRIGHT = #$05    ;; E
 key_DOWNLEFT = #$1a   ;; Z
 key_DOWNRIGHT = #$03  ;; C
 
+key_PICKUP = #$07     ;; G
+
 readKey
                     ;jsr clearscreen
                     jsr $ffe4
@@ -220,6 +222,9 @@ readKey
 
                     cmp key_DOWNRIGHT
                     beq move_downright
+
+                    cmp key_PICKUP
+                    beq move_pickup
 
                     cmp #$06
                     beq toggleFOV
@@ -257,10 +262,12 @@ move_downright      inx
                     iny
                     jmp attemptMove
 
+move_pickup         jmp attemptPickUp
+
 toggleFOV           lda areaMode
                     eor %10000000
                     sta areaMode
-                    ldx playerX
+dummyMove           ldx playerX
                     ldy playerY
                     jmp attemptMove
 
@@ -278,6 +285,52 @@ endReadKey
                     rts
 
 currentTileProps    .byte %00000000
+
+
+attemptPickUp:
+                    lda playerX
+                    sta tmpX
+                    lda playerY
+                    sta tmpY
+                    jsr getItemAt
+                    cmp #$ff
+                    beq nothingToPickUp
+
+                    ldy #$00
+                    lda ($20), y
+                    and #%01111111
+                    sta ($20), y
+
+                    ldy var_itemNamePtrLo
+                    lda ($20), y
+                    sta tmpPtr1
+                    iny
+                    lda ($20), y
+                    sta tmpPtr1+1
+
+                    lda #<text_PICKED_UP
+                    sta $20
+                    lda #>text_PICKED_UP
+                    sta $21
+                    jsr addToMessageBuffer
+
+                    lda tmpPtr1
+                    sta $20
+                    lda tmpPtr1+1
+                    sta $21
+                    jsr addToMessageBuffer
+                    jsr addMessage
+
+                    jmp dummyMove
+
+nothingToPickUp     lda #<text_NOTHING_TO_PICK_UP
+                    sta $20
+                    lda #>text_NOTHING_TO_PICK_UP
+                    sta $21
+                    jsr addToMessageBuffer
+                    jsr addMessage
+                    rts
+
 
 ;; +----------------------------------+
 ;; |                                  |
@@ -368,6 +421,50 @@ executeTrigger      inx
 
 nextTrigger         iny
                     jmp triggerIterLoop
+
+;; +----------------------------------+
+;; |                                  |
+;; |    ITEM ROUTINES                 |
+;; |                                  |
+;; +----------------------------------+
+
+getItemAt:
+                    ldx #$00
+                    cpx itemTableSize
+                    beq endGetItemAt
+                    jsr prepareItemIter
+getItemAtLoop       lda ($20), y
+                    and #%10000000
+                    cmp #%10000000
+                    bne getItemNextIter
+                    iny
+                    lda ($20), y
+                    cmp tmpX
+                    bne getItemNextIter
+                    iny
+                    lda ($20), y
+                    cmp tmpY
+                    bne getItemNextIter
+                    txa
+                    rts
+getItemNextIter     inx
+                    cpx itemTableSize
+                    beq endGetItemAt
+                    ldy #$00
+                    jsr inc20Ptr
+                    jmp getItemAtLoop
+endGetItemAt        lda #$ff
+                    rts
+
+prepareItemIter:
+                    lda #>itemTable
+                    sta $21
+                    lda #<itemTable
+                    sta $20
+                    lda itemTableRowSize
+                    sta inc20ModVal
+                    ldy #$00
+                    rts
 
 ;; +----------------------------------+
 ;; |                                  |
@@ -1703,8 +1800,10 @@ text_HP             .byte 2
                     .text "HP"
 text_PICKED_UP      .byte 10
                     .text "PICKED UP "
+text_NOTHING_TO_PICK_UP .byte 23
+                    .text "NOTHING TO PICK UP HERE"
 
-itemname_SCROLL             .byte 05
+itemname_SCROLL             .byte 06
                             .text "SCROLL"
 itemname_PIECES_OF_GOLD     .byte 14
                             .text "PIECES OF GOLD"
@@ -2288,6 +2387,17 @@ npcTable
      .byte 0, 0             ;; Target X and Y pos
      .byte 11               ;; Movement Cost
      .byte 11               ;; AP
+
+var_itemModes     = #$00 ; Bit 7 - On/Off
+                         ; Bit 6 - Amount On/Off
+                         ; Bit 5 - Unidentified object On/Off
+var_itemXPos      = #$01
+var_itemYPos      = #$02
+var_itemTileID    = #$03
+var_itemNamePtrLo = #$04
+var_itemNamePtrHi = #$05
+var_itemValue     = #$06    ; Amount if amount bit set.
+                            ; Actual Item ID if unidentified bit set.
 
 itemTableRowSize .byte $07
 itemTableSize .byte $00
