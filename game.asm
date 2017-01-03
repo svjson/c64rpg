@@ -288,7 +288,7 @@ currentTileProps    .byte %00000000
 
 
 attemptPickUp:
-                    lda playerX
+                    lda playerX             ; Check for item at player Pos
                     sta tmpX
                     lda playerY
                     sta tmpY
@@ -296,17 +296,20 @@ attemptPickUp:
                     cmp #$ff
                     beq nothingToPickUp
 
-                    ldy #$00
+                    ldy #$00                ; Turn off item in area item table
                     lda ($20), y
                     and #%01111111
                     sta ($20), y
 
-                    ldy var_itemNamePtrLo
+                    ldy var_itemNamePtrLo   ; Store pointer to item name
                     lda ($20), y
                     sta tmpPtr1
                     iny
                     lda ($20), y
                     sta tmpPtr1+1
+
+                    jsr addToInventory      ; Add item to Inventory
+                    lda backpackSize
 
                     lda #<text_PICKED_UP
                     sta $20
@@ -464,6 +467,46 @@ prepareItemIter:
                     lda itemTableRowSize
                     sta inc20ModVal
                     ldy #$00
+                    rts
+
+addToInventory:     lda #<backpackTable     ; Set pointer to backpack
+                    sta $22
+                    lda #>backpackTable
+                    sta $23
+
+                    lda backpackSize        ; Forward pointer to end of backpack
+                    sta num1
+                    lda backpackRowSize
+                    sta num2
+                    jsr multiply
+                    sta inc22ModVal
+                    jsr inc22Ptr
+
+                    ldy #$00
+                    lda ($20), y
+                    sta ($22), y
+
+                    ldy var_itemTileID
+                    lda ($20), y
+                    ldy #$01
+                    sta ($20), y
+
+                    ldy var_itemNamePtrHi
+                    lda ($20), y
+                    ldy #$02
+                    sta ($20), y
+
+                    ldy var_itemNamePtrLo
+                    lda ($20), y
+                    ldy #$03
+                    sta ($20), y
+
+                    ldy var_itemValue
+                    lda ($20), y
+                    ldy #$04
+                    sta ($20), y
+
+                    inc backpackSize
                     rts
 
 ;; +----------------------------------+
@@ -2183,10 +2226,29 @@ animatechars
 
 ;; +----------------------------------+
 ;; |                                  |
-;; |    CURRENT AREA STATE            |
+;; |    PLAYER STATE                  |
 ;; |                                  |
 ;; +----------------------------------+
 *=$C000
+backpackRowSize = #$05
+backpackSize .byte $00
+backpackTable:
+.byte $00, $00, $00, $00, $00
+.byte $00, $00, $00, $00, $00
+.byte $00, $00, $00, $00, $00
+.byte $00, $00, $00, $00, $00
+.byte $00, $00, $00, $00, $00
+.byte $00, $00, $00, $00, $00
+.byte $00, $00, $00, $00, $00
+.byte $00, $00, $00, $00, $00
+.byte $00, $00, $00, $00, $00
+.byte $00, $00, $00, $00, $00
+
+;; +----------------------------------+
+;; |                                  |
+;; |    CURRENT AREA STATE            |
+;; |                                  |
+;; +----------------------------------+
 currentAreaOffsetX  .byte $00
 currentAreaOffsetY  .byte $04
 
