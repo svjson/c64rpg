@@ -585,6 +585,19 @@ enterInventory:
                     sta boxWidth
                     jsr drawBox
 
+                    lda #$01
+                    sta memcpy_rowSize
+
+                    lda #<text_BACKPACK
+                    sta $20
+                    lda #>text_BACKPACK
+                    sta $21
+                    lda #$12
+                    sta $22
+                    lda #$04
+                    sta $23
+                    jsr memcpy_readRowsByte
+
                     lda #$00
                     sta boxLeft
                     lda #$27
@@ -594,6 +607,16 @@ enterInventory:
                     lda #$06
                     sta boxHeight
                     jsr drawBox
+
+                    lda #<text_FLOOR
+                    sta $20
+                    lda #>text_FLOOR
+                    sta $21
+                    lda #$fa
+                    sta $22
+                    lda #$06
+                    sta $23
+                    jsr memcpy_readRowsByte
 
 drawBackPack        lda #$28
                     sta $20
@@ -694,6 +717,7 @@ ilcont              lda #$15     ; wait for raster retrace
                     jmp inventoryMainLoop
 
 exitInventory:
+                    jsr clearscreen
                     lda #<enterstatusirq    ; Interrupt vector
                     sta $0314
                     lda #>enterstatusirq
@@ -2167,6 +2191,13 @@ messageRowCol3 = $db99
 .cdef " @", 32  ;characters
 .cdef "AZ", $01
 .cdef "az", $01
+
+text_PURSE          .byte 5
+                    .text "PURSE"
+text_FLOOR          .byte 5
+                    .text "FLOOR"
+text_BACKPACK       .byte 8
+                    .text "BACKPACK"
 
 text_YOU_KILLED_THE .byte 15
                     .text "YOU KILLED THE "
