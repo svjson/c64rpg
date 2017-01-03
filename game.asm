@@ -147,6 +147,21 @@ leavestatusirq   lda sceneColBg
                  asl $d019
                  jmp $ea81
 
+inventoryirq
+                 lda #$18           ; Char multicolour mode on for entire screen
+                 sta $d016
+
+                 lda #<inventoryirq
+                 sta $0314
+                 lda #>inventoryirq
+                 sta $0315
+
+                 lda #$ff
+                 sta $d012
+
+                 asl $d019
+                 jmp $ea31
+
 
 ;; +----------------------------------+
 ;; |                                  |
@@ -190,9 +205,9 @@ key_DOWNLEFT = #$1a   ;; Z
 key_DOWNRIGHT = #$03  ;; C
 
 key_PICKUP = #$07     ;; G
+key_INVENTORY = #$09  ;; I
 
 readKey
-                    ;jsr clearscreen
                     jsr $ffe4
                     and #$3f
 
@@ -225,6 +240,9 @@ readKey
 
                     cmp key_PICKUP
                     beq move_pickup
+
+                    cmp key_INVENTORY
+                    beq move_inventory
 
                     cmp #$06
                     beq toggleFOV
@@ -263,6 +281,7 @@ move_downright      inx
                     jmp attemptMove
 
 move_pickup         jmp attemptPickUp
+move_inventory      jmp enterInventory
 
 toggleFOV           lda areaMode
                     eor %10000000
@@ -285,54 +304,6 @@ endReadKey
                     rts
 
 currentTileProps    .byte %00000000
-
-
-attemptPickUp:
-                    lda playerX             ; Check for item at player Pos
-                    sta tmpX
-                    lda playerY
-                    sta tmpY
-                    jsr getItemAt
-                    cmp #$ff
-                    beq nothingToPickUp
-
-                    ldy #$00                ; Turn off item in area item table
-                    lda ($20), y
-                    and #%01111111
-                    sta ($20), y
-
-                    ldy var_itemNamePtrLo   ; Store pointer to item name
-                    lda ($20), y
-                    sta tmpPtr1
-                    iny
-                    lda ($20), y
-                    sta tmpPtr1+1
-
-                    jsr addToInventory      ; Add item to Inventory
-                    lda backpackSize
-
-                    lda #<text_PICKED_UP
-                    sta $20
-                    lda #>text_PICKED_UP
-                    sta $21
-                    jsr addToMessageBuffer
-
-                    lda tmpPtr1
-                    sta $20
-                    lda tmpPtr1+1
-                    sta $21
-                    jsr addToMessageBuffer
-                    jsr addMessage
-
-                    jmp dummyMove
-
-nothingToPickUp     lda #<text_NOTHING_TO_PICK_UP
-                    sta $20
-                    lda #>text_NOTHING_TO_PICK_UP
-                    sta $21
-                    jsr addToMessageBuffer
-                    jsr addMessage
-                    rts
 
 
 ;; +----------------------------------+
@@ -469,6 +440,53 @@ prepareItemIter:
                     ldy #$00
                     rts
 
+attemptPickUp:
+                    lda playerX             ; Check for item at player Pos
+                    sta tmpX
+                    lda playerY
+                    sta tmpY
+                    jsr getItemAt
+                    cmp #$ff
+                    beq nothingToPickUp
+
+                    ldy #$00                ; Turn off item in area item table
+                    lda ($20), y
+                    and #%01111111
+                    sta ($20), y
+
+                    ldy var_itemNamePtrLo   ; Store pointer to item name
+                    lda ($20), y
+                    sta tmpPtr1
+                    iny
+                    lda ($20), y
+                    sta tmpPtr1+1
+
+                    jsr addToInventory      ; Add item to Inventory
+                    lda backpackSize
+
+                    lda #<text_PICKED_UP
+                    sta $20
+                    lda #>text_PICKED_UP
+                    sta $21
+                    jsr addToMessageBuffer
+
+                    lda tmpPtr1
+                    sta $20
+                    lda tmpPtr1+1
+                    sta $21
+                    jsr addToMessageBuffer
+                    jsr addMessage
+
+                    jmp dummyMove
+
+nothingToPickUp     lda #<text_NOTHING_TO_PICK_UP
+                    sta $20
+                    lda #>text_NOTHING_TO_PICK_UP
+                    sta $21
+                    jsr addToMessageBuffer
+                    jsr addMessage
+                    rts
+
 addToInventory:     lda #<backpackTable     ; Set pointer to backpack
                     sta $22
                     lda #>backpackTable
@@ -489,25 +507,179 @@ addToInventory:     lda #<backpackTable     ; Set pointer to backpack
                     ldy var_itemTileID
                     lda ($20), y
                     ldy #$01
-                    sta ($20), y
-
-                    ldy var_itemNamePtrHi
-                    lda ($20), y
-                    ldy #$02
-                    sta ($20), y
+                    sta ($22), y
 
                     ldy var_itemNamePtrLo
                     lda ($20), y
+                    ldy #$02
+                    sta ($22), y
+
+                    ldy var_itemNamePtrHi
+                    lda ($20), y
                     ldy #$03
-                    sta ($20), y
+                    sta ($22), y
 
                     ldy var_itemValue
                     lda ($20), y
                     ldy #$04
-                    sta ($20), y
+                    sta ($22), y
 
                     inc backpackSize
                     rts
+
+enterInventory:
+                    lda #<inventoryirq    ; Disable game map interrupts
+                    sta $0314
+                    lda #>inventoryirq
+                    sta $0315
+
+                    lda #$00           ; Set screen background color
+                    sta $d021
+                    jsr clearscreen
+
+                    lda #$00           ; Disable sprites
+                    sta $d015
+
+                    lda #$00
+                    sta boxTop
+                    sta boxLeft
+                    lda #$0f
+                    sta boxWidth
+                    lda #$13
+                    sta boxHeight
+                    jsr drawBox
+
+                    lda #$10
+                    sta boxLeft
+                    lda #$17
+                    sta boxWidth
+                    jsr drawBox
+
+                    lda #$00
+                    sta boxLeft
+                    lda #$27
+                    sta boxWidth
+                    lda #$13
+                    sta boxTop
+                    lda #$06
+                    sta boxHeight
+                    jsr drawBox
+
+drawBackPack        lda #$28
+                    sta $20
+                    sta $24
+                    lda #$04
+                    sta $21
+                    lda #$d8
+                    sta $25
+
+                    lda #<backpackTable
+                    sta $22
+                    lda #>backpackTable
+                    sta $23
+                    lda backpackRowSize
+                    sta inc22ModVal
+
+                    ldx #$00
+                    stx iter
+drawBackPackLoop    cpx backpackSize
+                    beq inventoryMainLoop
+
+                    lda $20
+
+                    ldy #$01
+                    lda ($22), y
+                    tax                         ; Item Tile Index in X
+                    ldy #$12                    ; Horiz position of backpack items
+                    jsr drawBackpackItem
+
+                    lda $20
+                    clc
+                    adc #$15
+                    sta print_target
+                    lda $21
+                    sta print_target+1
+                    ldy #$02
+                    lda ($22), y
+                    sta print_source
+                    ldy #$03
+                    lda ($22), y
+                    sta print_source+1
+                    ldy #$00
+                    lda (print_source), y
+                    sta print_source_length
+                    inc print_source
+                    jsr print_string
+
+                    jsr incscreenoffset
+
+                    jsr inc22Ptr
+                    inc iter
+                    ldx iter
+                    jmp drawBackPackLoop
+
+drawBackpackItem
+                    lda tileChar1, x        ; Draw upper row of tile chars to screen
+                    sta ($20), y
+                    lda tileCharColor1, x
+                    sta ($24), y
+
+                    iny
+                    lda tileChar2, x
+                    sta ($20), y
+                    lda tileCharColor2, x
+                    sta ($24), y
+
+                    tya                     ; Forward to lower row
+                    adc #$27
+                    tay
+
+                    lda tileChar3, x        ; Draw lower row of tile chars to screen
+                    sta ($20), y
+                    lda tileCharColor3, x
+                    sta ($24), y
+
+                    iny
+                    lda tileChar4, x
+                    sta ($20), y
+                    lda tileCharColor4, x
+                    sta ($24), y
+
+                    rts
+
+inventoryMainLoop:
+                    jsr inventoryReadKey
+
+ilcont              lda #$15     ; wait for raster retrace
+                    cmp $d012
+                    bne ilcont
+
+                    lda screenDirty
+                    cmp #$00
+                    beq inventoryMainLoop
+
+                    lda #$00
+                    sta screenDirty
+
+                    jmp inventoryMainLoop
+
+inventoryReadKey:
+                    jsr $ffe4
+                    and #$3f
+
+                    cmp key_INVENTORY
+                    beq exitInventory
+
+                    rts
+
+exitInventory:
+                    lda #<enterstatusirq    ; Interrupt vector
+                    sta $0314
+                    lda #>enterstatusirq
+                    sta $0315
+                    jsr initStatusArea
+                    inc screenDirty
+                    jmp mainloop
 
 ;; +----------------------------------+
 ;; |                                  |
@@ -1814,7 +1986,7 @@ resolveTile
 ;; |    STATUS BAR ROUTINES           |
 ;; |                                  |
 ;; +----------------------------------+
-*=$0915
+*=$0940
 messageLineLength = #24
 
 messageRow1 = $0749
@@ -2121,40 +2293,17 @@ outputPlayerCoordinates
                     rts
 
 initStatusArea:
+                lda #$27
+                sta boxWidth
+                lda #$05
+                sta boxHeight
                 lda #$00
-                sta $0720
-                lda #$1c
-                sta $0747
-                lda #$1e
-                sta $07e7
-                lda #$1f
-                sta $07c0
+                sta boxLeft
+                lda #$14
+                sta boxTop
+                jsr drawBox
 
-                lda #$1b
-                ldx #$00
-horlineloop     sta $0721, x
-                sta $07c1, x
-                inx
-                cpx #$26
-                bne horlineloop
-
-                lda #$1d
-vertlineloop    sta $0748
-                sta $076f
-                sta $0770
-                sta $0797
-                sta $0798
-                sta $07bf
-
-                lda #$01
-                ldx #$00
-
-colloop         sta $db20, x
-                inx
-                cpx #$c8
-                bne colloop
-
-                lda #$0f
+                lda #$0f            ; Print dummy HP/EXP
                 sta $db62
                 sta $db63
 
@@ -2193,6 +2342,94 @@ colloop         sta $db20, x
                 jsr print_string
 
                 rts
+
+boxWidth        .byte $00
+boxHeight       .byte $00
+boxTop          .byte $00
+boxLeft         .byte $00
+boxCounter      .byte $00
+
+drawBox:        lda boxTop
+                sta targetLine
+                jsr forwardToLine
+
+                lda #$00
+                ldy boxLeft
+                sta ($20), y
+
+                tya
+                clc
+                adc boxWidth
+                sta boxCounter
+                iny
+
+drawTopBord     cpy boxCounter
+                beq drawBoxCrnr2
+                lda #$1b
+                sta ($20), y
+                iny
+                jmp drawTopBord
+
+drawBoxCrnr2    lda #$1c
+                sta ($20), y
+
+                inc targetLine
+                lda boxHeight
+                sta boxCounter
+                dec boxCounter
+                dec boxCounter
+
+                ldx #$00
+                ldy boxLeft
+drawBoxVert     jsr inc20Ptr
+                cpx boxCounter
+                beq drawBoxBottom
+                lda #$1d
+                sta ($20), y
+                tya
+                clc
+                adc boxWidth
+                tay
+                lda #$1d
+                sta ($20), y
+                ldy boxLeft
+                inx
+                jmp drawBoxVert
+
+drawBoxBottom   lda #$1f
+                sta ($20), y
+
+                lda boxLeft
+                clc
+                adc boxWidth
+                sta boxCounter
+drawBottBord    iny
+                cpy boxCounter
+                beq drawBoxEnd
+                lda #$1b
+                sta ($20), y
+                jmp drawBottBord
+
+drawBoxEnd      lda #$1e
+                sta ($20), y
+                rts
+
+targetLine .byte $00
+
+forwardToLine:
+                lda #<$0400
+                sta $20
+                lda #>$0400
+                sta $21
+                lda #$28
+                sta inc20ModVal
+                ldx #$00
+forwardLoop     cpx targetLine
+                beq forwardedToLine
+                jsr inc20Ptr
+                inx
+                jmp forwardLoop
+forwardedToLine rts
 
 ;; ----------------------
 ;; ANIMATE LEVEL CHARS
@@ -3738,18 +3975,20 @@ rightshift_2d_nocarry
                         rts
 
 
-clearscreen      lda #$20     ; #$20 is the spacebar Screen Code
+clearscreen      ldx #$ff
+clearscreenloop  inx
+                 lda #$20     ; #$20 is the spacebar Screen Code
                  sta $0400,x
                  sta $0500,x
                  sta $0600,x
                  sta $06e8,x
-                 lda #$00     ; set foreground to black in Color Ram
+                 lda #$01     ; set foreground to white in Color Ram
                  sta $d800,x
                  sta $d900,x
                  sta $da00,x
                  sta $dae8,x
-                 inx
-                 bne clearscreen
+                 cpx #$ff
+                 bne clearscreenloop
                  rts
 
 decBuffer       .byte $03
