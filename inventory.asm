@@ -33,6 +33,9 @@ floorTable:
 .byte $00, $00, $00, $00, $00
 .byte $00, $00, $00, $00, $00
 
+backPackTop = $01
+backPackLeft = $15
+
 ;; +----------------------------------+
 ;; |    INITIALIZE INVENTORY MODE     |
 ;; +----------------------------------+
@@ -465,86 +468,6 @@ updateInventoryContents:
         rts
 
 ;; +----------------------------------+
-;; |    DRAW FLOOR CONTENTS           |
-;; +----------------------------------+
-drawFloor           ldx #$00
-
-                    lda #$20
-                    sta $20
-                    sta $24
-                    lda #$07
-                    sta $21
-                    lda #$db
-                    sta $25
-
-                    lda #<floorTable
-                    sta $22
-                    lda #>floorTable
-                    sta $23
-                    lda backpackRowSize
-                    sta inc22ModVal
-
-                    ldx #$00
-                    stx iter
-                    jmp drawFloorLoop
-drawFloorDone       rts
-drawFloorLoop       cpx floorTableSize
-                    beq drawFloorDone
-
-                    ldy #$01
-                    lda ($22), y
-                    tax                         ; Item Tile Index in X
-                    ldy #$02                    ; Horiz position of backpack items
-                    jsr drawBackpackItem
-
-                    lda $20
-                    clc
-                    adc #$05
-                    sta print_target
-                    lda $21
-                    sta print_target+1
-                    ldy #$02
-                    lda ($22), y
-                    sta print_source
-                    ldy #$03
-                    lda ($22), y
-                    sta print_source+1
-                    ldy #$00
-                    lda (print_source), y
-                    sta print_source_length
-                    inc print_source
-                    jsr print_string
-
-                    lda invSelArea              ; Check if area contains selection
-                    cmp #$02
-                    bne drawFLNoSelect
-
-                    lda invSelPos               ; Check if current position is selected
-                    cmp iter
-                    bne drawFLNoSelect
-
-                    lda #$03
-                    sta target_color
-                    jmp addFLNameColor
-
-drawFLNoSelect      lda #$01
-                    sta target_color
-addFLNameColor      lda $24
-                    clc
-                    adc #$05
-                    sta print_target
-                    lda $25
-                    sta print_target+1
-                    jsr apply_text_color
-
-                    jsr incscreenoffset
-
-                    jsr inc22Ptr
-                    inc iter
-                    ldx iter
-                    jmp drawFloorLoop
-
-;; +----------------------------------+
 ;; |    DRAW BACKPACK CONTENTS        |
 ;; +----------------------------------+
 drawBackPack        lda #$28
@@ -562,12 +485,71 @@ drawBackPack        lda #$28
                     lda backpackRowSize
                     sta inc22ModVal
 
+                    lda #$08
+                    sta itemContSize
+                    lda backpackSize
+                    sta itemSourceSize
+                    lda #$15
+                    sta itemContTextOff
+                    lda #$12
+                    sta itemContTileOff
+                    lda #$24
+                    sta itemContRight
+                    lda #$00
+                    sta itemContID
+
+                    jmp drawItemContainer
+
+;; +----------------------------------+
+;; |    DRAW FLOOR CONTENTS           |
+;; +----------------------------------+
+drawFloor           lda #$20
+                    sta $20
+                    sta $24
+                    lda #$07
+                    sta $21
+                    lda #$db
+                    sta $25
+
+                    lda #<floorTable
+                    sta $22
+                    lda #>floorTable
+                    sta $23
+                    lda backpackRowSize
+                    sta inc22ModVal
+
+                    lda #$02
+                    sta itemContSize
+                    lda floorTableSize
+                    sta itemSourceSize
+                    lda #$05
+                    sta itemContTextOff
+                    lda #$02
+                    sta itemContTileOff
+                    lda #$14
+                    sta itemContRight
+                    lda #$02
+                    sta itemContID
+                    jmp drawItemContainer
+
+;; +----------------------------------+
+;; |    DRAW ITEM CONTAINER           |
+;; +----------------------------------+
+
+itemContSize        .byte $00
+itemSourceSize      .byte $00
+itemContTileOff     .byte $00
+itemContTextOff     .byte $00
+itemContRight       .byte $00
+itemContID          .byte $00
+
+drawItemContainer:
                     ldx #$00
                     stx iter
-                    jmp drawBackPackLoop
-drawBackPackFillB   cpx #$08
-                    beq drawBackPackDone
-                    ldy #$12
+                    jmp drawItemContLoop
+itemContFillRemain  cpx itemContSize
+                    bcs drawItemContDone
+                    ldy itemContTileOff
 
 fillBLoop           lda #$20
                     sta ($20), y
@@ -581,26 +563,24 @@ fillBLoop           lda #$20
                     sbc #$27
                     tay
                     iny
-                    cpy #$24
+                    cpy itemContRight
                     bne fillBLoop
                     jsr incscreenoffset
                     inx
-                    jmp drawBackPackFillB
-drawBackPackDone    rts
-drawBackPackLoop    cpx backpackSize
-                    beq drawBackPackFillB
-
-                    lda $20
+                    jmp itemContFillRemain
+drawItemContDone    rts
+drawItemContLoop    cpx itemSourceSize
+                    beq itemContFillRemain
 
                     ldy #$01
                     lda ($22), y
                     tax                         ; Item Tile Index in X
-                    ldy #$12                    ; Horiz position of backpack items
-                    jsr drawBackpackItem
+                    ldy itemContTileOff         ; Horiz position of backpack items
+                    jsr drawItemTile
 
                     lda $20
                     clc
-                    adc #$15
+                    adc itemContTextOff
                     sta print_target
                     lda $21
                     sta print_target+1
@@ -617,22 +597,22 @@ drawBackPackLoop    cpx backpackSize
                     jsr print_string
 
                     lda invSelArea              ; Check if area contains selection
-                    cmp #$00
-                    bne drawBPNoSelect
+                    cmp itemContID
+                    bne drawItemNoSelect
 
                     lda invSelPos               ; Check if current position is selected
                     cmp iter
-                    bne drawBPNoSelect
+                    bne drawItemNoSelect
 
                     lda #$03
                     sta target_color
-                    jmp addBPNameColor
+                    jmp addItemNameColor
 
-drawBPNoSelect      lda #$01
+drawItemNoSelect    lda #$01
                     sta target_color
-addBPNameColor      lda $24
+addItemNameColor    lda $24
                     clc
-                    adc #$15
+                    adc itemContTextOff
                     sta print_target
                     lda $25
                     sta print_target+1
@@ -643,9 +623,9 @@ addBPNameColor      lda $24
                     jsr inc22Ptr
                     inc iter
                     ldx iter
-                    jmp drawBackPackLoop
+                    jmp drawItemContLoop
 
-drawBackpackItem
+drawItemTile:
                     lda tileChar1, x        ; Draw upper row of tile chars to screen
                     sta ($20), y
                     lda tileCharColor1, x
