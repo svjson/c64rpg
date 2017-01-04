@@ -456,8 +456,6 @@ attemptPickUp:
 
                     ldy #$00                ; Turn off item in area item table
                     lda ($20), y
-                    and #%01111111
-                    sta ($20), y
 
                     ldy var_itemNamePtrLo   ; Store pointer to item name
                     lda ($20), y
@@ -508,6 +506,8 @@ addToInventory:     lda #<backpackTable     ; Set pointer to backpack
                     ldy #$00
                     lda ($20), y
                     sta ($22), y
+                    and #%01111111
+                    sta ($20), y
 
                     ldy var_itemTileID
                     lda ($20), y
@@ -2328,12 +2328,27 @@ animatechars
 ;; +----------------------------------+
 *=$C000
 backpackRowSize = #$05
-backpackSize .byte $01
+backpackSize .byte $04
 backpackTable:
-.byte %10100000
+.byte %10000000
 .byte $30              ;; Tile ID
 .word itemname_SCROLL  ;; Name pointer
 .byte $00              ;; Actual Type
+.byte %10000000
+.byte $32              ;; Tile ID
+.word itemname_PIECES_OF_GOLD ;; Name pointer
+.byte $19                     ;; Amount
+
+.byte %10000000
+.byte $31              ;; Tile ID
+.word itemname_POTION  ;; Name pointer
+.byte $01              ;; Actual Type
+
+.byte %10000000
+.byte $34              ;; Tile ID
+.word itemname_LEATHER_ARMOR;; Name pointer
+.byte $00              ;; Actual Type
+
 .byte $00, $00, $00, $00, $00
 .byte $00, $00, $00, $00, $00
 .byte $00, $00, $00, $00, $00
@@ -2573,7 +2588,7 @@ var_itemValue     = #$06    ; Amount if amount bit set.
                             ; Actual Item ID if unidentified bit set.
 
 itemTableRowSize .byte $07
-itemTableSize .byte $00
+itemTableSize .byte $03
 itemTable
 
      .byte %11000000

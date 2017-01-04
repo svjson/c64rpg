@@ -337,7 +337,82 @@ selectedItemAction:
         inc screenDirty
 
 moveSelectedItem
+        lda invCrsrArea
+        cmp #$02
+        beq dropItem
         rts
+
+dropItem:
+                        lda #$ff
+                        sta invSelArea
+
+                        lda #<backpackTable
+                        sta $20
+                        lda #>backpackTable
+                        sta $21
+                        lda backpackRowSize
+                        sta inc20ModVal
+
+                        lda #<itemTable
+                        sta $22
+                        lda #>itemTable
+                        sta $23
+                        lda itemTableRowSize
+                        sta inc22ModVal
+
+                        ldy #$00
+                        ldx #$00
+forwardToItemLoop       cpx invSelPos
+                        beq forwardedToItem
+                        jsr inc20Ptr
+                        inx
+                        jmp forwardToItemLoop
+forwardedToItem         ldx #$00
+forwardToEndOfItems     cpx itemTableSize
+                        beq forwardedToEnd
+                        jsr inc22Ptr
+                        inx
+                        jmp forwardToEndOfItems
+
+forwardedToEnd          ldy #$00
+                        lda ($20), y
+                        sta ($22), y
+                        and #%01111111
+                        sta ($20), y
+
+                        iny
+                        lda playerX
+                        sta ($22), y
+                        iny
+                        lda playerY
+                        sta ($22), y
+
+                        ldy #$01
+                        lda ($20), y
+                        ldy #$03
+                        sta ($22), y
+
+                        ldy #$02
+                        lda ($20), y
+                        ldy #$04
+                        sta ($22), y
+
+                        ldy #$03
+                        lda ($20), y
+                        ldy #$05
+                        sta ($22), y
+
+                        ldy #$04
+                        lda ($20), y
+                        ldy #$06
+                        sta ($22), y
+
+                        inc itemTableSize
+itemDropped
+                        jsr compactBackpack
+                        jsr populateFloorTable
+                        inc screenDirty
+                        rts
 
 updateInventoryContents:
         jsr drawBackPack
@@ -445,9 +520,30 @@ drawBackPack        lda #$28
                     ldx #$00
                     stx iter
                     jmp drawBackPackLoop
+drawBackPackFillB   cpx #$08
+                    beq drawBackPackDone
+                    ldy #$12
+
+fillBLoop           lda #$20
+                    sta ($20), y
+                    tya
+                    clc
+                    adc #$28
+                    tay
+                    lda #$20
+                    sta ($20), y
+                    tya
+                    sbc #$27
+                    tay
+                    iny
+                    cpy #$24
+                    bne fillBLoop
+                    jsr incscreenoffset
+                    inx
+                    jmp drawBackPackFillB
 drawBackPackDone    rts
 drawBackPackLoop    cpx backpackSize
-                    beq drawBackPackDone
+                    beq drawBackPackFillB
 
                     lda $20
 
@@ -600,4 +696,52 @@ floorTableNextIter  jsr inc20Ptr
                     jmp floorTableLoop
 
 endPopulateFloorTable:
+                    rts
+
+;; +----------------------------------+
+;; |    BACKPACK TABLE OPS            |
+;; +----------------------------------+
+tmpPos .byte $00
+iterMax .byte $00
+compactBackpack:
+                    lda #<backpackTable         ; Set 20 and 22 pointers to backpack
+                    sta $20
+                    sta $22
+                    lda #>backpackTable
+                    sta $21
+                    sta $23
+
+                    lda backpackRowSize         ; Increment and copy full backpackTable row at a time
+                    sta inc20ModVal
+                    sta inc22ModVal
+                    sta memcpy_rowSize
+
+                    lda #$01                    ; Copy one row at a time
+                    sta memcpy_rows
+
+                    lda backpackSize
+                    sta iterMax
+
+                    ldx #$00
+                    stx iter
+compactBPLoop       ldx iter
+                    cpx iterMax
+                    bcs endCompactBP
+
+                    ldy #$00
+                    lda ($20), y
+
+                    and #%10000000
+                    cmp #%10000000
+                    beq compactBPEntry
+                    jsr inc20Ptr
+                    dec backpackSize
+                    dec iterMax
+compactBPEntry
+                    jsr memcpy              ; memcpy forwards both 20 and 22 pointers one step
+
+                    inc iter
+                    jmp compactBPLoop
+
+endCompactBP
                     rts
