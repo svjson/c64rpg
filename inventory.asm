@@ -345,22 +345,6 @@ moveBDCursorDown:
                     jmp invPositionCrsr
 moveInvNoAction     rts
 
-;moveFLCursorDown:
-;                    ldx invFLPos
-;                    inx
-;                    cpx backpackSize
-;                    bcs moveInvNoAction
-;                    cpx #$02
-;                    bcc incFLCursor
-;                    lda #$f1
-;                    cmp $d02c
-;                    bne moveInvNoAction
-;                    inc invFLOffset
-;                    inc screenDirty
-;                    rts
-;incFLCursor         inc invFLPos
-;                    rts
-
 invPositionCrsr:
                     lda invCrsrArea
                     cmp #$00
@@ -570,7 +554,15 @@ itemDroppedNoAdjust     inc screenDirty
 
 updateInventoryContents:
         jsr drawBackPack
+        lda invBPScrlUp
+        sta $d029
+        lda invBPScrlDn
+        sta $d02a
         jsr drawFloor
+        lda invFLScrlUp
+        sta $d02b
+        lda invFLScrlDn
+        sta $d02c
         rts
 
 ;; +----------------------------------+
@@ -596,10 +588,12 @@ drawBackPack        lda #$28
                     sta itemContOffset
                     jsr roll22Ptr
 
-                    lda #$08
-                    sta itemContSize
                     lda backpackSize
                     sta itemSourceSize
+                    ldx #$00
+                    lda boxSizes, x
+                    sta itemContSize
+
                     lda #$15
                     sta itemContTextOff
                     lda #$12
@@ -609,29 +603,6 @@ drawBackPack        lda #$28
                     lda #$00
                     sta itemContID
 
-                    lda #$0b                    ; Update scroll icons
-                    ldx invBPOffset
-                    cpx #$00
-                    beq bpSetScrollUpColor
-                    lda #$01
-bpSetScrollUpColor  sta $d029
-                    sta invBPScrlUp
-
-                    lda #$0b
-                    ldx backpackSize
-                    inx
-                    cpx itemContSize
-                    bcc bpSetScrollDownColor
-                    lda invBPOffset
-                    clc
-                    adc itemContSize
-                    tax
-                    lda #$0b
-                    cpx itemSourceSize
-                    bcs bpSetScrollDownColor
-                    lda #$01
-bpSetScrollDownColor sta $d02a
-                    sta invBPScrlDn
                     jmp drawItemContainer
 
 ;; +----------------------------------+
@@ -670,29 +641,6 @@ drawFloor           lda #$20
                     lda #$02
                     sta itemContID
 
-                    lda #$0b                    ; Update scroll icons
-                    ldx invFLOffset
-                    cpx #$00
-                    beq flSetScrollUpColor
-                    lda #$01
-flSetScrollUpColor  sta $d02b
-                    sta invFLScrlUp
-
-                    lda #$0b
-                    ldx floorTableSize
-                    inx
-                    cpx itemContSize
-                    bcc flSetScrollDownColor
-                    lda invFLOffset
-                    clc
-                    adc itemContSize
-                    tax
-                    lda #$0b
-                    cpx itemSourceSize
-                    bcs flSetScrollDownColor
-                    lda #$01
-flSetScrollDownColor sta $d02c
-                    sta invFLScrlDn
                     jmp drawItemContainer
 
 ;; +----------------------------------+
@@ -732,7 +680,8 @@ fillBLoop           lda #$20
                     jsr incscreenoffset
                     inx
                     jmp itemContFillRemain
-drawItemContDone    rts
+drawItemContDone    jmp updateItemContainerArrows
+                    rts
 drawItemContLoop    cpx itemSourceSize
                     beq itemContFillRemain
                     cpx itemContSize
@@ -830,6 +779,32 @@ drawItemTile:
                     lda tileCharColor4, x
                     sta ($24), y
 
+                    rts
+
+updateItemContainerArrows
+                    ldy #$0b                ; Update upwards arrow
+                    ldx itemContID
+                    lda itemContOffset
+                    cmp #$00
+                    beq updateUpArrow
+                    ldy #$01
+updateUpArrow       tya
+                    sta boxScrlUp, x
+
+                    ldy #$0b                ; Update downwards arrow
+                    ldx itemSourceSize
+                    inx
+                    cpx itemContSize
+                    bcc updateDownArrow
+                    lda itemContOffset
+                    clc
+                    adc itemContSize
+                    cmp itemSourceSize
+                    bcs updateDownArrow
+                    ldy #$01
+updateDownArrow     tya
+                    ldx itemContID
+                    sta boxScrlDn, x
                     rts
 
 ;; +----------------------------------+
