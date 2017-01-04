@@ -241,24 +241,21 @@ inventoryReadKey:
                     beq invPerformAction
 
                     ldx invCrsrArea
-                    cpx #$00
-                    beq invReadBackpackAreaKey
-
                     cpx #$01
                     beq invReadBodyAreaKey
+                    jmp invReadItemContainerKey
 
-                    jmp invReadFloorAreaKey
-
-invReadBackpackAreaKey:
+invReadItemContainerKey
                     cmp key_UP
                     beq moveItemContCrsrUp
                     cmp key_DOWN
                     beq moveItemContCrsrDn
                     cmp key_LEFT
-                    beq moveBPCursorLeft
+                    beq moveItemContCrsrLeft
                     dec screenDirty
                     rts
 
+; CURSOR UP
 moveItemContCrsrUp  ldx invCrsrArea
                     lda boxPositions, x
                     beq moveItemContUpTop
@@ -274,6 +271,7 @@ leaveContUp         cpx #$02
                     beq invIntoBackPackArea
                     rts
 
+; CURSOR DOWN
 moveItemContCrsrDn  ldx invCrsrArea
                     ldy boxPositions, x
                     iny
@@ -294,9 +292,14 @@ leaveContDown       cpx #$00
                     beq invIntoFloorArea
                     rts
 
-moveBPCursorLeft:
-                    jsr invIntoBodyArea
-                    jmp invPositionCrsr
+; CURSOR LEFT
+moveItemContCrsrLeft:
+                    lda invCrsrArea
+                    cmp #$00
+                    bne moveInvNoAction
+                    jmp invIntoBodyArea
+
+; BODY AREA KEYS
 invReadBodyAreaKey:
                     cmp key_UP
                     beq moveBDCursorUp
@@ -305,7 +308,6 @@ invReadBodyAreaKey:
                     cmp key_RIGHT
                     beq moveBDCursorRight
                     rts
-
 
 invIntoBackPackArea:
                     lda #$00
@@ -320,14 +322,6 @@ invIntoFloorArea:
                     lda floorTableSize
                     sta invCrsrAreaContentSize
                     jmp invPositionCrsr
-
-invReadFloorAreaKey:
-                    cmp key_UP
-                    beq moveItemContCrsrUp
-                    cmp key_DOWN
-                    beq moveItemContCrsrDn
-                    dec screenDirty
-                    rts
 
 invIntoBodyArea:
                     lda #$01
