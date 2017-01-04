@@ -2,6 +2,7 @@
 ;; |    INVENTORY UI STATE            |
 ;; +----------------------------------+
 invCrsrArea .byte $00           ; Currently Active Box - $00 = Backpack, $01 = Body, $02 = Floor
+invCrsrAreaContentSize .byte $00
 
 invSelArea  .byte $ff           ; Selection In Box - $00 = Backpack, $01 = Body, $02 = Floor, $ff = No selection
 invSelPos   .byte $00           ; Position of selected item in box
@@ -15,6 +16,21 @@ boxPositions:
 invBPPos    .byte $00           ; Position in Backpack box
 invBDPos    .byte $00           ; Position in Body
 invFLPos    .byte $00           ; Position in Floor
+
+boxSizes:
+invBPSize   .byte $08
+invBDSize   .byte $08
+invFLSize   .byte $02
+
+boxScrlUp:
+invBPScrlUp .byte $00
+invBDScrlUp .byte $00
+invFLScrlUp .byte $00
+
+boxScrlDn:
+invBPScrlDn .byte $00
+invBDScrlDn .byte $00
+invFLScrlDn .byte $00
 
 floorTableOriginTable:
 .byte $00
@@ -49,6 +65,8 @@ enterInventory:
                     sta invFLOffset
                     sta invFLPos
                     sta invBDPos
+                    lda backpackSize
+                    sta invCrsrAreaContentSize
 
                     lda #<inventoryirq    ; Disable game map interrupts
                     sta $0314
@@ -233,41 +251,49 @@ inventoryReadKey:
 
 invReadBackpackAreaKey:
                     cmp key_UP
-                    beq moveBPCursorUp
+                    beq moveItemContCrsrUp
                     cmp key_DOWN
-                    beq moveBPCursorDown
+                    beq moveItemContCrsrDn
                     cmp key_LEFT
                     beq moveBPCursorLeft
                     dec screenDirty
                     rts
-moveBPCursorUp:
-                    lda invBPPos
+
+moveItemContCrsrUp  ldx invCrsrArea
+                    lda boxPositions, x
+                    beq moveItemContUpTop
+                    dec boxPositions, x
+                    rts
+moveItemContUpTop   lda boxOffsets, x
                     cmp #$00
-                    beq moveBPUpTop
-                    dec invBPPos
-                    jmp invPositionCrsr
-moveBPUpTop         lda invBPOffset
-                    cmp #$00
-                    beq moveInvNoAction
-                    dec invBPOffset
-                    inc screenDirty
+                    beq leaveContUp
+                    dec boxOffsets, x
                     rts
 
-moveBPCursorDown:
-                    ldx invBPPos
-                    inx
-                    cpx backpackSize
-                    bcs invIntoFloorArea
-                    cpx #$08
-                    bcc incBPCursor
-                    lda #$f1
-                    cmp $d02a
-                    bne invIntoFloorArea
-                    inc invBPOffset
-                    inc screenDirty
+leaveContUp         cpx #$02
+                    beq invIntoBackPackArea
                     rts
-incBPCursor         inc invBPPos
+
+moveItemContCrsrDn  ldx invCrsrArea
+                    ldy boxPositions, x
+                    iny
+                    cpy invCrsrAreaContentSize
+                    bcs leaveContDown
+                    tya
+                    cmp boxSizes, x
+                    bcc incItemContCursor
+                    lda #$01
+                    cmp boxScrlDn, x
+                    bne leaveContDown
+                    inc boxOffsets, x
                     rts
+incItemContCursor   inc boxPositions, x
+                    rts
+
+leaveContDown       cpx #$00
+                    beq invIntoFloorArea
+                    rts
+
 moveBPCursorLeft:
                     jsr invIntoBodyArea
                     jmp invPositionCrsr
@@ -279,6 +305,37 @@ invReadBodyAreaKey:
                     cmp key_RIGHT
                     beq moveBDCursorRight
                     rts
+
+
+invIntoBackPackArea:
+                    lda #$00
+                    sta invCrsrArea
+                    lda backpackSize
+                    sta invCrsrAreaContentSize
+                    jmp invPositionCrsr
+
+invIntoFloorArea:
+                    lda #$02
+                    sta invCrsrArea
+                    lda floorTableSize
+                    sta invCrsrAreaContentSize
+                    jmp invPositionCrsr
+
+invReadFloorAreaKey:
+                    cmp key_UP
+                    beq moveItemContCrsrUp
+                    cmp key_DOWN
+                    beq moveItemContCrsrDn
+                    dec screenDirty
+                    rts
+
+invIntoBodyArea:
+                    lda #$01
+                    sta invCrsrArea
+;                    lda backpackSize
+;                    sta invCrsrAreaContentSize
+                    rts
+
 moveBDCursorRight:
                     jmp invIntoBackPackArea
 moveBDCursorUp:
@@ -288,56 +345,21 @@ moveBDCursorDown:
                     jmp invPositionCrsr
 moveInvNoAction     rts
 
-invIntoBodyArea:
-                    lda #$01
-                    sta invCrsrArea
-                    rts
-
-invIntoBackPackArea:
-                    lda #$00
-                    sta invCrsrArea
-                    jmp invPositionCrsr
-
-invIntoFloorArea:
-                    lda #$02
-                    sta invCrsrArea
-                    jmp invPositionCrsr
-
-invReadFloorAreaKey:
-                    cmp key_UP
-                    beq moveFLCursorUp
-                    cmp key_DOWN
-                    beq moveFLCursorDown
-                    dec screenDirty
-                    rts
-moveFLCursorUp:
-                    lda invFLPos
-                    cmp #$00
-                    beq moveFLUpTop
-                    dec invFLPos
-                    jmp invPositionCrsr
-moveFLUpTop         lda invFLOffset
-                    cmp #$00
-                    beq invIntoBackPackArea
-                    dec invFLOffset
-                    inc screenDirty
-                    rts
-
-moveFLCursorDown:
-                    ldx invFLPos
-                    inx
-                    cpx backpackSize
-                    bcs moveInvNoAction
-                    cpx #$02
-                    bcc incFLCursor
-                    lda #$f1
-                    cmp $d02c
-                    bne moveInvNoAction
-                    inc invFLOffset
-                    inc screenDirty
-                    rts
-incFLCursor         inc invFLPos
-                    rts
+;moveFLCursorDown:
+;                    ldx invFLPos
+;                    inx
+;                    cpx backpackSize
+;                    bcs moveInvNoAction
+;                    cpx #$02
+;                    bcc incFLCursor
+;                    lda #$f1
+;                    cmp $d02c
+;                    bne moveInvNoAction
+;                    inc invFLOffset
+;                    inc screenDirty
+;                    rts
+;incFLCursor         inc invFLPos
+;                    rts
 
 invPositionCrsr:
                     lda invCrsrArea
@@ -593,6 +615,7 @@ drawBackPack        lda #$28
                     beq bpSetScrollUpColor
                     lda #$01
 bpSetScrollUpColor  sta $d029
+                    sta invBPScrlUp
 
                     lda #$0b
                     ldx backpackSize
@@ -608,6 +631,7 @@ bpSetScrollUpColor  sta $d029
                     bcs bpSetScrollDownColor
                     lda #$01
 bpSetScrollDownColor sta $d02a
+                    sta invBPScrlDn
                     jmp drawItemContainer
 
 ;; +----------------------------------+
@@ -652,6 +676,7 @@ drawFloor           lda #$20
                     beq flSetScrollUpColor
                     lda #$01
 flSetScrollUpColor  sta $d02b
+                    sta invFLScrlUp
 
                     lda #$0b
                     ldx floorTableSize
@@ -667,6 +692,7 @@ flSetScrollUpColor  sta $d02b
                     bcs flSetScrollDownColor
                     lda #$01
 flSetScrollDownColor sta $d02c
+                    sta invFLScrlDn
                     jmp drawItemContainer
 
 ;; +----------------------------------+
