@@ -14,6 +14,14 @@ invBPPos    .byte $00           ; Position in Backpack box
 invBDPos    .byte $00           ; Position in Body
 invFLPos    .byte $00           ; Position in Floor
 
+floorTableOriginTable:
+.byte $00
+.byte $00
+.byte $00
+.byte $00
+.byte $00
+.byte $00
+.byte $00
 
 floorTableSize .byte $00
 floorTable:
@@ -324,22 +332,59 @@ selectItem:
         inc screenDirty
         rts
 selectedItemAction:
-        lda invCrsrArea
+        lda invCrsrArea                 ; branch to move item if origin and target area differ
         cmp invSelArea
         bne moveSelectedItem
-        tax
+
+        tax                             ; Trade places if positions differ
         lda boxPositions, x
         cmp invSelPos
-        bne moveSelectedItem
-        lda #$ff
+        bne rearrangeItem
+
+        lda #$ff                        ; Else, deselect
         sta invSelArea
         sta invSelPos
         inc screenDirty
+        rts
 
 moveSelectedItem
         lda invCrsrArea
         cmp #$02
         beq dropItem
+
+        cmp #$00
+        beq pickUpItem
+        rts
+
+rearrangeItem
+        rts
+
+targetPos .byte $00
+pickUpItem:
+        lda #<itemTable
+        sta $20
+        lda #>itemTable
+        sta $21
+        lda itemTableRowSize
+        sta inc20ModVal
+
+        ldx invFLPos
+        lda floorTableOriginTable, x
+        sta targetPos
+        sta $0429
+
+        ldx #$00
+pickUpForwardLoop:
+        cpx targetPos
+        beq pickUpForwarded
+        inx
+        jsr inc20Ptr
+        jmp pickUpForwardLoop
+pickUpForwarded:
+        jsr addToInventory
+        inc screenDirty
+        lda #$ff
+        sta invSelArea
         rts
 
 dropItem:
@@ -687,6 +732,10 @@ floorTableLoop      cpx itemTableSize
                     lda ($20), y
                     ldy #$03
                     sta ($22), y
+
+                    txa
+                    ldy floorTableSize
+                    sta floorTableOriginTable, y
 
                     inc floorTableSize
                     jsr inc22Ptr
