@@ -371,7 +371,6 @@ pickUpItem:
         ldx invFLPos
         lda floorTableOriginTable, x
         sta targetPos
-        sta $0429
 
         ldx #$00
 pickUpForwardLoop:
@@ -382,6 +381,7 @@ pickUpForwardLoop:
         jmp pickUpForwardLoop
 pickUpForwarded:
         jsr addToInventory
+        jsr populateFloorTable
         inc screenDirty
         lda #$ff
         sta invSelArea
@@ -752,6 +752,50 @@ endPopulateFloorTable:
 ;; +----------------------------------+
 tmpPos .byte $00
 iterMax .byte $00
+
+compactItemTable:
+                    lda #<itemTable
+                    sta $20
+                    sta $22
+                    lda #>itemTable
+                    sta $21
+                    sta $23
+
+                    lda itemTableRowSize
+                    sta inc20ModVal
+                    sta inc22ModVal
+                    sta memcpy_rowSize
+
+                    lda #$01
+                    sta memcpy_rows
+
+                    lda itemTableSize
+                    sta iterMax
+
+                    ldx #$00
+                    stx iter
+compactITLoop       ldx iter
+                    cpx iterMax
+                    bcs endCompactIT
+
+                    ldy #$00
+                    lda ($20), y
+
+                    and #%10000000
+                    cmp #%10000000
+                    beq compactITEntry
+                    jsr inc20Ptr
+                    dec itemTableSize
+                    dec iterMax
+compactITEntry
+                    jsr memcpy              ; memcpy forwards both 20 and 22 pointers one step
+
+                    inc iter
+                    jmp compactITLoop
+
+endCompactIT
+                    rts
+
 compactBackpack:
                     lda #<backpackTable         ; Set 20 and 22 pointers to backpack
                     sta $20

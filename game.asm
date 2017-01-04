@@ -530,6 +530,7 @@ addToInventory:     lda #<backpackTable     ; Set pointer to backpack
                     sta ($22), y
 
                     inc backpackSize
+                    jsr compactItemTable
                     rts
 
 .include "inventory.asm"
