@@ -516,7 +516,17 @@ forwardedToEnd          ldy #$00
 itemDropped
                         jsr compactBackpack
                         jsr populateFloorTable
-                        inc screenDirty
+
+                        lda invBPOffset             ; Adjust backpack offset if necessary
+                        cmp #$00
+                        beq itemDroppedNoAdjust
+                        clc
+                        adc #$08
+                        cmp backpackSize
+                        bcc itemDroppedNoAdjust
+                        dec invBPOffset
+
+itemDroppedNoAdjust     inc screenDirty
                         rts
 
 updateInventoryContents:
@@ -578,7 +588,7 @@ bpSetScrollUpColor  sta $d029
                     tax
                     lda #$0b
                     cpx itemSourceSize
-                    beq bpSetScrollDownColor
+                    bcs bpSetScrollDownColor
                     lda #$01
 bpSetScrollDownColor sta $d02a
                     lda $d02a
