@@ -575,7 +575,6 @@ bpSetScrollUpColor  sta $d029
                     lda #$01
 bpSetScrollDownColor sta $d02a
                     lda $d02a
-                    sta $0410
                     jmp drawItemContainer
 
 ;; +----------------------------------+
@@ -676,6 +675,14 @@ drawItemContLoop    cpx itemSourceSize
                     inc print_source
                     jsr print_string
 
+                    lda #$20
+drawItemBLTextLoop  cpy #$11
+                    bcs drawItemContinue
+                    sta (print_target), y
+                    iny
+                    jmp drawItemBLTextLoop
+
+drawItemContinue
                     lda invSelArea              ; Check if area contains selection
                     cmp itemContID
                     bne drawItemNoSelect
