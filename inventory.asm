@@ -62,6 +62,13 @@ enterInventory:
                     lda #$83          ; Set cursor sprite pointers
                     sta $07f9
 
+                    lda #$84          ; Set nav arrow sprite pointers
+                    sta $07fa
+                    sta $07fc
+                    lda #$85
+                    sta $07fb
+                    sta $07fd
+
                     lda #$03           ; Set cursor sprites to multicolor
                     sta $d01c
 
@@ -71,12 +78,38 @@ enterInventory:
 
                     lda #$0a
                     sta $d025
+                    
+                    lda #$0b           ; Set nav sprites to dark grey
+                    sta $d029
+                    sta $d02a
+                    sta $d02b
+                    sta $d02c
 
                     jsr populateFloorTable
-
                     jsr invPositionCrsr
+                    
+                    lda #$3d           ; Set BP nav sprite positions
+                    sta $d004
+                    sta $d006
 
-                    lda #%00000011     ; Enable cursor sprites
+                    lda #$38
+                    sta $d005
+                    lda #$af
+                    sta $d007
+                    
+                    lda #$c0           ; Set FL nav sprite positions
+                    sta $d008
+                    sta $d00a
+                    
+                    lda #$d0
+                    sta $d009
+                    lda #$e0
+                    sta $d00b
+                    
+                    lda #%00001100     ; Set hi bits for bp nav sprites
+                    sta $d010
+
+                    lda #%00111111     ; Enable inventory sprites
                     sta $d015
 
                     lda #$00
@@ -295,7 +328,7 @@ invPositionFLCrsr:
                     sta $d000
                     lda #$b0
                     sta $d002
-                    lda #%00000000
+                    lda #%00001100
                     sta $d010
                     rts
 invPositionBDCrsr:
@@ -303,7 +336,7 @@ invPositionBDCrsr:
                     sta $d000
                     lda #$80
                     sta $d002
-                    lda #%00000000
+                    lda #%00001100
                     sta $d010
                     rts
 invPositionBPCrsr:
@@ -321,7 +354,7 @@ invPositionBPCrsr:
                     sta $d000
                     lda #$30
                     sta $d002
-                    lda #%00000010
+                    lda #%00001110
                     sta $d010
                     rts
 
