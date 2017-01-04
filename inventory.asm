@@ -491,16 +491,13 @@ dropItem:
                         ldy #$00
                         ldx #$00
 forwardToItemLoop       cpx invSelPos
-                        beq forwardedToItem
+                        beq forwardToEndOfItems
                         jsr inc20Ptr
                         inx
                         jmp forwardToItemLoop
-forwardedToItem         ldx #$00
-forwardToEndOfItems     cpx itemTableSize
-                        beq forwardedToEnd
-                        jsr inc22Ptr
-                        inx
-                        jmp forwardToEndOfItems
+forwardToEndOfItems     lda itemTableSize
+                        sta rollIterations
+                        jsr roll22Ptr
 
 forwardedToEnd          ldy #$00
                         lda ($20), y
