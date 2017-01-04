@@ -6,7 +6,9 @@ invCrsrArea .byte $00           ; Currently Active Box - $00 = Backpack, $01 = B
 invSelArea  .byte $ff           ; Selection In Box - $00 = Backpack, $01 = Body, $02 = Floor, $ff = No selection
 invSelPos   .byte $00           ; Position of selected item in box
 
+boxOffsets:
 invBPOffset .byte $00           ; Offset in Backpack
+invBDOffset .byte $00
 invFLOffset .byte $00           ; Offset in Floor
 
 boxPositions:
@@ -382,6 +384,8 @@ selectItem:
         sta invSelArea
         tax
         lda boxPositions, x
+        clc
+        adc boxOffsets, x
         sta invSelPos
         inc screenDirty
         rts
@@ -392,6 +396,8 @@ selectedItemAction:
 
         tax                             ; Trade places if positions differ
         lda boxPositions, x
+        clc
+        adc boxOffsets, x
         cmp invSelPos
         bne rearrangeItem
 
@@ -538,6 +544,7 @@ drawBackPack        lda #$28
 
                     lda invBPOffset
                     sta rollIterations
+                    sta itemContOffset
                     jsr roll22Ptr
 
                     lda #$08
@@ -615,6 +622,7 @@ drawFloor           lda #$20
 
 itemContSize        .byte $00
 itemSourceSize      .byte $00
+itemContOffset      .byte $00
 itemContTileOff     .byte $00
 itemContTextOff     .byte $00
 itemContRight       .byte $00
@@ -683,11 +691,15 @@ drawItemBLTextLoop  cpy #$11
                     jmp drawItemBLTextLoop
 
 drawItemContinue
-                    lda invSelArea              ; Check if area contains selection
-                    cmp itemContID
+                    ldy invSelArea              ; Check if area contains selection
+                    cpy itemContID
                     bne drawItemNoSelect
 
-                    lda invSelPos               ; Check if current position is selected
+                    ldy invSelPos               ; Check if current position is selected
+                    iny
+                    tya
+                    clc
+                    sbc itemContOffset
                     cmp iter
                     bne drawItemNoSelect
 
