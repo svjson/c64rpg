@@ -2575,17 +2575,24 @@ var_itemValue     = #$06    ; Amount if amount bit set.
 itemTableRowSize .byte $07
 itemTableSize .byte $00
 itemTable
+
+     .byte %11000000
+     .byte $13, $08                ;; X and Y pos
+     .byte $32                     ;; Tile ID
+     .word itemname_PIECES_OF_GOLD ;; Name pointer
+     .byte $15                     ;; Amount
+
      .byte %10100000
-     .byte $0e, $05         ;; X and Y pos
+     .byte $13, $08         ;; X and Y pos
      .byte $30              ;; Tile ID
      .word itemname_SCROLL  ;; Name pointer
      .byte $00              ;; Actual Type
 
-     .byte %11000000
-     .byte $17, $13                ;; X and Y pos
-     .byte $32                     ;; Tile ID
-     .word itemname_PIECES_OF_GOLD ;; Name pointer
-     .byte $15                     ;; Amount
+     .byte %10100000
+     .byte $12, $0b         ;; X and Y pos;
+     .byte $31              ;; Tile ID
+     .word itemname_POTION  ;; Name pointer
+     .byte $01              ;; Actual Type
 
      .byte %11000000
      .byte $18, $13         ;; X and Y pos
@@ -2610,7 +2617,6 @@ itemTable
      .byte $32              ;; Tile ID
      .word itemname_PIECES_OF_GOLD ;; Name pointer
      .byte $19                     ;; Amount
-
 
 ;; +----------------------------------+
 ;; |                                  |
@@ -3815,15 +3821,23 @@ dec22Carry          dec $23
 print_source = $fb
 print_source_length = $02
 print_target = $fd
-
+target_color = $00
 
 print_string            ldy #$00
-print_string_loop       lda ($fb), y
+print_string_loop       lda (print_source), y
                         and #$3f
-                        sta ($fd), y
+                        sta (print_target), y
                         iny
                         cpy print_source_length
                         bne print_string_loop
+                        rts
+
+apply_text_color        ldy #$00
+                        lda target_color
+apply_text_color_loop   sta (print_target), y
+                        iny
+                        cpy print_source_length
+                        bne apply_text_color_loop
                         rts
 
 leftshift_2d            ldy #$00                    ; Rotate Left/Bit-shift with wrap
