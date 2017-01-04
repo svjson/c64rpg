@@ -186,6 +186,7 @@ ilcont              lda #$15     ; wait for raster retrace
                     cmp #$00
                     beq inventoryMainLoop
 
+                    jsr invPositionCrsr
                     jsr updateInventoryContents
                     lda #$00
                     sta screenDirty
@@ -213,6 +214,7 @@ jmpSelectItem       jmp selectItem
 inventoryReadKey:
                     jsr $ffe4
                     and #$3f
+                    inc screenDirty
 
                     cmp key_INVENTORY
                     beq exitInventory
@@ -236,6 +238,7 @@ invReadBackpackAreaKey:
                     beq moveBPCursorDown
                     cmp key_LEFT
                     beq moveBPCursorLeft
+                    dec screenDirty
                     rts
 moveBPCursorUp:
                     lda invBPPos
@@ -264,7 +267,7 @@ moveBPCursorDown:
                     inc screenDirty
                     rts
 incBPCursor         inc invBPPos
-                    jmp invPositionCrsr
+                    rts
 moveBPCursorLeft:
                     jsr invIntoBodyArea
                     jmp invPositionCrsr
@@ -277,35 +280,13 @@ invReadBodyAreaKey:
                     beq moveBDCursorRight
                     rts
 moveBDCursorRight:
-                    jsr invIntoBackPackArea
-                    jmp invPositionCrsr
+                    jmp invIntoBackPackArea
 moveBDCursorUp:
                     rts
 moveBDCursorDown:
                     jsr invIntoFloorArea
                     jmp invPositionCrsr
 moveInvNoAction     rts
-
-invReadFloorAreaKey:
-                    cmp key_UP
-                    beq moveFLCursorUp
-                    cmp key_DOWN
-                    beq moveFLCursorDown
-                    rts
-moveFLCursorUp:
-                    ldx invFLPos
-                    cpx #$00
-                    beq invIntoBackPackArea
-                    dec invFLPos
-                    jmp invPositionCrsr
-
-moveFLCursorDown:
-                    ldx invFLPos
-                    inx
-                    cpx floorTableSize
-                    bcs moveInvNoAction
-                    inc invFLPos
-                    jmp invPositionCrsr
 
 invIntoBodyArea:
                     lda #$01
@@ -321,6 +302,42 @@ invIntoFloorArea:
                     lda #$02
                     sta invCrsrArea
                     jmp invPositionCrsr
+
+invReadFloorAreaKey:
+                    cmp key_UP
+                    beq moveFLCursorUp
+                    cmp key_DOWN
+                    beq moveFLCursorDown
+                    dec screenDirty
+                    rts
+moveFLCursorUp:
+                    lda invFLPos
+                    cmp #$00
+                    beq moveFLUpTop
+                    dec invFLPos
+                    jmp invPositionCrsr
+moveFLUpTop         lda invFLOffset
+                    cmp #$00
+                    beq invIntoBackPackArea
+                    dec invFLOffset
+                    inc screenDirty
+                    rts
+
+moveFLCursorDown:
+                    ldx invFLPos
+                    inx
+                    cpx backpackSize
+                    bcs moveInvNoAction
+                    cpx #$02
+                    bcc incFLCursor
+                    lda #$f1
+                    cmp $d02c
+                    bne moveInvNoAction
+                    inc invFLOffset
+                    inc screenDirty
+                    rts
+incFLCursor         inc invFLPos
+                    rts
 
 invPositionCrsr:
                     lda invCrsrArea
@@ -570,7 +587,7 @@ drawBackPack        lda #$28
                     lda #$00
                     sta itemContID
 
-                    lda #$0b
+                    lda #$0b                    ; Update scroll icons
                     ldx invBPOffset
                     cpx #$00
                     beq bpSetScrollUpColor
@@ -591,7 +608,6 @@ bpSetScrollUpColor  sta $d029
                     bcs bpSetScrollDownColor
                     lda #$01
 bpSetScrollDownColor sta $d02a
-                    lda $d02a
                     jmp drawItemContainer
 
 ;; +----------------------------------+
@@ -612,6 +628,11 @@ drawFloor           lda #$20
                     lda backpackRowSize
                     sta inc22ModVal
 
+                    lda invFLOffset
+                    sta rollIterations
+                    sta itemContOffset
+                    jsr roll22Ptr
+
                     lda #$02
                     sta itemContSize
                     lda floorTableSize
@@ -624,6 +645,28 @@ drawFloor           lda #$20
                     sta itemContRight
                     lda #$02
                     sta itemContID
+
+                    lda #$0b                    ; Update scroll icons
+                    ldx invFLOffset
+                    cpx #$00
+                    beq flSetScrollUpColor
+                    lda #$01
+flSetScrollUpColor  sta $d02b
+
+                    lda #$0b
+                    ldx floorTableSize
+                    inx
+                    cpx itemContSize
+                    bcc flSetScrollDownColor
+                    lda invFLOffset
+                    clc
+                    adc itemContSize
+                    tax
+                    lda #$0b
+                    cpx itemSourceSize
+                    bcs flSetScrollDownColor
+                    lda #$01
+flSetScrollDownColor sta $d02c
                     jmp drawItemContainer
 
 ;; +----------------------------------+

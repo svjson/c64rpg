@@ -2646,7 +2646,7 @@ itemTable
      .byte $00              ;; Actual Type
 
      .byte %10100000
-     .byte $12, $0b         ;; X and Y pos;
+     .byte $13, $08         ;; X and Y pos;
      .byte $31              ;; Tile ID
      .word itemname_POTION  ;; Name pointer
      .byte $01              ;; Actual Type
