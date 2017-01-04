@@ -583,16 +583,10 @@ drawBackPack        lda #$28
                     lda backpackRowSize
                     sta inc22ModVal
 
-                    lda invBPOffset
-                    sta rollIterations
-                    sta itemContOffset
-                    jsr roll22Ptr
-
+                    lda #$00
+                    sta itemContID
                     lda backpackSize
                     sta itemSourceSize
-                    ldx #$00
-                    lda boxSizes, x
-                    sta itemContSize
 
                     lda #$15
                     sta itemContTextOff
@@ -600,8 +594,6 @@ drawBackPack        lda #$28
                     sta itemContTileOff
                     lda #$24
                     sta itemContRight
-                    lda #$00
-                    sta itemContID
 
                     jmp drawItemContainer
 
@@ -623,23 +615,17 @@ drawFloor           lda #$20
                     lda backpackRowSize
                     sta inc22ModVal
 
-                    lda invFLOffset
-                    sta rollIterations
-                    sta itemContOffset
-                    jsr roll22Ptr
-
                     lda #$02
-                    sta itemContSize
+                    sta itemContID
                     lda floorTableSize
                     sta itemSourceSize
+
                     lda #$05
                     sta itemContTextOff
                     lda #$02
                     sta itemContTileOff
                     lda #$14
                     sta itemContRight
-                    lda #$02
-                    sta itemContID
 
                     jmp drawItemContainer
 
@@ -656,6 +642,16 @@ itemContRight       .byte $00
 itemContID          .byte $00
 
 drawItemContainer:
+                    ldx itemContID
+
+                    lda boxSizes, x     ; Look up source container size
+                    sta itemContSize
+
+                    lda boxOffsets, x   ; Roll item ptr to offset
+                    sta rollIterations
+                    sta itemContOffset
+                    jsr roll22Ptr
+
                     ldx #$00
                     stx iter
                     jmp drawItemContLoop
