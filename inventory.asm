@@ -127,6 +127,9 @@ enterInventory:
                     sta $23
                     jsr memcpy_readRowsByte
 
+                    lda #$ff                    ; No selection on entry
+                    sta invSelArea
+
                     jsr updateInventoryContents
                     jmp inventoryMainLoop
 
@@ -571,6 +574,8 @@ fillBLoop           lda #$20
 drawItemContDone    rts
 drawItemContLoop    cpx itemSourceSize
                     beq itemContFillRemain
+                    cpx itemContSize
+                    beq drawItemContDone
 
                     ldy #$01
                     lda ($22), y

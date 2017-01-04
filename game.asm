@@ -2329,12 +2329,53 @@ animatechars
 ;; +----------------------------------+
 *=$C000
 backpackRowSize = #$05
-backpackSize .byte $04
+backpackSize .byte $0c
 backpackTable:
 .byte %10000000
 .byte $30              ;; Tile ID
 .word itemname_SCROLL  ;; Name pointer
 .byte $00              ;; Actual Type
+
+.byte %10000000
+.byte $32              ;; Tile ID
+.word itemname_PIECES_OF_GOLD ;; Name pointer
+.byte $19                     ;; Amount
+
+.byte %10000000
+.byte $31              ;; Tile ID
+.word itemname_POTION  ;; Name pointer
+.byte $01              ;; Actual Type
+
+.byte %10000000
+.byte $34              ;; Tile ID
+.word itemname_LEATHER_ARMOR;; Name pointer
+.byte $00              ;; Actual Type
+
+.byte %10000000
+.byte $30              ;; Tile ID
+.word itemname_SCROLL  ;; Name pointer
+.byte $00              ;; Actual Type
+
+.byte %10000000
+.byte $32              ;; Tile ID
+.word itemname_PIECES_OF_GOLD ;; Name pointer
+.byte $19                     ;; Amount
+
+.byte %10000000
+.byte $31              ;; Tile ID
+.word itemname_POTION  ;; Name pointer
+.byte $01              ;; Actual Type
+
+.byte %10000000
+.byte $34              ;; Tile ID
+.word itemname_LEATHER_ARMOR;; Name pointer
+.byte $00              ;; Actual Type
+
+.byte %10000000
+.byte $30              ;; Tile ID
+.word itemname_SCROLL  ;; Name pointer
+.byte $00              ;; Actual Type
+
 .byte %10000000
 .byte $32              ;; Tile ID
 .word itemname_PIECES_OF_GOLD ;; Name pointer
