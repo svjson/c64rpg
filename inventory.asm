@@ -229,10 +229,19 @@ invReadFloorAreaKey:
                     beq moveFLCursorDown
                     rts
 moveFLCursorUp:
-                    jsr invIntoBackPackArea
+                    ldx invFLPos
+                    cpx #$00
+                    beq invIntoBackPackArea
+                    dec invFLPos
                     jmp invPositionCrsr
+
 moveFLCursorDown:
-                    rts
+                    ldx invFLPos
+                    inx
+                    cpx floorTableSize
+                    bcs moveInvNoAction
+                    inc invFLPos
+                    jmp invPositionCrsr
 
 invIntoBodyArea:
                     lda #$01
@@ -242,7 +251,7 @@ invIntoBodyArea:
 invIntoBackPackArea:
                     lda #$00
                     sta invCrsrArea
-                    rts
+                    jmp invPositionCrsr
 
 invIntoFloorArea:
                     lda #$02
