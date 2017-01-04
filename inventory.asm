@@ -106,7 +106,7 @@ enterInventory:
                     lda #$e0
                     sta $d00b
                     
-                    lda #%00001100     ; Set hi bits for bp nav sprites
+                    lda #%00001110     ; Set hi bits for bp nav sprites
                     sta $d010
 
                     lda #%00111111     ; Enable inventory sprites
@@ -238,15 +238,30 @@ invReadBackpackAreaKey:
 moveBPCursorUp:
                     lda invBPPos
                     cmp #$00
-                    beq moveInvNoAction
+                    beq moveBPUpTop
                     dec invBPPos
                     jmp invPositionCrsr
+moveBPUpTop         lda invBPOffset
+                    cmp #$00
+                    beq moveInvNoAction
+                    dec invBPOffset
+                    inc screenDirty
+                    rts
+
 moveBPCursorDown:
                     ldx invBPPos
                     inx
                     cpx backpackSize
                     bcs invIntoFloorArea
-                    inc invBPPos
+                    cpx #$08
+                    bcc incBPCursor
+                    lda #$f1
+                    cmp $d02a
+                    bne invIntoFloorArea
+                    inc invBPOffset
+                    inc screenDirty
+                    rts
+incBPCursor         inc invBPPos
                     jmp invPositionCrsr
 moveBPCursorLeft:
                     jsr invIntoBodyArea
@@ -521,6 +536,10 @@ drawBackPack        lda #$28
                     lda backpackRowSize
                     sta inc22ModVal
 
+                    lda invBPOffset
+                    sta rollIterations
+                    jsr roll22Ptr
+
                     lda #$08
                     sta itemContSize
                     lda backpackSize
@@ -534,6 +553,29 @@ drawBackPack        lda #$28
                     lda #$00
                     sta itemContID
 
+                    lda #$0b
+                    ldx invBPOffset
+                    cpx #$00
+                    beq bpSetScrollUpColor
+                    lda #$01
+bpSetScrollUpColor  sta $d029
+
+                    lda #$0b
+                    ldx backpackSize
+                    inx
+                    cpx itemContSize
+                    bcc bpSetScrollDownColor
+                    lda invBPOffset
+                    clc
+                    adc itemContSize
+                    tax
+                    lda #$0b
+                    cpx itemSourceSize
+                    beq bpSetScrollDownColor
+                    lda #$01
+bpSetScrollDownColor sta $d02a
+                    lda $d02a
+                    sta $0410
                     jmp drawItemContainer
 
 ;; +----------------------------------+

@@ -3871,6 +3871,16 @@ dec22Ptr:           ; Helper subroutine for decreasing 16-bit buffer value at $2
 dec22Carry          dec $23
                     rts
 
+rollIterations .byte $00
+
+roll22Ptr           ldx #$00
+roll22PtrLoop       cpx rollIterations
+                    beq rollEnd
+                    jsr inc22Ptr
+                    inx
+                    jmp roll22PtrLoop
+rollEnd             rts
+
 ;; ----------------------
 ;; UTILITIES
 ;; ----------------------
