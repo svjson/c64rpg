@@ -32,6 +32,12 @@ invBPScrlDn .byte $00
 invBDScrlDn .byte $00
 invFLScrlDn .byte $00
 
+boxCrsrTopOffsets
+            .byte $37
+            .byte $37
+            .byte $cf
+            .byte $cf
+
 floorTableOriginTable:
 .byte $00
 .byte $00
@@ -334,50 +340,38 @@ moveBDCursorDown:
                     jmp invPositionCrsr
 moveInvNoAction     rts
 
+;; +----------------------------------+
+;; |    CURSOR POSITIONING            |
+;; +----------------------------------+
 invPositionCrsr:
-                    lda invCrsrArea
-                    cmp #$00
-                    beq invPositionBPCrsr
-
-                    cmp #$01
-                    beq invPositionBDCrsr
-
-invPositionFLCrsr:
-                    lda invFLPos
+                    ldx invCrsrArea
+                    lda boxPositions, x
                     sta num1
                     lda #$10
                     sta num2
                     jsr multiply
                     clc
-                    adc #$cf
+                    ldx invCrsrArea                    
+                    adc boxCrsrTopOffsets, x
+                    
+                    cpx #$01
+                    beq invPositionBDCrsr
+invPositionRightCol:
                     sta $d001
                     sta $d003
-
-                    jmp invRightColCrsr
+                    lda #$9a
+                    sta $d000
+                    lda #$30
+                    sta $d002
+                    lda #%00111110
+                    sta $d010
+                    rts
 invPositionBDCrsr:
                     lda #$1a
                     sta $d000
                     lda #$80
                     sta $d002
                     lda #%00111100
-                    sta $d010
-                    rts
-invPositionBPCrsr:
-                    lda invBPPos
-                    sta num1
-                    lda #$10
-                    sta num2
-                    jsr multiply
-                    clc
-                    adc #$37
-                    sta $d001
-                    sta $d003
-invRightColCrsr:
-                    lda #$9a
-                    sta $d000
-                    lda #$30
-                    sta $d002
-                    lda #%00111110
                     sta $d010
                     rts
 
