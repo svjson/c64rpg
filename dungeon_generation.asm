@@ -1,4 +1,5 @@
 
+
 brushX .byte $00
 brushY .byte $00
 
@@ -34,6 +35,7 @@ bitMasks  .byte %10000000
 
 generateDungeon:
                         lda #$0d                ; Solid rock tile
+                        sta $d020
                         sta brushTile           ; Fill entire buffer with rock
                         jsr fillLevel
 
@@ -52,7 +54,9 @@ generateDungeon:
 ;; +----------------------------------+
 ;; |    CAVE ROOM                     |
 ;; +----------------------------------+
-addCaveRoom             lda #$00                ; Begin pushing upwards
+addCaveRoom             lda #$02
+                        sta $d020
+                        lda #$00                ; Begin pushing upwards
                         sta genDir
 
                         lda brushX              ; Store current brush position as the origin of the cave room
@@ -284,7 +288,9 @@ fillLevelComplete       rts
 rowIter .byte $00
 colIter .byte $00
 
-decorateArea:           lda #$00
+decorateArea:           lda #$05
+                        sta $d020
+                        lda #$00
                         sta brushX
                         sta brushY
                         sta rowIter
@@ -320,7 +326,9 @@ decorateNextRow         inc rowIter
                         cmp currentAreaHeight
                         bne decorateColLoop
 
-endDecorateArea         lda #<decorationBuffer          ; Copy decorated buffer back to level
+endDecorateArea         lda #$08
+                        sta $d020
+                        lda #<decorationBuffer          ; Copy decorated buffer back to level
                         sta $20
                         lda #>decorationBuffer
                         sta $21
@@ -333,6 +341,8 @@ endDecorateArea         lda #<decorationBuffer          ; Copy decorated buffer 
                         lda currentAreaHeight
                         sta memcpy_rows
                         jsr memcpy
+                        lda #$00
+                        sta $d020
                         rts
 
 getTileDecoration       cmp #$01
@@ -416,9 +426,6 @@ noTileReplacement       lda #$0d
 tileBit .byte $00
 tileBitIter .byte $00
 
-tileBitX .byte $00
-tileBitY .byte $00
-
 collectTileBits         lda #$00
                         sta tileBit
                         sta tileBitIter
@@ -426,8 +433,8 @@ collectTileBits         lda #$00
                         ldx colIter
                         dex
                         dey
-                        stx tileBitX
-                        sty tileBitY
+                        stx tmpX
+                        sty tmpY
 
 collectTileBitsLoop     lda tileBitIter
                         jsr isOutOfBounds
@@ -448,20 +455,18 @@ noTileBit               lda tileBitIter
                         beq nextTileBitRow
                         cmp #$07
                         beq tileBitCollected
-                        inc tileBitX
+                        inc tmpX
                         cmp #$03
                         beq skipTile
                         jmp nextTileBitIter
-skipTile                inc tileBitX
+skipTile                inc tmpX
                         jmp nextTileBitIter
-nextTileBitRow          dec tileBitX
-                        dec tileBitX
-                        inc tileBitY
+nextTileBitRow          dec tmpX
+                        dec tmpX
+                        inc tmpY
 nextTileBitIter         inc tileBitIter
-                        ldx tileBitX
-                        ldy tileBitY
-                        stx tmpX
-                        sty tmpY
+                        ldx tmpX
+                        ldy tmpY
                         jmp collectTileBitsLoop
 tileBitCollected        rts
 
