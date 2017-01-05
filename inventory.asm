@@ -108,25 +108,23 @@ enterInventory:
                     jsr populateFloorTable
                     jsr invPositionCrsr
                     
-                    lda #$3d           ; Set BP nav sprite positions
+                    lda #$3d           ; Set arrows X POS
                     sta $d004
                     sta $d006
+                    sta $d008
+                    sta $d00a
 
-                    lda #$38
+                    lda #$38           ; Set BP nav sprite positions
                     sta $d005
                     lda #$af
                     sta $d007
                     
-                    lda #$c0           ; Set FL nav sprite positions
-                    sta $d008
-                    sta $d00a
-                    
-                    lda #$d0
+                    lda #$d0           ; Set FL nav sprite positions
                     sta $d009
                     lda #$e0
                     sta $d00b
                     
-                    lda #%00001110     ; Set hi bits for bp nav sprites
+                    lda #%00111110     ; Set hi bits for bp nav sprites
                     sta $d010
 
                     lda #%00111111     ; Enable inventory sprites
@@ -147,6 +145,13 @@ enterInventory:
                     sta boxWidth
                     jsr drawBox
 
+
+                    lda #$13
+                    sta boxTop
+                    lda #$06
+                    sta boxHeight
+                    jsr drawBox
+
                     lda #$01
                     sta memcpy_rowSize
 
@@ -160,23 +165,13 @@ enterInventory:
                     sta $23
                     jsr memcpy_readRowsByte
 
-                    lda #$00
-                    sta boxLeft
-                    lda #$27
-                    sta boxWidth
-                    lda #$13
-                    sta boxTop
-                    lda #$06
-                    sta boxHeight
-                    jsr drawBox
-
                     lda #<text_FLOOR
                     sta $20
                     lda #>text_FLOOR
                     sta $21
-                    lda #$fa
+                    lda #$0a
                     sta $22
-                    lda #$06
+                    lda #$07
                     sta $23
                     jsr memcpy_readRowsByte
 
@@ -358,19 +353,13 @@ invPositionFLCrsr:
                     sta $d001
                     sta $d003
 
-                    lda #$1a
-                    sta $d000
-                    lda #$b0
-                    sta $d002
-                    lda #%00001100
-                    sta $d010
-                    rts
+                    jmp invRightColCrsr
 invPositionBDCrsr:
                     lda #$1a
                     sta $d000
                     lda #$80
                     sta $d002
-                    lda #%00001100
+                    lda #%00111100
                     sta $d010
                     rts
 invPositionBPCrsr:
@@ -383,12 +372,12 @@ invPositionBPCrsr:
                     adc #$37
                     sta $d001
                     sta $d003
-
+invRightColCrsr:
                     lda #$9a
                     sta $d000
                     lda #$30
                     sta $d002
-                    lda #%00001110
+                    lda #%00111110
                     sta $d010
                     rts
 
@@ -544,17 +533,17 @@ itemDroppedNoAdjust     inc screenDirty
                         rts
 
 updateInventoryContents:
-        jsr drawBackPack
-        lda invBPScrlUp
-        sta $d029
-        lda invBPScrlDn
-        sta $d02a
-        jsr drawFloor
-        lda invFLScrlUp
-        sta $d02b
-        lda invFLScrlDn
-        sta $d02c
-        rts
+                        jsr drawBackPack
+                        lda invBPScrlUp
+                        sta $d029
+                        lda invBPScrlDn
+                        sta $d02a
+                        jsr drawFloor
+                        lda invFLScrlUp
+                        sta $d02b
+                        lda invFLScrlDn
+                        sta $d02c
+                        rts
 
 ;; +----------------------------------+
 ;; |    DRAW BACKPACK CONTENTS        |
@@ -611,11 +600,11 @@ drawFloor           lda #$20
                     lda floorTableSize
                     sta itemSourceSize
 
-                    lda #$05
+                    lda #$15
                     sta itemContTextOff
-                    lda #$02
+                    lda #$12
                     sta itemContTileOff
-                    lda #$14
+                    lda #$24
                     sta itemContRight
 
                     jmp drawItemContainer
