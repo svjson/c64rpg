@@ -573,6 +573,22 @@ updateInventoryContents:
                         sta $d02b
                         lda invFLScrlDn
                         sta $d02c
+
+                        ldx playerGoldBalance
+                        jsr byte_to_decimal
+
+                        lda #<decBuffer
+                        sta $20
+                        lda #>decBuffer
+                        sta $21
+                        lda #$75
+                        sta $22
+                        lda #$07
+                        sta $23
+                        lda #$01
+                        sta memcpy_rowSize
+                        jsr memcpy_readRowsByte
+
                         rts
 
 ;; +----------------------------------+

@@ -454,9 +454,6 @@ attemptPickUp:
                     cmp #$ff
                     beq nothingToPickUp
 
-                    ldy #$00                ; Turn off item in area item table
-                    lda ($20), y
-
                     ldy var_itemNamePtrLo   ; Store pointer to item name
                     lda ($20), y
                     sta tmpPtr1
@@ -473,7 +470,16 @@ attemptPickUp:
                     sta $21
                     jsr addToMessageBuffer
 
-                    lda tmpPtr1
+                    ldx goldPickedUp
+                    cpx #$00
+                    beq pickUpNoAmount
+
+                    jsr byte_to_decimal
+                    jsr addToMessageBuffer
+                    lda #$20
+                    jsr addCharToMessageBuffer
+
+pickUpNoAmount      lda tmpPtr1
                     sta $20
                     lda tmpPtr1+1
                     sta $21
@@ -490,7 +496,28 @@ nothingToPickUp     lda #<text_NOTHING_TO_PICK_UP
                     jsr addMessage
                     rts
 
-addToInventory:     lda #<backpackTable     ; Set pointer to backpack
+goldPickedUp .byte $00, $00
+
+addToInventory:     ldy #$00
+                    sty goldPickedUp
+                    lda ($20), y
+                    and #%01000000
+                    cmp #%01000000
+                    bne addToBackpack
+
+                    lda ($20), y
+                    and #%01111111
+                    sta ($20), y
+
+                    ldy var_itemValue
+                    lda ($20), y
+                    sta goldPickedUp
+                    clc
+                    adc playerGoldBalance
+                    sta playerGoldBalance
+                    jsr compactItemTable
+                    rts
+addToBackpack       lda #<backpackTable     ; Set pointer to backpack
                     sta $22
                     lda #>backpackTable
                     sta $23
@@ -2330,69 +2357,17 @@ animatechars
 ;; |                                  |
 ;; +----------------------------------+
 *=$C000
+playerGoldBalance .byte $00, $00
 backpackRowSize = #$05
-backpackSize .byte $0c
+backpackSize .byte $00
 backpackTable:
-.byte %10000000
-.byte $30              ;; Tile ID
-.word itemname_SCROLL  ;; Name pointer
-.byte $00              ;; Actual Type
-
-.byte %10000000
-.byte $32              ;; Tile ID
-.word itemname_PIECES_OF_GOLD ;; Name pointer
-.byte $19                     ;; Amount
-
-.byte %10000000
-.byte $31              ;; Tile ID
-.word itemname_POTION  ;; Name pointer
-.byte $01              ;; Actual Type
-
-.byte %10000000
-.byte $34              ;; Tile ID
-.word itemname_LEATHER_ARMOR;; Name pointer
-.byte $00              ;; Actual Type
-
-.byte %10000000
-.byte $30              ;; Tile ID
-.word itemname_SCROLL  ;; Name pointer
-.byte $00              ;; Actual Type
-
-.byte %10000000
-.byte $32              ;; Tile ID
-.word itemname_PIECES_OF_GOLD ;; Name pointer
-.byte $19                     ;; Amount
-
-.byte %10000000
-.byte $31              ;; Tile ID
-.word itemname_POTION  ;; Name pointer
-.byte $01              ;; Actual Type
-
-.byte %10000000
-.byte $34              ;; Tile ID
-.word itemname_LEATHER_ARMOR;; Name pointer
-.byte $00              ;; Actual Type
-
-.byte %10000000
-.byte $30              ;; Tile ID
-.word itemname_SCROLL  ;; Name pointer
-.byte $00              ;; Actual Type
-
-.byte %10000000
-.byte $32              ;; Tile ID
-.word itemname_PIECES_OF_GOLD ;; Name pointer
-.byte $19                     ;; Amount
-
-.byte %10000000
-.byte $31              ;; Tile ID
-.word itemname_POTION  ;; Name pointer
-.byte $01              ;; Actual Type
-
-.byte %10000000
-.byte $34              ;; Tile ID
-.word itemname_LEATHER_ARMOR;; Name pointer
-.byte $00              ;; Actual Type
-
+.byte $00, $00, $00, $00, $00
+.byte $00, $00, $00, $00, $00
+.byte $00, $00, $00, $00, $00
+.byte $00, $00, $00, $00, $00
+.byte $00, $00, $00, $00, $00
+.byte $00, $00, $00, $00, $00
+.byte $00, $00, $00, $00, $00
 .byte $00, $00, $00, $00, $00
 .byte $00, $00, $00, $00, $00
 .byte $00, $00, $00, $00, $00
@@ -2636,7 +2611,7 @@ itemTableSize .byte $03
 itemTable
 
      .byte %11000000
-     .byte $13, $08                ;; X and Y pos
+     .byte $10, $0a                ;; X and Y pos
      .byte $32                     ;; Tile ID
      .word itemname_PIECES_OF_GOLD ;; Name pointer
      .byte $15                     ;; Amount
