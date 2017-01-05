@@ -1861,6 +1861,8 @@ text_FLOOR          .byte 5
                     .text "FLOOR"
 text_BACKPACK       .byte 8
                     .text "BACKPACK"
+text_GOLD           .byte 4
+                    .text "GOLD"
 
 text_YOU_KILLED_THE .byte 15
                     .text "YOU KILLED THE "
@@ -1885,7 +1887,7 @@ itemname_PIECES_OF_GOLD     .byte 14
                             .text "PIECES OF GOLD"
 itemname_POTION             .byte 06
                             .text "POTION"
-itemname_LEATHER_ARMOR       .byte 13
+itemname_LEATHER_ARMOR      .byte 13
                             .text "LEATHER ARMOR"
 
 npcname_GIANT_RAT           .byte 09

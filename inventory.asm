@@ -151,11 +151,16 @@ enterInventory:
                     sta boxWidth
                     jsr drawBox
 
-
                     lda #$13
                     sta boxTop
                     lda #$06
                     sta boxHeight
+                    jsr drawBox
+
+                    lda #$00
+                    sta boxLeft
+                    lda #$0f
+                    sta boxWidth
                     jsr drawBox
 
                     lda #$01
@@ -181,12 +186,43 @@ enterInventory:
                     sta $23
                     jsr memcpy_readRowsByte
 
+                    lda #<text_PURSE
+                    sta $20
+                    lda #>text_PURSE
+                    sta $21
+                    lda #$fa
+                    sta $22
+                    lda #$06
+                    sta $23
+                    jsr memcpy_readRowsByte
+
+                    lda #<text_GOLD
+                    sta $20
+                    lda #>text_GOLD
+                    sta $21
+                    lda #$4d
+                    sta $22
+                    lda #$07
+                    sta $23
+                    jsr memcpy_readRowsByte
+
+                    lda #<$0749
+                    sta $20
+                    lda #>$0749
+                    sta $21
+                    lda #<$db49
+                    sta $24
+                    lda #>$db49
+                    sta $25
+                    ldx #$32
+                    clc
+                    jsr drawItemTile
+
                     lda #$ff                    ; No selection on entry
                     sta invSelArea
 
                     jsr updateInventoryContents
                     jmp inventoryMainLoop
-
 
 ;; +----------------------------------+
 ;; |    INVENTORY MAIN LOOP           |
