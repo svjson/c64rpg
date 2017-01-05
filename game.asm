@@ -57,12 +57,11 @@
      lda #%00000001     ; Enable raster interrupt signals
      sta $d01a
 
-     ldx playerX
-     ldy playerY
-     jsr attemptMove
-
-     jsr drawlevel
-
+     lda #<dungeoncellar
+     sta $20
+     lda #>dungeoncellar
+     sta $21
+     jsr enterArea
      jmp mainloop
 
 enterMapMode:
@@ -1030,9 +1029,14 @@ enterArea:
                     lda ($20), y
                     sta sceneCol2
 
-                    lda #$07              ; Set up map pointer for memcpy
+                    lda #$07              ; Skip ahead of already read map header
                     sta inc20ModVal
                     jsr inc20Ptr
+
+                    lda areaMode          ; Skip reading map data if we are to generate a level
+                    and #%01000000
+                    cmp #%01000000
+                    beq loadAreaTriggerTable
 
                     lda #<currentArea     ; Set currentArea map memory as target for memcpy
                     sta $22
@@ -1164,6 +1168,13 @@ areaLoaded            lda $d018              ; Remap tileset
                       lda sceneCol2
                       sta $d023
 
+                      lda areaMode           ; Go generate the map if required
+                      and #%01000000
+                      cmp #%01000000
+                      bne doEnterArea
+                      jsr generateDungeon
+
+doEnterArea:
                       ldx playerX
                       stx tmpX
                       ldy playerY
@@ -1862,6 +1873,8 @@ resolveTile
                     lda ($24), y
                     rts
 
+.include "dungeon_generation.asm"
+
 ;; +----------------------------------+
 ;; |                                  |
 ;; |    STATUS BAR ROUTINES           |
@@ -1923,6 +1936,8 @@ npcname_SKELETON_WARRIOR    .byte 16
                             .text "SKELETON WARRIOR"
 npcname_KOBOLD              .byte 6
                             .text "KOBOLD"
+npcname_ORC                 .byte 3
+                            .text "ORC"
 
 messageBufferLength .byte $00
 messageBuffer .text "ABC                                                        "
@@ -2393,8 +2408,8 @@ backpackTable:
 currentAreaOffsetX  .byte $00
 currentAreaOffsetY  .byte $04
 
-playerX .byte $09
-playerY .byte $09
+playerX .byte $1d
+playerY .byte $13
 playerTurnCost .byte $00
 
 screenDirty .byte $00
@@ -2414,7 +2429,7 @@ drawBufferHeight = $0811
 
 areaMode:
     .byte %00000000    ; 0/1 = FOV mode on/off
-                       ; Unused
+                       ; 0/1 = Randomly generated on/off
                        ; Unused
                        ; Unused
                        ; Unused
@@ -2595,6 +2610,17 @@ npcTable
      .byte 11               ;; Movement Cost
      .byte 11               ;; AP
 
+     .byte %00000000
+     .byte $0f, $08         ;; X and Y pos
+     .byte $20              ;; Tile ID
+     .byte $89              ;; Sprite pointer   $00 = off
+     .byte $00, $00         ;; Name pointer
+     .byte $12              ;; HP
+     .byte $00              ;; Mode
+     .byte 0, 0             ;; Target X and Y pos
+     .byte 11               ;; Movement Cost
+     .byte 11               ;; AP
+
 var_itemModes     = #$00 ; Bit 7 - On/Off
                          ; Bit 6 - Amount On/Off
                          ; Bit 5 - Unidentified object On/Off
@@ -2607,7 +2633,7 @@ var_itemValue     = #$06    ; Amount if amount bit set.
                             ; Actual Item ID if unidentified bit set.
 
 itemTableRowSize .byte $07
-itemTableSize .byte $03
+itemTableSize .byte $00
 itemTable
 
      .byte %11000000
@@ -2633,6 +2659,24 @@ itemTable
      .byte $32              ;; Tile ID
      .word itemname_PIECES_OF_GOLD ;; Name pointer
      .byte $09                     ;; Amount
+
+     .byte %11000000
+     .byte $18, $14         ;; X and Y pos
+     .byte $32              ;; Tile ID
+     .word itemname_PIECES_OF_GOLD ;; Name pointer
+     .byte $19                     ;; Amount
+
+     .byte %11000000
+     .byte $18, $14         ;; X and Y pos
+     .byte $32              ;; Tile ID
+     .word itemname_PIECES_OF_GOLD ;; Name pointer
+     .byte $19                     ;; Amount
+
+     .byte %11000000
+     .byte $18, $14         ;; X and Y pos
+     .byte $32              ;; Tile ID
+     .word itemname_PIECES_OF_GOLD ;; Name pointer
+     .byte $19                     ;; Amount
 
      .byte %11000000
      .byte $18, $14         ;; X and Y pos
@@ -2728,11 +2772,11 @@ dungeoncellar
      .byte $0d, $05, $02, $01, $01, $03, $02, $02, $01, $02, $06, $0c, $01, $03, $01, $01, $02, $01, $01, $03, $01, $02, $02, $03, $0b, $07, $09, $01, $02, $14, $15, $02, $06
      .byte $0d, $05, $01, $02, $01, $01, $01, $01, $0f, $01, $06, $05, $02, $02, $02, $01, $0b, $0a, $0c, $01, $01, $01, $18, $12, $04, $09, $01, $01, $18, $09, $01, $01, $06
      .byte $0d, $0d, $0c, $01, $03, $03, $01, $01, $10, $03, $06, $05, $03, $01, $03, $01, $06, $0d, $05, $01, $03, $0b, $05, $01, $01, $02, $01, $02, $10, $01, $03, $01, $06
-     .byte $0d, $0d, $05, $01, $02, $03, $01, $01, $10, $01, $08, $09, $01, $0b, $0a, $0a, $0d, $0d, $0d, $0a, $0a, $0d, $0d, $0c, $02, $03, $03, $02, $10, $02, $03, $02, $06
+     .byte $0d, $0d, $05, $01, $02, $03, $01, $01, $10, $01, $08, $09, $01, $0b, $0a, $0a, $0d, $0d, $0d, $0a, $0a, $0d, $0d, $0c, $02, $03, $03, $02, $10, $1b, $03, $02, $06
      .byte $0d, $0d, $0d, $0a, $0a, $0a, $0c, $01, $10, $01, $03, $01, $02, $06, $0d, $0d, $0d, $0d, $0d, $0d, $0d, $0d, $0d, $0d, $0c, $01, $01, $01, $10, $01, $01, $0b, $0d
      .byte $0d, $0d, $0d, $0d, $0d, $0d, $0d, $0a, $0d, $0a, $0a, $0a, $0a, $0d, $0d, $0d, $0d, $0d, $0d, $0d, $0d, $0d, $0d, $0d, $0d, $0a, $0a, $0a, $0d, $0a, $0a, $0d, $0d
      ;---
-     .byte $01 ; - Number of triggers
+     .byte $02 ; - Number of triggers
      ;---
      .byte $0e  ; Trigger X
      .byte $0a  ; Trigger Y
@@ -2741,8 +2785,17 @@ dungeoncellar
      .byte >(houseArea)
      .byte $05  ; Target X
      .byte $01  ; Target Y
+
+     .byte $1d  ; Trigger X
+     .byte $14  ; Trigger Y
+     .byte $01  ; trigger type
+     .byte <(rnddungeon1)
+     .byte >(rnddungeon1)
+     .byte $12  ; Target X
+     .byte $0a  ; Target Y
+
      ;---
-     .byte $09 ; Number of npcs
+     .byte $0a ; Number of npcs
 
      .byte %10000000
      .byte $0f, $08         ;; X and Y pos
@@ -2842,6 +2895,17 @@ dungeoncellar
      .byte 0, 0             ;; Target X and Y pos
      .byte 20
      .byte 0
+
+     .byte %10000000
+     .byte $15, $03         ;; X and Y pos
+     .byte $23              ;; Tile ID
+     .byte $8f              ;; Sprite pointer   $00 = off
+     .word npcname_ORC ;; Name pointer
+     .byte $20              ;; HP
+     .byte $01              ;; Mode
+     .byte 0, 0             ;; Target X and Y pos
+     .byte 13
+     .byte 0
      ;---
      .byte $06 ; Item table size
 
@@ -2916,6 +2980,18 @@ houseArea
      .byte $0a  ; Target Y
      ;---
      .byte $00  ; NPC table size
+     ;---
+     .byte $00  ; Item table size
+
+rnddungeon1
+     .byte $21 ; W
+     .byte $17 ; H
+     .byte %01000000
+     .byte %00001010    ; Tile set mask
+     .byte $1f, $1c, $1b
+     .byte $00 ; No triggers
+     .byte $00 ; No npcs
+     .byte $00 ; No ites
 
 ;; +----------------------------------+
 ;; |                                  |
@@ -2991,7 +3067,7 @@ tileChar1
      .byte $80   ;; Rat             $20
      .byte $82   ;; Skeleton        $21
      .byte $84   ;; Kobold          $22
-     .byte $00   ;; Unused monster  $23
+     .byte $86   ;; Orc             $23
      .byte $00   ;; Unused monster  $24
      .byte $00   ;; Unused monster  $25
      .byte $00   ;; Unused monster  $26
@@ -3047,7 +3123,7 @@ tileChar2
      .byte $81   ;; Rat             $20
      .byte $83   ;; Skeleton        $21
      .byte $85   ;; Kobold          $22
-     .byte $00   ;; Unused monster  $23
+     .byte $87   ;; Orc             $23
      .byte $00   ;; Unused monster  $24
      .byte $00   ;; Unused monster  $25
      .byte $00   ;; Unused monster  $26
@@ -3104,7 +3180,7 @@ tileChar3
      .byte $a0   ;; Rat             $20
      .byte $a2   ;; Skeleton        $21
      .byte $a4   ;; Kobold          $22
-     .byte $00   ;; Unused monster  $23
+     .byte $a6   ;; Orc             $23
      .byte $00   ;; Unused monster  $24
      .byte $00   ;; Unused monster  $25
      .byte $00   ;; Unused monster  $26
@@ -3161,7 +3237,7 @@ tileChar4
      .byte $a1   ;; Rat             $20
      .byte $a3   ;; Skeleton        $21
      .byte $a5   ;; Kobold          $22
-     .byte $00   ;; Unused monster  $23
+     .byte $a7   ;; Orc             $23
      .byte $00   ;; Unused monster  $24
      .byte $00   ;; Unused monster  $25
      .byte $00   ;; Unused monster  $26
@@ -3217,7 +3293,7 @@ tileCharColor1
      .byte $1a   ;; Rat             $20
      .byte $09   ;; Skeleton        $21
      .byte $0d   ;; Kobold          $22
-     .byte $00   ;; Unused monster  $23
+     .byte $1a   ;; Orc             $23
      .byte $00   ;; Unused monster  $24
      .byte $00   ;; Unused monster  $25
      .byte $00   ;; Unused monster  $26
@@ -3273,7 +3349,7 @@ tileCharColor2
      .byte $1a   ;; Rat             $20
      .byte $01   ;; Skeleton        $21
      .byte $0d   ;; Kobold          $22
-     .byte $00   ;; Unused monster  $23
+     .byte $1a   ;; Orc             $23
      .byte $00   ;; Unused monster  $24
      .byte $00   ;; Unused monster  $25
      .byte $00   ;; Unused monster  $26
@@ -3329,7 +3405,7 @@ tileCharColor3
      .byte $1a   ;; Rat             $20
      .byte $09   ;; Skeleton        $21
      .byte $0d   ;; Kobold          $22
-     .byte $00   ;; Unused monster  $23
+     .byte $1a   ;; Orc             $23
      .byte $00   ;; Unused monster  $24
      .byte $00   ;; Unused monster  $25
      .byte $00   ;; Unused monster  $26
@@ -3385,7 +3461,7 @@ tileCharColor4
      .byte $1a   ;; Rat             $20
      .byte $01   ;; Skeleton        $20
      .byte $0d   ;; Kobold          $22
-     .byte $00   ;; Unused monster  $23
+     .byte $1a   ;; Orc             $23
      .byte $00   ;; Unused monster  $24
      .byte $00   ;; Unused monster  $25
      .byte $00   ;; Unused monster  $26
@@ -3441,7 +3517,7 @@ tileProps:
      .byte %11000000
      .byte %11000000
      .byte %11000000
-     .byte %00000000
+     .byte %11000000
      .byte %00000000
      .byte %00000000
      .byte %00000000
@@ -3594,7 +3670,7 @@ indoorsTilesetPropsTable:
 
 ; Dungeon tile set
 dungeonTileset:
-     .byte $1b
+     .byte $1c
      .byte $48, $48, $48, $48       ;; Nothing/Black        $00
      .byte $40, $41, $41, $40       ;; Dungeon floor        $01
      .byte $41, $40, $40, $41       ;; Dungeon floor        $02
@@ -3622,6 +3698,7 @@ dungeonTileset:
      .byte $4b, $4a, $4c, $4f       ;; Dungeon wall n e     $18
      .byte $5e, $5f, $5c, $5d       ;; Stairs               $19
      .byte $62, $63, $60, $61       ;; Barrel               $1a
+     .byte $64, $65, $66, $67       ;; Stairs down          $1b
 
 dungeonTilesetColorTable:
      .byte $00, $00, $00, $00 ;; Nothing / Black
@@ -3651,6 +3728,7 @@ dungeonTilesetColorTable:
      .byte $08, $08, $08, $08 ;; Dungeon wall n e
      .byte $00, $00, $00, $00 ;; Stairs up
      .byte $1a, $1a, $1a, $1a ;; Barrel
+     .byte $00, $00, $00, $00 ;; Stairs down
 
 dungeonTilesetPropsTable:
      .byte %00000000          ;; Nothing / Black. Not passable.    Block Sight
@@ -3680,6 +3758,7 @@ dungeonTilesetPropsTable:
      .byte %00000000          ;; Dungeon wall     Not passable.    Block sight
      .byte %11100000          ;; Dungeon floor    Stairs up        See-through    Trigger
      .byte %01000000          ;; Barrel           Not passable.    See-through
+     .byte %11100000          ;; Dungeon floor    Stairs up        See-through    Trigger
 
 ;; +----------------------------------+
 ;; |                                  |
@@ -3762,8 +3841,9 @@ mply_enterLoop   lsr num2
                  bcs mply_doAdd
                  bne mply_loop
                  rts
+
 ; num1 - input number
-; num2 - divide by factor X ( X = 256 / num2 )
+; num2 - divide by factor ( X = 256 / num2 )
 ; num3 - X
 divide_rndup:
                  ldy #$00   ; loop counter
