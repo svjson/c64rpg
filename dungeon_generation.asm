@@ -41,7 +41,7 @@ bitMasks  .byte %10000000
 leIndex .byte $00
 
 generateDungeon:
-                        lda #$15                ; Set known seed for debug.
+                        lda #$2a                ; Set known seed for debug.
                         sta seed
 
                         ldx seed                ; Print seed as decimal for debug.
@@ -50,6 +50,13 @@ generateDungeon:
                         lda #>$0740
                         sta print_target+1
                         jsr print_decimal
+
+                        ldx #$00                ; Clear loose ends from any previous run
+                        lda #$ff
+clearLooseEndsLoop      sta looseEndDir, x
+                        inx
+                        cpx #$08
+                        bne clearLooseEndsLoop
 
                         lda #$20
                         sta feats
@@ -138,7 +145,6 @@ addCaveCorrRetry        inc attempts
                         sta brushX
                         lda looseEndY, x
                         sta brushY
-                        jsr randomGenDir
 
                         lda #$07            ; Get a random corridor length, 0-7 + 3
                         sta num3
@@ -215,7 +221,6 @@ tryShorterBrush         dec sweepBrushLn
 checkBrushBounds        lda sweepBrushLn
                         cmp #$01
                         bmi endCaveSweep3
-                        jsr genDirLeft
                         sta modVal
                         inc modVal
                         jsr isTargetOutOfBounds
@@ -246,6 +251,7 @@ endCaveSweep2           inc genDir              ; Set up next sweep dir
                         cmp #$04
                         bne sweepNextDir
                         dec genDir
+
 endAddCaveRoom          rts
 
 sweepNextDir            jmp addCaveRoomDirLoop

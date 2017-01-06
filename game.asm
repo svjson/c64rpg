@@ -3177,7 +3177,7 @@ tileChar2
 ; Items
      .byte $c1   ;; Scroll          $40
      .byte $c3   ;; Potion          $41
-     .byte $c5   ;; Coins           $42
+     .byte $20   ;; Coins           $42
      .byte $c7   ;; Sword           $43
      .byte $c9   ;; Armor           $44
 
