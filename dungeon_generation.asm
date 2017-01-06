@@ -73,13 +73,9 @@ genDungFeatsLoop
                         lda #$01                ; Set brush tile to floor
                         sta brushTile
                         jsr getRandomActiveLE
-                        jsr rndNum
-                        sta num1
-                        lda #$20
-                        sta num2
-                        lda #$07
+                        lda #$07                ; Get a random int, 0-7
                         sta num3
-                        jsr divide_rndup
+                        jsr rndInt
                         cmp #$01
                         bcc loopAddRoomFeat
                         jsr addCaveCorridor
@@ -144,13 +140,9 @@ addCaveCorrRetry        inc attempts
                         sta brushY
                         jsr randomGenDir
 
-                        jsr rndNum          ; Select a random dir
-                        sta num1
-                        lda #$20
-                        sta num2
-                        lda #$07
+                        lda #$07            ; Get a random corridor length, 0-7 + 3
                         sta num3
-                        jsr divide_rndup
+                        jsr rndInt
                         adc #$03
                         sta corrLn
                         sta modVal
@@ -300,15 +292,13 @@ sweepBrushApplied       rts
 
 generateSweepBrush      ldx #$00
                         stx sweepBrush
+                        stx sweepIter
                         jsr genSweepBLn
-genSweepBrushLoop       jsr rndNum
-                        sta num1
-                        lda #$7f
-                        sta num2
+genSweepBrushLoop
                         lda #$01
                         sta num3
-                        jsr divide_rndup
-
+                        jsr rndInt
+                        ldx sweepIter
                         cmp #$01
                         bne noSweepBrushIndent
 
@@ -319,29 +309,23 @@ genSweepBrushLoop       jsr rndNum
 noSweepBrushIndent      inx
                         cpx sweepBrushLn
                         beq endSweepBrushGen
+                        stx sweepIter
                         jmp genSweepBrushLoop
 endSweepBrushGen        rts
 
-genSweepSteps:          jsr rndNum
-                        sta num1
-                        lda #$40
-                        sta num2
-                        lda #$03
+genSweepSteps:          lda #$03
                         sta num3
-                        jsr divide_rndup
+                        jsr rndInt
+
                         sta sweepSteps
                         inc sweepSteps
                         inc sweepSteps
                         ldx genDir
                         rts
 
-genSweepBLn:            jsr rndNum
-                        sta num1
-                        lda #$40
-                        sta num2
-                        lda #$03
+genSweepBLn:            lda #$03
                         sta num3
-                        jsr divide_rndup
+                        jsr rndInt
                         sta sweepBrushLn
                         inc sweepBrushLn
                         inc sweepBrushLn
@@ -415,13 +399,9 @@ storeBrushToPrevCoord   lda brushX              ; Keep coords before modifying t
                         sta prevCoordY
                         rts
 
-randomGenDir:           jsr rndNum
-                        sta num1
-                        lda #$40
-                        sta num2
-                        lda #$03
+randomGenDir:           lda #$03
                         sta num3
-                        jsr divide_rndup
+                        jsr rndInt
                         sta genDir
                         rts
 
@@ -455,13 +435,9 @@ findRandomActiveLE
                 jmp foundLooseEnd
 
 getRandomActiveLE
-                jsr rndNum          ; Select a random dir
-                sta num1
-                lda #32
-                sta num2
                 lda #$07
                 sta num3
-                jsr divide_rndup
+                jsr rndInt
                 tax
                 lda looseEndDir, x
                 cmp #$ff
@@ -566,13 +542,9 @@ getTileDecoration       cmp #$01
                         jmp findWallTile
                         rts
 
-getRandomGroundTile     jsr rndNum
-                        sta num1
-                        lda #$55
-                        sta num2
-                        lda #$02
+getRandomGroundTile     lda #$02
                         sta num3
-                        jsr divide_rndup
+                        jsr rndInt
                         clc
                         adc #$01
                         rts
