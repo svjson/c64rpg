@@ -6,6 +6,8 @@ brushY .byte $00
 
 prevCoordX .byte $00
 prevCoordY .byte $00
+entryX .byte $00
+entryY .byte $00
 
 featOriginX .byte $00
 featOriginY .byte $00
@@ -46,6 +48,9 @@ generateDungeon:
                         sta print_target+1
                         jsr print_decimal
 
+                        lda #$25
+                        sta feats
+
                         lda #$0d                ; Solid rock tile
                         sta brushTile           ; Fill entire buffer with rock
                         sta $d020
@@ -56,8 +61,10 @@ generateDungeon:
 
                         lda playerX             ; Start carving caves at player loc
                         sta brushX
+                        sta entryX
                         lda playerY
                         sta brushY
+                        sta entryY
                         jsr addCaveRoom
 
 genDungFeatsLoop
@@ -88,7 +95,36 @@ featAdded
                         ;sta $0720
                         cmp #$00
                         bne genDungFeatsLoop
+
                         jsr decorateArea
+
+                        lda entryX              ; Add stairs back up
+                        sta brushX
+                        lda entryY
+                        sta brushY
+                        jsr brushCoordsToPtr
+
+                        lda #$19
+                        ldy #$01
+                        sta ($22), y
+
+                        lda #$01
+                        sta triggerTableSize
+                        sta triggerTable+2
+                        lda entryX
+                        sta triggerTable
+                        inc triggerTable
+                        lda entryY
+                        sta triggerTable+1
+                        lda #<dungeoncellar
+                        sta triggerTable+3
+                        lda #>dungeoncellar
+                        sta triggerTable+4
+                        lda #$1e
+                        sta triggerTable+5
+                        lda #$14
+                        sta triggerTable+6
+
                         rts
 
 ;; +----------------------------------+

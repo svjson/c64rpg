@@ -388,6 +388,11 @@ executeTrigger      inx
                     lda triggerTable, x     ; Area addr hi-byte
                     sta $21
 
+                    lda playerX
+                    sta prevPlayerX
+                    lda playerY
+                    sta prevPlayerY
+
                     inx
                     lda triggerTable, x     ; Target X coord
                     sta playerX
@@ -2409,6 +2414,8 @@ currentAreaOffsetY  .byte $04
 
 playerX .byte $1d
 playerY .byte $13
+prevPlayerX .byte $00
+prevPlayerY .byte $00
 playerTurnCost .byte $00
 
 screenDirty .byte $00
