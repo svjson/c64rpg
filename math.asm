@@ -66,16 +66,46 @@ num3          .byte $00                ; Math input #3
 seed          .byte $01
 
 rndDivisorTable:
-        .byte $ff
-        .byte $80
-        .byte $55
-        .byte $40
-        .byte $33
-        .byte $2b
-        .byte $24
-        .byte $20
-        .byte $1c
-        .byte $1a
+        .byte $ff       ; 1
+        .byte $80       ; 2
+        .byte $55       ; 3
+        .byte $40       ; 4
+        .byte $33       ; 5
+        .byte $2b       ; 6
+        .byte $24       ; 7
+        .byte $20       ; 8
+        .byte $1c       ; 9
+        .byte $1a       ; 10
+        .byte $17       ; 11
+        .byte $15       ; 12
+        .byte $14       ; 13
+        .byte $12       ; 14
+        .byte $11       ; 15
+        .byte $10       ; 16
+        .byte $0f       ; 17
+        .byte $0e       ; 18
+        .byte $0d       ; 19
+        .byte $0d       ; 20
+        .byte $0c       ; 21
+        .byte $0c       ; 22
+        .byte $0b       ; 23
+        .byte $0b       ; 24
+        .byte $0a       ; 25
+        .byte $0a       ; 26
+        .byte $09       ; 27
+        .byte $09       ; 28
+        .byte $09       ; 29
+        .byte $09       ; 30
+        .byte $08       ; 31
+        .byte $08       ; 32
+        .byte $08       ; 33
+        .byte $08       ; 34
+        .byte $07       ; 35
+        .byte $07       ; 36
+        .byte $07       ; 37
+        .byte $07       ; 38
+        .byte $07       ; 39
+        .byte $06       ; 40
 
 rndInt:
         ldx num3

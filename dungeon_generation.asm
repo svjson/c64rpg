@@ -41,15 +41,15 @@ bitMasks  .byte %10000000
 leIndex .byte $00
 
 generateDungeon:
-                        lda #$2a                ; Set known seed for debug.
-                        sta seed
+                        ;lda #$6b                ; Set known seed for debug.
+                        ;sta seed
 
-                        ldx seed                ; Print seed as decimal for debug.
-                        lda #<$0740
-                        sta print_target
-                        lda #>$0740
-                        sta print_target+1
-                        jsr print_decimal
+                        ;ldx seed                ; Print seed as decimal for debug.
+                        ;lda #<$0740
+                        ;sta print_target
+                        ;lda #>$0740
+                        ;sta print_target+1
+                        ;jsr print_decimal
 
                         ldx #$00                ; Clear loose ends from any previous run
                         lda #$ff
@@ -98,7 +98,7 @@ featAdded
                         cmp #$00
                         bne genDungFeatsLoop
 
-                        jsr decorateArea
+generationDone          jsr decorateArea
 
                         lda entryX              ; Add stairs back up
                         sta brushX
@@ -170,10 +170,9 @@ addCaveCorridorLoop     cpx corrLn
                         ldx iter
                         jmp addCaveCorridorLoop
 
-addCaveCorridorDone     jsr randomGenDir
+addCaveCorridorDone     jsr randomGenDirAheadOrTurn
                         jsr addLooseEnd
                         rts
-
 
 ;; +----------------------------------+
 ;; |    CAVE ROOM                     |
@@ -190,6 +189,7 @@ addCaveRoomDirLoop      lda featOriginX         ; Return to origin of room for n
                         lda featOriginY
                         sta brushY
                         jsr generateSweepBrush  ; Generate a random sweep brush
+
                         jsr genDirRight         ; Center the brush around the origin
                         ldx #$00
                         ldy sweepBrushLn
@@ -214,15 +214,29 @@ checkSweepBounds        lda sweepSteps
                         jsr isTargetOutOfBounds
                         cmp #$01
                         beq tryFewerSweepSteps
-                        jsr genDirLeft
+
+                        jsr genDirRight
+                        lda #$02
+                        sta modVal
+                        jsr isTargetOutOfBounds
+                        cmp #$01
+                        bne prepCheckBrush
+
+                        jsr genDir180
+                        jsr stepBrush
+                        jsr genDir180
+
+prepCheckBrush          jsr genDirLeft
                         jmp checkBrushBounds
 
 tryShorterBrush         dec sweepBrushLn
-checkBrushBounds        lda sweepBrushLn
+                        jmp checkBrushBoundsLoop
+checkBrushBounds        jsr genDirLeft
+checkBrushBoundsLoop    lda sweepBrushLn
                         cmp #$01
                         bmi endCaveSweep3
                         sta modVal
-                        inc modVal
+                        ;inc modVal
                         jsr isTargetOutOfBounds
                         cmp #$01
                         beq tryShorterBrush
@@ -411,6 +425,19 @@ randomGenDir:           lda #$03
                         sta genDir
                         rts
 
+randomGenDirAheadOrTurn:
+                        lda #$03
+                        sta num3
+                        jsr rndInt
+                        cmp #$02
+                        bcc noTurn
+                        cmp #$02
+                        beq rGenDirTurnLeft
+                        jsr genDirRight
+                        rts
+rGenDirTurnLeft         jsr genDirLeft
+noTurn                  rts
+
 ;; +----------------------------------+
 ;; |    LOOSE ENDS                    |
 ;; +----------------------------------+
@@ -440,16 +467,54 @@ findRandomActiveLE
                 jsr getRandomActiveLE
                 jmp foundLooseEnd
 
+fraAttempt .byte $00
 getRandomActiveLE
+                lda #$00
+                sta fraAttempt
+getRandomActiveLERetry
+                lda fraAttempt
+                cmp #$0f
+                beq createLooseEndFromRandomFloorSpot
+                inc fraAttempt
                 lda #$07
                 sta num3
                 jsr rndInt
                 tax
                 lda looseEndDir, x
                 cmp #$ff
-                beq getRandomActiveLE
+                beq getRandomActiveLERetry
                 stx leIndex
                 rts
+
+createLooseEndFromRandomFloorSpot
+                stx leIndex
+                lda currentAreaWidth
+                sta num3
+                dec num3
+                jsr rndInt
+                sta brushX
+                lda currentAreaHeight
+                sta num3
+                dec num3
+                jsr rndInt
+                ldx leIndex
+                sta brushY
+                ldx brushX
+                ldy brushY
+                jsr isOutOfBounds
+                cmp #$01
+                beq createLooseEndFromRandomFloorSpot
+                ldx leIndex
+                lda brushX
+                sta looseEndX, x
+                lda brushY
+                sta looseEndY, x
+
+                jsr randomGenDir
+                lda genDir
+                ldx leIndex
+                sta looseEndDir, x
+                jmp getRandomActiveLE
 
 ;; +----------------------------------+
 ;; |    GENERAL AREA MANIPULATION     |
@@ -564,26 +629,26 @@ findWallTile
 wallSpecs .byte $19
 
 wallSpec
-.byte %01011000
-.byte %01010110
-.byte %01001011
-.byte %01011110
-.byte %01001000
-.byte %01010000
-.byte %00011111
-.byte %00001011
-.byte %00010110
-.byte %01011011
-.byte %00000010
-.byte %01000010
-.byte %00001000
-.byte %00011000
-.byte %01000000
-.byte %01101010 ; Untested
-.byte %00010000
-.byte %00011010
-.byte %11011011 ; Untested
-.byte %00001010
+.byte %01011000                 ; 04
+.byte %01010110                 ; 05
+.byte %01001011                 ; 06
+.byte %01011110                 ; 07
+.byte %01001000                 ; 08
+.byte %01010000                 ; 09
+.byte %00011111                 ; 0a
+.byte %00001011                 ; 0b
+.byte %00010110                 ; 0c
+.byte %01011011                 ; 0e
+.byte %00000010                 ; 0f
+.byte %01000010                 ; 10
+.byte %00001000                 ; 11
+.byte %00011000                 ; 12
+.byte %01000000                 ; 13
+.byte %01001010                 ; 14
+.byte %00010000                 ; 15
+.byte %00011010                 ; 16
+.byte %11011011 ; Untested      ; 17
+.byte %00001010                 ; 18
 .byte %00000000
 .byte %11010010
 .byte %00011110
@@ -591,26 +656,26 @@ wallSpec
 .byte %00010010
 
 wallSpecInterestingBits
-.byte %01011010
-.byte %01011110
-.byte %01011011
-.byte %01011111
-.byte %01011010
-.byte %01011010
-.byte %01011111
-.byte %01011011
-.byte %01011110
-.byte %01011111
-.byte %01011010
-.byte %01011010
-.byte %01011010
-.byte %01011010
-.byte %01011010
-.byte %01111011 ; Untested
-.byte %01011010
-.byte %00011111
-.byte %11011111 ; Untested
-.byte %01011011
+.byte %01011010                 ; 04
+.byte %01011110                 ; 05
+.byte %01011011                 ; 06
+.byte %01011111                 ; 07
+.byte %01011010                 ; 08
+.byte %01011010                 ; 09
+.byte %01011111                 ; 0a
+.byte %01011011                 ; 0b
+.byte %01011110                 ; 0c
+.byte %01011111                 ; 0e
+.byte %01011010                 ; 0f
+.byte %01011010                 ; 10
+.byte %01011010                 ; 11
+.byte %01011010                 ; 12
+.byte %01011010                 ; 13
+.byte %01011011                 ; 14
+.byte %01011010                 ; 15
+.byte %00011111                 ; 16
+.byte %11011111 ; Untested      ; 17
+.byte %01011011                 ; 18
 .byte %01011010
 .byte %11011110
 .byte %01011111
