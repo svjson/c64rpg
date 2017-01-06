@@ -65,6 +65,27 @@ num3          .byte $00                ; Math input #3
 ;; +----------------------------------------+
 seed          .byte $01
 
+rndDivisorTable:
+        .byte $ff
+        .byte $80
+        .byte $55
+        .byte $40
+        .byte $33
+        .byte $2b
+        .byte $24
+        .byte $20
+        .byte $1c
+        .byte $1a
+
+rndInt:
+        ldx num3
+        lda rndDivisorTable, x
+        sta num2
+        jsr rndNum
+        sta num1
+        jsr divide_rndup
+        rts
+
 rndNum:
         lda seed
         beq doEor
