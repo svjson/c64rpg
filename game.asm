@@ -147,7 +147,6 @@ leavestatusirq   lda sceneColBg
                  lda #$d2          ; Set raster line for next irq
                  sta $d012
 
-
                  asl $d019
                  jmp $ea81
 
@@ -2986,7 +2985,7 @@ houseArea
 rnddungeon1
      .byte $21 ; W
      .byte $17 ; H
-     .byte %01000000
+     .byte %11000000
      .byte %00001010    ; Tile set mask
      .byte $1f, $1c, $1b
      .byte $00 ; No triggers
@@ -3607,7 +3606,6 @@ outdoorsTilesetPropsTable:
      .byte %00000000          ;; Tree             Not passable     Block sight
      .byte %11000000          ;; Bridge           Passable         See-through
 
-
 ;; Indoors tileset
 indoorsTileset:
      .byte $11
@@ -3670,7 +3668,7 @@ indoorsTilesetPropsTable:
 
 ; Dungeon tile set
 dungeonTileset:
-     .byte $1c
+     .byte $1d
      .byte $48, $48, $48, $48       ;; Nothing/Black        $00
      .byte $40, $41, $41, $40       ;; Dungeon floor        $01
      .byte $41, $40, $40, $41       ;; Dungeon floor        $02
@@ -3699,6 +3697,7 @@ dungeonTileset:
      .byte $5e, $5f, $5c, $5d       ;; Stairs               $19
      .byte $62, $63, $60, $61       ;; Barrel               $1a
      .byte $64, $65, $66, $67       ;; Stairs down          $1b
+     .byte $6a, $6b, $68, $69       ;; Stalactite           $1c
 
 dungeonTilesetColorTable:
      .byte $00, $00, $00, $00 ;; Nothing / Black
@@ -3729,6 +3728,7 @@ dungeonTilesetColorTable:
      .byte $00, $00, $00, $00 ;; Stairs up
      .byte $1a, $1a, $1a, $1a ;; Barrel
      .byte $00, $00, $00, $00 ;; Stairs down
+     .byte $08, $08, $08, $08 ;; Stalactite
 
 dungeonTilesetPropsTable:
      .byte %00000000          ;; Nothing / Black. Not passable.    Block Sight
@@ -3759,6 +3759,7 @@ dungeonTilesetPropsTable:
      .byte %11100000          ;; Dungeon floor    Stairs up        See-through    Trigger
      .byte %01000000          ;; Barrel           Not passable.    See-through
      .byte %11100000          ;; Dungeon floor    Stairs up        See-through    Trigger
+     .byte %00000000          ;; Stalactite       Not passable.    Block sight
 
 ;; +----------------------------------+
 ;; |                                  |

@@ -1,4 +1,5 @@
 
+feats .byte $25
 
 brushX .byte $00
 brushY .byte $00
@@ -24,6 +25,8 @@ genDirModY .byte $ff, $00, $01, $00
 sweepBrushLn .byte $00
 sweepBrush .byte %00000000
 
+corrLn .byte $00
+
 bitMasks  .byte %10000000
           .byte %01000000
           .byte %00100000
@@ -33,21 +36,112 @@ bitMasks  .byte %10000000
           .byte %00000010
           .byte %00000001
 
+leIndex .byte $00
+
 generateDungeon:
+                        ldx seed
+                        lda #<$0740
+                        sta print_target
+                        lda #>$0740
+                        sta print_target+1
+                        jsr print_decimal
+
                         lda #$0d                ; Solid rock tile
-                        sta $d020
                         sta brushTile           ; Fill entire buffer with rock
+                        sta $d020
                         jsr fillLevel
+
+                        lda #$01                ; Set brush tile to floor
+                        sta brushTile
 
                         lda playerX             ; Start carving caves at player loc
                         sta brushX
                         lda playerY
                         sta brushY
+                        jsr addCaveRoom
 
+genDungFeatsLoop
                         lda #$01                ; Set brush tile to floor
                         sta brushTile
-                        jsr addCaveRoom         ; Just add one caveroom to begin with
+                        jsr getRandomActiveLE
+                        jsr rndNum
+                        sta num1
+                        lda #$20
+                        sta num2
+                        lda #$07
+                        sta num3
+                        jsr divide_rndup
+                        cmp #$01
+                        bcc loopAddRoomFeat
+;                        lda #$02
+;                        sta $0722
+                        jsr addCaveCorridor
+                        jmp featAdded
+loopAddRoomFeat         ;lda #$01
+                        ;sta $0722
+                        jsr addCaveRoom
+featAdded
+;                        lda #$03
+;                        sta $0722
+                        dec feats
+                        lda feats
+                        ;sta $0720
+                        cmp #$00
+                        bne genDungFeatsLoop
                         jsr decorateArea
+                        rts
+
+;; +----------------------------------+
+;; |    CAVE CORRIDOR                 |
+;; +----------------------------------+
+addCaveCorridor         lda #$00
+                        sta attempts
+                        ;sta $0725
+
+addCaveCorrRetry
+                        ldx leIndex
+                        lda looseEndX, x
+                        sta brushX
+                        lda looseEndY, x
+                        sta brushY
+                        jsr randomGenDir
+
+                        jsr rndNum          ; Select a random dir
+                        sta num1
+                        lda #$20
+                        sta num2
+                        lda #$07
+                        sta num3
+                        jsr divide_rndup
+                        adc #$03
+                        sta corrLn
+                        sta modVal
+
+;                        lda #$01
+;                        sta $0725
+
+                        jsr isTargetOutOfBounds
+                        cmp #$01
+                        beq addCaveCorridor
+
+;                        lda #$02
+;                        sta $0725
+
+                        ldx #$00
+                        stx iter
+addCaveCorridorLoop     cpx corrLn
+                        beq addCaveCorridorDone
+                        jsr brushCoordsToPtr
+                        lda #$01
+                        ldy #$00
+                        sta ($22), y
+                        jsr stepBrush
+                        inc iter
+                        ldx iter
+                        jmp addCaveCorridorLoop
+
+addCaveCorridorDone     jsr randomGenDir
+                        jsr addLooseEnd
                         rts
 
 
@@ -58,7 +152,6 @@ addCaveRoom             lda #$02
                         sta $d020
                         lda #$00                ; Begin pushing upwards
                         sta genDir
-
                         lda brushX              ; Store current brush position as the origin of the cave room
                         sta featOriginX
                         lda brushY
@@ -69,7 +162,6 @@ addCaveRoomDirLoop      lda featOriginX         ; Return to origin of room for n
                         lda featOriginY
                         sta brushY
                         jsr generateSweepBrush  ; Generate a random sweep brush
-
                         jsr genDirRight         ; Center the brush around the origin
                         ldx #$00
                         ldy sweepBrushLn
@@ -102,10 +194,13 @@ sweepNStepsLoop         jsr brushCoordsToPtr
                         jsr stepBrush           ; ...and forward one step
                         jmp sweepNStepsLoop
 
-endCaveSweep            inc genDir              ; Set up next sweep dir
+endCaveSweep            jsr addLooseEnd
+
+                        inc genDir              ; Set up next sweep dir
                         lda genDir
                         cmp #$04
                         bne addCaveRoomDirLoop
+                        dec genDir
 endAddCaveRoom          rts
 
 ;; +----------------------------------+
@@ -147,7 +242,6 @@ noSweepDent             inc sweepIter
 
                         jmp applySweepBrushLoop
 sweepBrushApplied       rts
-
 
 generateSweepBrush      ldx #$00
                         stx sweepBrush
@@ -254,6 +348,60 @@ brushCoordsToPtr        lda #<currentArea
                         sta brushPtr+1
                         rts
 
+randomGenDir:           jsr rndNum
+                        sta num1
+                        lda #$40
+                        sta num2
+                        lda #$03
+                        sta num3
+                        jsr divide_rndup
+                        sta genDir
+                        rts
+
+;; +----------------------------------+
+;; |    LOOSE ENDS                    |
+;; +----------------------------------+
+
+looseEndX   .byte $00, $00, $00, $00, $00, $00, $00, $00
+looseEndY   .byte $00, $00, $00, $00, $00, $00, $00, $00
+looseEndDir .byte $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff
+
+addLooseEnd:
+                ldx #$00
+findFreeLE      lda looseEndDir, x
+                cmp #$ff
+                beq foundLooseEnd
+                inx
+                cpx #$08
+                beq findRandomActiveLE
+                jmp findFreeLE
+foundLooseEnd:
+                lda brushX
+                sta looseEndX, x
+                lda brushY
+                sta looseEndY, x
+                lda genDir
+                sta looseEndDir, x
+                rts
+findRandomActiveLE
+                jsr getRandomActiveLE
+                jmp foundLooseEnd
+
+getRandomActiveLE
+                jsr rndNum          ; Select a random dir
+                sta num1
+                lda #32
+                sta num2
+                lda #$07
+                sta num3
+                jsr divide_rndup
+                tax
+                lda looseEndDir, x
+                cmp #$ff
+                beq getRandomActiveLE
+                stx leIndex
+                rts
+
 ;; +----------------------------------+
 ;; |    GENERAL AREA MANIPULATION     |
 ;; +----------------------------------+
@@ -323,6 +471,7 @@ decorateNextRow         inc rowIter
                         ldx #$00
                         stx colIter
                         lda rowIter
+                        inc $d020
                         cmp currentAreaHeight
                         bne decorateColLoop
 
@@ -367,7 +516,7 @@ findWallTile
                         jsr getTileReplacement
                         rts
 
-wallSpecs .byte $0a
+wallSpecs .byte $15
 
 wallSpec
 .byte %01011000
@@ -376,10 +525,22 @@ wallSpec
 .byte %01011010
 .byte %01001000
 .byte %01010000
-.byte %00011010
+.byte %00011110
 .byte %00001010
 .byte %00010010
 .byte %01011010
+.byte %00000010
+.byte %01000010
+.byte %00001000
+.byte %00011000
+.byte %01000000
+.byte %01101010 ; Untested
+.byte %00010000 ; Untested
+.byte %11111010 ; Untested
+.byte %11011011 ; Untested
+.byte %00001011 ; Untested
+.byte %00000000
+.byte %11111111
 
 wallSpecInterestingBits
 .byte %01011010
@@ -388,10 +549,23 @@ wallSpecInterestingBits
 .byte %01011011
 .byte %01011010
 .byte %01011010
-.byte %01011010
+.byte %01011110
 .byte %01011010
 .byte %01011010
 .byte %01011110
+.byte %01011010
+.byte %01011010
+.byte %01011010
+.byte %01011010
+.byte %01011010
+.byte %01111011 ; Untested
+.byte %01011010 ; Untested
+.byte %11111111 ; Untested
+.byte %11011111 ; Untested
+.byte %01011011 ; Untested
+.byte %01011010 ; Untested
+.byte %11111111
+
 
 wallSpecTargetTile
 .byte $04
@@ -404,6 +578,18 @@ wallSpecTargetTile
 .byte $0b
 .byte $0c
 .byte $0e
+.byte $0f
+.byte $10
+.byte $11
+.byte $12
+.byte $13
+.byte $14   ; Untested
+.byte $15   ; Untested
+.byte $16   ; Untested
+.byte $17   ; Untested
+.byte $18   ; Untested
+.byte $1c
+
 
 getTileReplacement      ldx #$00
                         stx tileBitIter
@@ -469,6 +655,40 @@ nextTileBitIter         inc tileBitIter
                         ldy tmpY
                         jmp collectTileBitsLoop
 tileBitCollected        rts
+
+
+;; +----------------------------------+
+;; |    BOUNDS CHECK                  |
+;; +----------------------------------+
+
+isTargetOutOfBounds
+                        lda brushX
+                        sta tmpX
+                        lda brushY
+                        sta tmpY
+
+isTargetOOBLoop         jsr stepBrush
+                        ldx brushX
+                        ldy brushY
+                        cpx #$00
+                        beq targetOutOfBoundsTrue
+                        cpy #$00
+                        beq targetOutOfBoundsTrue
+                        jsr isOutOfBounds
+                        cmp #$01
+                        beq targetOutOfBoundsTrue
+                        dec modVal
+                        lda #$ff
+                        cmp modVal
+                        bne isTargetOOBLoop
+                        lda #$00
+                        jmp isTargetRestoreBrush
+targetOutOfBoundsTrue   lda #$01
+isTargetRestoreBrush    ldx tmpX
+                        stx brushX
+                        ldx tmpY
+                        stx brushY
+                        rts
 
 isOutOfBounds
                         cpx currentAreaWidth
