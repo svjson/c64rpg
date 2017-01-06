@@ -88,6 +88,9 @@ loopAddRoomFeat         ;lda #$01
                         ;sta $0722
                         jsr addCaveRoom
 featAdded
+                        ldx leIndex
+                        lda #$ff
+                        sta looseEndDir, x
 ;                        lda #$03
 ;                        sta $0722
                         dec feats
