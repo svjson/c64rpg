@@ -41,7 +41,7 @@ bitMasks  .byte %10000000
 leIndex .byte $00
 
 generateDungeon:
-                        lda #$bd                ; Set known seed for debug.
+                        lda #$15                ; Set known seed for debug.
                         sta seed
 
                         ldx seed                ; Print seed as decimal for debug.
@@ -92,7 +92,6 @@ featAdded
 
                         dec feats
                         lda feats
-                        sta $0720
                         cmp #$00
                         bne genDungFeatsLoop
 
@@ -135,7 +134,6 @@ addCaveCorridor         lda #$00
                         sta attempts
 addCaveCorrRetry        inc attempts
                         lda attempts
-                        sta $0725
                         cmp #$05
                         beq caveCorrNoSolution
 
@@ -156,9 +154,6 @@ addCaveCorrRetry        inc attempts
                         adc #$03
                         sta corrLn
                         sta modVal
-
-                        lda #$01
-                        sta $0725
 
                         jsr isTargetOutOfBounds
                         cmp #$01
@@ -227,7 +222,8 @@ checkSweepBounds        lda sweepSteps
 tryShorterBrush         dec sweepBrushLn
 checkBrushBounds        lda sweepBrushLn
                         cmp #$01
-                        bmi endCaveSweep2
+                        bmi endCaveSweep3
+                        jsr genDirLeft
                         sta modVal
                         inc modVal
                         jsr isTargetOutOfBounds
@@ -248,6 +244,9 @@ sweepNStepsLoop         jsr brushCoordsToPtr
                         jsr returnBrushToPrevCoord
                         jsr stepBrush           ; ...and forward one step
                         jmp sweepNStepsLoop
+
+endCaveSweep3           jsr genDirRight
+                        jmp endCaveSweep2
 
 endCaveSweep            jsr addLooseEnd
 endCaveSweep2           inc genDir              ; Set up next sweep dir
