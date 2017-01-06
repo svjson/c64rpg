@@ -214,7 +214,8 @@ enterInventory:
                     sta $24
                     lda #>$db49
                     sta $25
-                    ldx #$32
+
+                    ldx #$42                    ; Draw gold tile
                     clc
                     jsr drawItemTile
 

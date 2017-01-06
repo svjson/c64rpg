@@ -2775,7 +2775,7 @@ dungeoncellar
      .byte $0d, $0d, $05, $01, $02, $03, $01, $01, $03, $03, $01, $01, $01, $01, $01, $06, $0d, $07, $04, $0e, $0d, $0d, $05, $02, $03, $02, $0b, $05, $03, $10, $02, $0b, $0d
      .byte $0d, $0d, $05, $03, $01, $02, $02, $03, $11, $12, $16, $12, $17, $0c, $03, $06, $0d, $05, $02, $06, $0d, $0d, $05, $01, $02, $01, $06, $05, $03, $10, $01, $08, $0e
      .byte $0d, $07, $09, $02, $03, $01, $01, $01, $01, $02, $10, $03, $08, $09, $01, $08, $04, $09, $03, $08, $04, $04, $09, $02, $02, $03, $14, $09, $02, $10, $02, $03, $06
-     .byte $0d, $05, $02, $01, $01, $03, $02, $02, $01, $02, $06, $0c, $01, $03, $01, $01, $02, $01, $01, $03, $01, $02, $02, $03, $0b, $07, $09, $01, $02, $14, $15, $02, $06
+     .byte $0d, $05, $02, $01, $01, $03, $02, $02, $01, $02, $06, $0c, $01, $03, $01, $01, $02, $01, $01, $03, $01, $02, $02, $03, $0b, $1e, $09, $01, $02, $14, $15, $02, $06
      .byte $0d, $05, $01, $02, $01, $01, $01, $01, $0f, $01, $06, $05, $02, $02, $02, $01, $0b, $0a, $0c, $01, $01, $01, $18, $12, $04, $09, $01, $01, $18, $09, $01, $01, $06
      .byte $0d, $0d, $0c, $01, $03, $03, $01, $01, $10, $03, $06, $05, $03, $01, $03, $01, $06, $0d, $05, $01, $03, $0b, $05, $01, $01, $02, $01, $02, $10, $01, $03, $01, $06
      .byte $0d, $0d, $05, $01, $02, $03, $01, $01, $10, $01, $08, $09, $01, $0b, $0a, $0a, $0d, $0d, $0d, $0a, $0a, $0d, $0d, $0c, $02, $03, $03, $02, $10, $1b, $03, $02, $06
@@ -2805,7 +2805,7 @@ dungeoncellar
 
      .byte %10000000
      .byte $0f, $08         ;; X and Y pos
-     .byte $20              ;; Tile ID
+     .byte $30              ;; Tile ID
      .byte $89              ;; Sprite pointer   $00 = off
      .word npcname_GIANT_RAT ;; Name pointer
      .byte $0c              ;; HP
@@ -2816,7 +2816,7 @@ dungeoncellar
 
      .byte %10000000
      .byte $04, $04         ;; X and Y pos
-     .byte $20              ;; Tile ID
+     .byte $30              ;; Tile ID
      .byte $89              ;; Sprite pointer   $00 = off
      .word npcname_GIANT_RAT ;; Name pointer
      .byte $0c              ;; HP
@@ -2827,7 +2827,7 @@ dungeoncellar
 
      .byte %10000000
      .byte $12, $09         ;; X and Y pos
-     .byte $20              ;; Tile ID
+     .byte $30              ;; Tile ID
      .byte $89              ;; Sprite pointer   $00 = off
      .word npcname_GIANT_RAT ;; Name pointer
      .byte $0c              ;; HP
@@ -2838,7 +2838,7 @@ dungeoncellar
 
      .byte %10000000
      .byte $0e, $13         ;; X and Y pos
-     .byte $20              ;; Tile ID
+     .byte $30              ;; Tile ID
      .byte $89              ;; Sprite pointer   $00 = off
      .word npcname_GIANT_RAT ;; Name pointer
      .byte $0c              ;; HP
@@ -2849,7 +2849,7 @@ dungeoncellar
 
      .byte %10000000
      .byte 27, 8            ;; X and Y pos
-     .byte $21              ;; Tile ID
+     .byte $31              ;; Tile ID
      .byte $8b              ;; Sprite pointer   $00 = off
      .word npcname_SKELETON_WARRIOR ;; Name pointer
      .byte $12              ;; HP
@@ -2860,7 +2860,7 @@ dungeoncellar
 
      .byte %10000000
      .byte 30, 19           ;; X and Y pos
-     .byte $22              ;; Tile ID
+     .byte $32              ;; Tile ID
      .byte $8d              ;; Sprite pointer   $00 = off
      .word npcname_KOBOLD   ;; Name pointer
      .byte $06              ;; HP
@@ -2871,7 +2871,7 @@ dungeoncellar
 
      .byte %10000000
      .byte 30, 20           ;; X and Y pos
-     .byte $22              ;; Tile ID
+     .byte $32              ;; Tile ID
      .byte $8d              ;; Sprite pointer   $00 = off
      .word npcname_KOBOLD   ;; Name pointer
      .byte $06              ;; HP
@@ -2882,7 +2882,7 @@ dungeoncellar
 
      .byte %10000000
      .byte 25, 19           ;; X and Y pos
-     .byte $22              ;; Tile ID
+     .byte $32              ;; Tile ID
      .byte $8d              ;; Sprite pointer   $00 = off
      .word npcname_KOBOLD   ;; Name pointer
      .byte $06              ;; HP
@@ -2893,7 +2893,7 @@ dungeoncellar
 
      .byte %10000000
      .byte $05, $08         ;; X and Y pos
-     .byte $21              ;; Tile ID
+     .byte $31              ;; Tile ID
      .byte $8b              ;; Sprite pointer   $00 = off
      .word npcname_SKELETON_WARRIOR ;; Name pointer
      .byte $12              ;; HP
@@ -2904,7 +2904,7 @@ dungeoncellar
 
      .byte %10000000
      .byte $15, $03         ;; X and Y pos
-     .byte $23              ;; Tile ID
+     .byte $33              ;; Tile ID
      .byte $8f              ;; Sprite pointer   $00 = off
      .word npcname_ORC ;; Name pointer
      .byte $20              ;; HP
@@ -2917,37 +2917,37 @@ dungeoncellar
 
      .byte %10100000
      .byte $0e, $05         ;; X and Y pos
-     .byte $30              ;; Tile ID
+     .byte $40              ;; Tile ID
      .word itemname_SCROLL  ;; Name pointer
      .byte $00              ;; Actual Type
 
      .byte %11000000
      .byte $17, $13                ;; X and Y pos
-     .byte $32                     ;; Tile ID
+     .byte $42                     ;; Tile ID
      .word itemname_PIECES_OF_GOLD ;; Name pointer
      .byte $15                     ;; Amount
 
      .byte %11000000
      .byte $18, $13         ;; X and Y pos
-     .byte $32              ;; Tile ID
+     .byte $42              ;; Tile ID
      .word itemname_PIECES_OF_GOLD ;; Name pointer
      .byte $09                     ;; Amount
 
      .byte %11000000
      .byte $18, $14         ;; X and Y pos;
-     .byte $32              ;; Tile ID
+     .byte $42              ;; Tile ID
      .word itemname_PIECES_OF_GOLD ;; Name pointer
      .byte $19                     ;; Amount
 
      .byte %10100000
      .byte $07, $15         ;; X and Y pos;
-     .byte $31              ;; Tile ID
+     .byte $41              ;; Tile ID
      .word itemname_POTION  ;; Name pointer
      .byte $01              ;; Actual Type
 
      .byte %10000000
      .byte $04, $04         ;; X and Y pos;
-     .byte $34              ;; Tile ID
+     .byte $44              ;; Tile ID
      .word itemname_LEATHER_ARMOR;; Name pointer
      .byte $00              ;; Actual Type
 
@@ -3069,28 +3069,44 @@ tileChar1
      .byte $00   ;;                 $1d
      .byte $00   ;;                 $1e
      .byte $00   ;;                 $1f
+     .byte $00   ;;                 $20
+     .byte $00   ;;                 $21
+     .byte $00   ;;                 $22
+     .byte $00   ;;                 $23
+     .byte $00   ;;                 $24
+     .byte $00   ;;                 $25
+     .byte $00   ;;                 $26
+     .byte $00   ;;                 $27
+     .byte $00   ;;                 $28
+     .byte $00   ;;                 $29
+     .byte $00   ;;                 $2a
+     .byte $00   ;;                 $2b
+     .byte $00   ;;                 $2c
+     .byte $00   ;;                 $2d
+     .byte $00   ;;                 $2e
+     .byte $00   ;;                 $2f
 ; Npc Tiles
-     .byte $80   ;; Rat             $20
-     .byte $82   ;; Skeleton        $21
-     .byte $84   ;; Kobold          $22
-     .byte $86   ;; Orc             $23
-     .byte $00   ;; Unused monster  $24
-     .byte $00   ;; Unused monster  $25
-     .byte $00   ;; Unused monster  $26
-     .byte $00   ;; Unused monster  $27
-     .byte $00   ;; Unused monster  $28
-     .byte $00   ;; Unused monster  $29
-     .byte $00   ;; Unused monster  $2a
-     .byte $00   ;; Unused monster  $2b
-     .byte $00   ;; Unused monster  $2c
-     .byte $00   ;; Unused monster  $2d
-     .byte $00   ;; Unused monster  $2e
-     .byte $00   ;; Unused monster  $2f
-     .byte $c0   ;; Scroll          $30
-     .byte $c2   ;; Potion          $31
-     .byte $c4   ;; Coins           $32
-     .byte $c6   ;; Sword           $33
-     .byte $c8   ;; Armor           $34
+     .byte $80   ;; Rat             $30
+     .byte $82   ;; Skeleton        $31
+     .byte $84   ;; Kobold          $32
+     .byte $86   ;; Orc             $33
+     .byte $00   ;; Unused monster  $34
+     .byte $00   ;; Unused monster  $35
+     .byte $00   ;; Unused monster  $36
+     .byte $00   ;; Unused monster  $37
+     .byte $00   ;; Unused monster  $38
+     .byte $00   ;; Unused monster  $39
+     .byte $00   ;; Unused monster  $3a
+     .byte $00   ;; Unused monster  $3b
+     .byte $00   ;; Unused monster  $3c
+     .byte $00   ;; Unused monster  $3d
+     .byte $00   ;; Unused monster  $3e
+     .byte $00   ;; Unused monster  $3f
+     .byte $c0   ;; Scroll          $40
+     .byte $c2   ;; Potion          $41
+     .byte $c4   ;; Coins           $42
+     .byte $c6   ;; Sword           $43
+     .byte $c8   ;; Armor           $44
 
 tileChar2
      .byte $48   ;; Nothing/Black   $00
@@ -3125,29 +3141,45 @@ tileChar2
      .byte $00   ;;                 $1d
      .byte $00   ;;                 $1e
      .byte $00   ;;                 $1f
+     .byte $00   ;;                 $20
+     .byte $00   ;;                 $21
+     .byte $00   ;;                 $22
+     .byte $00   ;;                 $23
+     .byte $00   ;;                 $24
+     .byte $00   ;;                 $25
+     .byte $00   ;;                 $26
+     .byte $00   ;;                 $27
+     .byte $00   ;;                 $28
+     .byte $00   ;;                 $29
+     .byte $00   ;;                 $2a
+     .byte $00   ;;                 $2b
+     .byte $00   ;;                 $2c
+     .byte $00   ;;                 $2d
+     .byte $00   ;;                 $2e
+     .byte $00   ;;                 $2f
 ; Npc Tiles
-     .byte $81   ;; Rat             $20
-     .byte $83   ;; Skeleton        $21
-     .byte $85   ;; Kobold          $22
-     .byte $87   ;; Orc             $23
-     .byte $00   ;; Unused monster  $24
-     .byte $00   ;; Unused monster  $25
-     .byte $00   ;; Unused monster  $26
-     .byte $00   ;; Unused monster  $27
-     .byte $00   ;; Unused monster  $28
-     .byte $00   ;; Unused monster  $29
-     .byte $00   ;; Unused monster  $2a
-     .byte $00   ;; Unused monster  $2b
-     .byte $00   ;; Unused monster  $2c
-     .byte $00   ;; Unused monster  $2d
-     .byte $00   ;; Unused monster  $2e
-     .byte $00   ;; Unused monster  $2f
+     .byte $81   ;; Rat             $30
+     .byte $83   ;; Skeleton        $31
+     .byte $85   ;; Kobold          $32
+     .byte $87   ;; Orc             $33
+     .byte $00   ;; Unused monster  $34
+     .byte $00   ;; Unused monster  $35
+     .byte $00   ;; Unused monster  $36
+     .byte $00   ;; Unused monster  $37
+     .byte $00   ;; Unused monster  $38
+     .byte $00   ;; Unused monster  $39
+     .byte $00   ;; Unused monster  $3a
+     .byte $00   ;; Unused monster  $3b
+     .byte $00   ;; Unused monster  $3c
+     .byte $00   ;; Unused monster  $3d
+     .byte $00   ;; Unused monster  $3e
+     .byte $00   ;; Unused monster  $3f
 ; Items
-     .byte $c1   ;; Scroll          $30
-     .byte $c3   ;; Potion          $31
-     .byte $c5   ;; Coins           $32
-     .byte $c7   ;; Sword           $33
-     .byte $c9   ;; Armor           $34
+     .byte $c1   ;; Scroll          $40
+     .byte $c3   ;; Potion          $41
+     .byte $c5   ;; Coins           $42
+     .byte $c7   ;; Sword           $43
+     .byte $c9   ;; Armor           $44
 
 tileChar3
      .byte $48 	 ;; Nothing/Black   $00
@@ -3182,29 +3214,45 @@ tileChar3
      .byte $00   ;;                 $1d
      .byte $00   ;;                 $1e
      .byte $00   ;;                 $1f
+     .byte $00   ;;                 $20
+     .byte $00   ;;                 $21
+     .byte $00   ;;                 $22
+     .byte $00   ;;                 $23
+     .byte $00   ;;                 $24
+     .byte $00   ;;                 $25
+     .byte $00   ;;                 $26
+     .byte $00   ;;                 $27
+     .byte $00   ;;                 $28
+     .byte $00   ;;                 $29
+     .byte $00   ;;                 $2a
+     .byte $00   ;;                 $2b
+     .byte $00   ;;                 $2c
+     .byte $00   ;;                 $2d
+     .byte $00   ;;                 $2e
+     .byte $00   ;;                 $2f
 ; Npc Tiles
-     .byte $a0   ;; Rat             $20
-     .byte $a2   ;; Skeleton        $21
-     .byte $a4   ;; Kobold          $22
-     .byte $a6   ;; Orc             $23
-     .byte $00   ;; Unused monster  $24
-     .byte $00   ;; Unused monster  $25
-     .byte $00   ;; Unused monster  $26
-     .byte $00   ;; Unused monster  $27
-     .byte $00   ;; Unused monster  $28
-     .byte $00   ;; Unused monster  $29
-     .byte $00   ;; Unused monster  $2a
-     .byte $00   ;; Unused monster  $2b
-     .byte $00   ;; Unused monster  $2c
-     .byte $00   ;; Unused monster  $2d
-     .byte $00   ;; Unused monster  $2e
-     .byte $00   ;; Unused monster  $2f
+     .byte $a0   ;; Rat             $30
+     .byte $a2   ;; Skeleton        $31
+     .byte $a4   ;; Kobold          $32
+     .byte $a6   ;; Orc             $33
+     .byte $00   ;; Unused monster  $34
+     .byte $00   ;; Unused monster  $35
+     .byte $00   ;; Unused monster  $36
+     .byte $00   ;; Unused monster  $37
+     .byte $00   ;; Unused monster  $38
+     .byte $00   ;; Unused monster  $39
+     .byte $00   ;; Unused monster  $3a
+     .byte $00   ;; Unused monster  $3b
+     .byte $00   ;; Unused monster  $3c
+     .byte $00   ;; Unused monster  $3d
+     .byte $00   ;; Unused monster  $3e
+     .byte $00   ;; Unused monster  $3f
 ; Items
-     .byte $e0   ;; Scroll          $30
-     .byte $e2   ;; Potion          $31
-     .byte $e4   ;; Coins           $32
-     .byte $e6   ;; Sword           $33
-     .byte $e8   ;; Armor           $34
+     .byte $e0   ;; Scroll          $40
+     .byte $e2   ;; Potion          $41
+     .byte $e4   ;; Coins           $42
+     .byte $e6   ;; Sword           $43
+     .byte $e8   ;; Armor           $44
 
 tileChar4
      .byte $48   ;; Nothing/Black   $00
@@ -3239,29 +3287,45 @@ tileChar4
      .byte $00   ;;                 $1d
      .byte $00   ;;                 $1e
      .byte $00   ;;                 $1f
+     .byte $00   ;;                 $20
+     .byte $00   ;;                 $21
+     .byte $00   ;;                 $22
+     .byte $00   ;;                 $23
+     .byte $00   ;;                 $24
+     .byte $00   ;;                 $25
+     .byte $00   ;;                 $26
+     .byte $00   ;;                 $27
+     .byte $00   ;;                 $28
+     .byte $00   ;;                 $29
+     .byte $00   ;;                 $2a
+     .byte $00   ;;                 $2b
+     .byte $00   ;;                 $2c
+     .byte $00   ;;                 $2d
+     .byte $00   ;;                 $2e
+     .byte $00   ;;                 $2f
 	; Npc Tiles
-     .byte $a1   ;; Rat             $20
-     .byte $a3   ;; Skeleton        $21
-     .byte $a5   ;; Kobold          $22
-     .byte $a7   ;; Orc             $23
-     .byte $00   ;; Unused monster  $24
-     .byte $00   ;; Unused monster  $25
-     .byte $00   ;; Unused monster  $26
-     .byte $00   ;; Unused monster  $27
-     .byte $00   ;; Unused monster  $28
-     .byte $00   ;; Unused monster  $29
-     .byte $00   ;; Unused monster  $2a
-     .byte $00   ;; Unused monster  $2b
-     .byte $00   ;; Unused monster  $2c
-     .byte $00   ;; Unused monster  $2d
-     .byte $00   ;; Unused monster  $2e
-     .byte $00   ;; Unused monster  $2f
+     .byte $a1   ;; Rat             $30
+     .byte $a3   ;; Skeleton        $31
+     .byte $a5   ;; Kobold          $32
+     .byte $a7   ;; Orc             $33
+     .byte $00   ;; Unused monster  $34
+     .byte $00   ;; Unused monster  $35
+     .byte $00   ;; Unused monster  $36
+     .byte $00   ;; Unused monster  $37
+     .byte $00   ;; Unused monster  $38
+     .byte $00   ;; Unused monster  $39
+     .byte $00   ;; Unused monster  $3a
+     .byte $00   ;; Unused monster  $3b
+     .byte $00   ;; Unused monster  $3c
+     .byte $00   ;; Unused monster  $3d
+     .byte $00   ;; Unused monster  $3e
+     .byte $00   ;; Unused monster  $3f
      ; Items
-     .byte $e1   ;; Scroll          $30
-     .byte $e3   ;; Potion          $31
-     .byte $e5   ;; Coins           $32
-     .byte $e7   ;; Sword           $33
-     .byte $e9   ;; Armor           $34
+     .byte $e1   ;; Scroll          $40
+     .byte $e3   ;; Potion          $41
+     .byte $e5   ;; Coins           $42
+     .byte $e7   ;; Sword           $43
+     .byte $e9   ;; Armor           $44
 
 tileCharColor1
      .byte $00   ;; Nothing / Black
@@ -3296,28 +3360,44 @@ tileCharColor1
      .byte $00   ;;                 $1d
      .byte $00   ;;                 $1e
      .byte $00   ;;                 $1f
-     .byte $1a   ;; Rat             $20
-     .byte $09   ;; Skeleton        $21
-     .byte $0d   ;; Kobold          $22
-     .byte $1a   ;; Orc             $23
-     .byte $00   ;; Unused monster  $24
-     .byte $00   ;; Unused monster  $25
-     .byte $00   ;; Unused monster  $26
-     .byte $00   ;; Unused monster  $27
-     .byte $00   ;; Unused monster  $28
-     .byte $00   ;; Unused monster  $29
-     .byte $00   ;; Unused monster  $2a
-     .byte $00   ;; Unused monster  $2b
-     .byte $00   ;; Unused monster  $2c
-     .byte $00   ;; Unused monster  $2d
-     .byte $00   ;; Unused monster  $2e
-     .byte $00   ;; Unused monster  $2f
+     .byte $00   ;;                 $20
+     .byte $00   ;;                 $21
+     .byte $00   ;;                 $22
+     .byte $00   ;;                 $23
+     .byte $00   ;;                 $24
+     .byte $00   ;;                 $25
+     .byte $00   ;;                 $26
+     .byte $00   ;;                 $27
+     .byte $00   ;;                 $28
+     .byte $00   ;;                 $29
+     .byte $00   ;;                 $2a
+     .byte $00   ;;                 $2b
+     .byte $00   ;;                 $2c
+     .byte $00   ;;                 $2d
+     .byte $00   ;;                 $2e
+     .byte $00   ;;                 $2f
+     .byte $1a   ;; Rat             $30
+     .byte $09   ;; Skeleton        $31
+     .byte $0d   ;; Kobold          $32
+     .byte $1a   ;; Orc             $33
+     .byte $00   ;; Unused monster  $34
+     .byte $00   ;; Unused monster  $35
+     .byte $00   ;; Unused monster  $36
+     .byte $00   ;; Unused monster  $37
+     .byte $00   ;; Unused monster  $38
+     .byte $00   ;; Unused monster  $39
+     .byte $00   ;; Unused monster  $3a
+     .byte $00   ;; Unused monster  $3b
+     .byte $00   ;; Unused monster  $3c
+     .byte $00   ;; Unused monster  $3d
+     .byte $00   ;; Unused monster  $3e
+     .byte $00   ;; Unused monster  $3f
 ; Items
-     .byte $0f   ;; Scroll          $30
-     .byte $0e   ;; Potion          $31
-     .byte $0f   ;; Coins           $32
-     .byte $0a   ;; Sword           $33
-     .byte $0a   ;; Armor           $34
+     .byte $0f   ;; Scroll          $40
+     .byte $0e   ;; Potion          $41
+     .byte $0f   ;; Coins           $42
+     .byte $0a   ;; Sword           $43
+     .byte $0a   ;; Armor           $44
 
 tileCharColor2
      .byte $00   ;; Nothing / Black
@@ -3352,28 +3432,44 @@ tileCharColor2
      .byte $00   ;;                 $1d
      .byte $00   ;;                 $1e
      .byte $00   ;;                 $1f
-     .byte $1a   ;; Rat             $20
-     .byte $01   ;; Skeleton        $21
-     .byte $0d   ;; Kobold          $22
-     .byte $1a   ;; Orc             $23
-     .byte $00   ;; Unused monster  $24
-     .byte $00   ;; Unused monster  $25
-     .byte $00   ;; Unused monster  $26
-     .byte $00   ;; Unused monster  $27
-     .byte $00   ;; Unused monster  $28
-     .byte $00   ;; Unused monster  $29
-     .byte $00   ;; Unused monster  $2a
-     .byte $00   ;; Unused monster  $2b
-     .byte $00   ;; Unused monster  $2c
-     .byte $00   ;; Unused monster  $2d
-     .byte $00   ;; Unused monster  $2e
-     .byte $00   ;; Unused monster  $2f
+     .byte $00   ;;                 $20
+     .byte $00   ;;                 $21
+     .byte $00   ;;                 $22
+     .byte $00   ;;                 $23
+     .byte $00   ;;                 $24
+     .byte $00   ;;                 $25
+     .byte $00   ;;                 $26
+     .byte $00   ;;                 $27
+     .byte $00   ;;                 $28
+     .byte $00   ;;                 $29
+     .byte $00   ;;                 $2a
+     .byte $00   ;;                 $2b
+     .byte $00   ;;                 $2c
+     .byte $00   ;;                 $2d
+     .byte $00   ;;                 $2e
+     .byte $00   ;;                 $2f
+     .byte $1a   ;; Rat             $30
+     .byte $01   ;; Skeleton        $31
+     .byte $0d   ;; Kobold          $32
+     .byte $1a   ;; Orc             $33
+     .byte $00   ;; Unused monster  $34
+     .byte $00   ;; Unused monster  $35
+     .byte $00   ;; Unused monster  $36
+     .byte $00   ;; Unused monster  $37
+     .byte $00   ;; Unused monster  $38
+     .byte $00   ;; Unused monster  $39
+     .byte $00   ;; Unused monster  $3a
+     .byte $00   ;; Unused monster  $3b
+     .byte $00   ;; Unused monster  $3c
+     .byte $00   ;; Unused monster  $3d
+     .byte $00   ;; Unused monster  $3e
+     .byte $00   ;; Unused monster  $3f
 ; Items
-     .byte $0f   ;; Scroll          $30
-     .byte $0e   ;; Potion          $31
-     .byte $0f   ;; Coins           $32
-     .byte $0a   ;; Sword           $33
-     .byte $0a   ;; Armor           $34
+     .byte $0f   ;; Scroll          $40
+     .byte $0e   ;; Potion          $41
+     .byte $0f   ;; Coins           $42
+     .byte $0a   ;; Sword           $43
+     .byte $0a   ;; Armor           $44
 
 tileCharColor3
      .byte $00   ;; Nothing / Black
@@ -3408,28 +3504,44 @@ tileCharColor3
      .byte $00   ;;                 $1d
      .byte $00   ;;                 $1e
      .byte $00   ;;                 $1f
-     .byte $1a   ;; Rat             $20
-     .byte $09   ;; Skeleton        $21
-     .byte $0d   ;; Kobold          $22
-     .byte $1a   ;; Orc             $23
-     .byte $00   ;; Unused monster  $24
-     .byte $00   ;; Unused monster  $25
-     .byte $00   ;; Unused monster  $26
-     .byte $00   ;; Unused monster  $27
-     .byte $00   ;; Unused monster  $28
-     .byte $00   ;; Unused monster  $29
-     .byte $00   ;; Unused monster  $2a
-     .byte $00   ;; Unused monster  $2b
-     .byte $00   ;; Unused monster  $2c
-     .byte $00   ;; Unused monster  $2d
-     .byte $00   ;; Unused monster  $2e
-     .byte $00   ;; Unused monster  $2f
+     .byte $00   ;;                 $20
+     .byte $00   ;;                 $21
+     .byte $00   ;;                 $22
+     .byte $00   ;;                 $23
+     .byte $00   ;;                 $24
+     .byte $00   ;;                 $25
+     .byte $00   ;;                 $26
+     .byte $00   ;;                 $27
+     .byte $00   ;;                 $28
+     .byte $00   ;;                 $29
+     .byte $00   ;;                 $2a
+     .byte $00   ;;                 $2b
+     .byte $00   ;;                 $2c
+     .byte $00   ;;                 $2d
+     .byte $00   ;;                 $2e
+     .byte $00   ;;                 $2f
+     .byte $1a   ;; Rat             $30
+     .byte $09   ;; Skeleton        $31
+     .byte $0d   ;; Kobold          $32
+     .byte $1a   ;; Orc             $33
+     .byte $00   ;; Unused monster  $34
+     .byte $00   ;; Unused monster  $35
+     .byte $00   ;; Unused monster  $36
+     .byte $00   ;; Unused monster  $37
+     .byte $00   ;; Unused monster  $38
+     .byte $00   ;; Unused monster  $39
+     .byte $00   ;; Unused monster  $3a
+     .byte $00   ;; Unused monster  $3b
+     .byte $00   ;; Unused monster  $3c
+     .byte $00   ;; Unused monster  $3d
+     .byte $00   ;; Unused monster  $3e
+     .byte $00   ;; Unused monster  $3f
 ; Items
-     .byte $0f   ;; Scroll          $30
-     .byte $0e   ;; Potion          $31
-     .byte $0f   ;; Coins           $32
-     .byte $0a   ;; Sword           $33
-     .byte $0a   ;; Armor           $34
+     .byte $0f   ;; Scroll          $40
+     .byte $0e   ;; Potion          $41
+     .byte $0f   ;; Coins           $42
+     .byte $0a   ;; Sword           $43
+     .byte $0a   ;; Armor           $44
 
 tileCharColor4
      .byte $00   ;; Nothing / Black
@@ -3464,28 +3576,44 @@ tileCharColor4
      .byte $00   ;;                 $1d
      .byte $00   ;;                 $1e
      .byte $00   ;;                 $1f
-     .byte $1a   ;; Rat             $20
-     .byte $01   ;; Skeleton        $20
-     .byte $0d   ;; Kobold          $22
-     .byte $1a   ;; Orc             $23
-     .byte $00   ;; Unused monster  $24
-     .byte $00   ;; Unused monster  $25
-     .byte $00   ;; Unused monster  $26
-     .byte $00   ;; Unused monster  $27
-     .byte $00   ;; Unused monster  $28
-     .byte $00   ;; Unused monster  $29
-     .byte $00   ;; Unused monster  $2a
-     .byte $00   ;; Unused monster  $2b
-     .byte $00   ;; Unused monster  $2c
-     .byte $00   ;; Unused monster  $2d
-     .byte $00   ;; Unused monster  $2e
-     .byte $00   ;; Unused monster  $2f
+     .byte $00   ;;                 $20
+     .byte $00   ;;                 $21
+     .byte $00   ;;                 $22
+     .byte $00   ;;                 $23
+     .byte $00   ;;                 $24
+     .byte $00   ;;                 $25
+     .byte $00   ;;                 $26
+     .byte $00   ;;                 $27
+     .byte $00   ;;                 $28
+     .byte $00   ;;                 $29
+     .byte $00   ;;                 $2a
+     .byte $00   ;;                 $2b
+     .byte $00   ;;                 $2c
+     .byte $00   ;;                 $2d
+     .byte $00   ;;                 $2e
+     .byte $00   ;;                 $2f
+     .byte $1a   ;; Rat             $30
+     .byte $01   ;; Skeleton        $31
+     .byte $0d   ;; Kobold          $32
+     .byte $1a   ;; Orc             $33
+     .byte $00   ;; Unused monster  $34
+     .byte $00   ;; Unused monster  $35
+     .byte $00   ;; Unused monster  $36
+     .byte $00   ;; Unused monster  $37
+     .byte $00   ;; Unused monster  $38
+     .byte $00   ;; Unused monster  $39
+     .byte $00   ;; Unused monster  $3a
+     .byte $00   ;; Unused monster  $3b
+     .byte $00   ;; Unused monster  $3c
+     .byte $00   ;; Unused monster  $3d
+     .byte $00   ;; Unused monster  $3e
+     .byte $00   ;; Unused monster  $3f
 ; Items
-     .byte $0f   ;; Scroll          $30
-     .byte $0e   ;; Potion          $31
-     .byte $0f   ;; Coins           $32
-     .byte $0a   ;; Sword           $33
-     .byte $0a   ;; Armor           $34
+     .byte $0f   ;; Scroll          $40
+     .byte $0e   ;; Potion          $41
+     .byte $0f   ;; Coins           $42
+     .byte $0a   ;; Sword           $43
+     .byte $0a   ;; Armor           $44
 
 tileProps:
      .byte %00000000          ;; Nothing / Black. Not passable.    Block Sight
@@ -3507,6 +3635,22 @@ tileProps:
      .byte %11000000          ;; Flowers          Passable         See-through
      .byte %00000000          ;; Tree             Not passable     Block sight
      .byte %11000000          ;; Bridge           Passable         See-through
+     .byte %00000000
+     .byte %00000000
+     .byte %00000000
+     .byte %00000000
+     .byte %00000000
+     .byte %00000000
+     .byte %00000000
+     .byte %00000000
+     .byte %00000000
+     .byte %00000000
+     .byte %00000000
+     .byte %00000000
+     .byte %00000000
+     .byte %00000000
+     .byte %00000000
+     .byte %00000000
      .byte %00000000
      .byte %00000000
      .byte %00000000
@@ -3675,7 +3819,7 @@ indoorsTilesetPropsTable:
 
 ; Dungeon tile set
 dungeonTileset:
-     .byte $1d
+     .byte $21
      .byte $48, $48, $48, $48       ;; Nothing/Black        $00
      .byte $40, $41, $41, $40       ;; Dungeon floor        $01
      .byte $41, $40, $40, $41       ;; Dungeon floor        $02
@@ -3705,6 +3849,10 @@ dungeonTileset:
      .byte $62, $63, $60, $61       ;; Barrel               $1a
      .byte $64, $65, $66, $67       ;; Stairs down          $1b
      .byte $6a, $6b, $68, $69       ;; Stalactite           $1c
+     .byte $56, $47, $57, $49       ;; Dungeon wall wsn     $1d
+     .byte $54, $6c, $4d, $4f       ;; Dungeon wall ews,sw  $1e
+     .byte $6d, $54, $57, $4d       ;; Dungeon wall ews,se  $1f
+     .byte $6d, $55, $57, $49       ;; Dungeon wall ews,se  $20
 
 dungeonTilesetColorTable:
      .byte $00, $00, $00, $00 ;; Nothing / Black
@@ -3736,6 +3884,10 @@ dungeonTilesetColorTable:
      .byte $1a, $1a, $1a, $1a ;; Barrel
      .byte $00, $00, $00, $00 ;; Stairs down
      .byte $08, $08, $08, $08 ;; Stalactite
+     .byte $08, $08, $08, $08 ;; Dungeon wall wsn
+     .byte $08, $08, $08, $08 ;; Dungeon wall ews,sw
+     .byte $08, $08, $08, $08 ;; Dungeon wall ews,se
+     .byte $08, $08, $08, $08 ;; Dungeon wall ws
 
 dungeonTilesetPropsTable:
      .byte %00000000          ;; Nothing / Black. Not passable.    Block Sight
@@ -3767,6 +3919,10 @@ dungeonTilesetPropsTable:
      .byte %01000000          ;; Barrel           Not passable.    See-through
      .byte %11100000          ;; Dungeon floor    Stairs up        See-through    Trigger
      .byte %00000000          ;; Stalactite       Not passable.    Block sight
+     .byte %00000000          ;; Dungeon wall     Not passable.    Block sight
+     .byte %00000000          ;; Dungeon wall     Not passable.    Block sight
+     .byte %00000000          ;; Dungeon wall     Not passable.    Block sight
+     .byte %00000000          ;; Dungeon wall     Not passable.    Block sight
 
 ;; +----------------------------------+
 ;; |                                  |

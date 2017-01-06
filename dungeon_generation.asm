@@ -41,6 +41,9 @@ bitMasks  .byte %10000000
 leIndex .byte $00
 
 generateDungeon:
+                        lda #$bf
+                        sta seed
+
                         ldx seed
                         lda #<$0740
                         sta print_target
@@ -555,18 +558,18 @@ findWallTile
                         jsr getTileReplacement
                         rts
 
-wallSpecs .byte $15
+wallSpecs .byte $19
 
 wallSpec
 .byte %01011000
-.byte %01010010
-.byte %01001010
+.byte %01010110
+.byte %01001011
 .byte %01011010
 .byte %01001000
 .byte %01010000
-.byte %00011110
-.byte %00001010
-.byte %00010010
+.byte %00011111
+.byte %00001011
+.byte %00010110
 .byte %01011010
 .byte %00000010
 .byte %01000010
@@ -574,23 +577,26 @@ wallSpec
 .byte %00011000
 .byte %01000000
 .byte %01101010 ; Untested
-.byte %00010000 ; Untested
+.byte %00010000
 .byte %11111010 ; Untested
 .byte %11011011 ; Untested
-.byte %00001011 ; Untested
+.byte %00001010
 .byte %00000000
-.byte %11111111
+.byte %11010010
+.byte %00011110
+.byte %00011011
+.byte %00010010
 
 wallSpecInterestingBits
 .byte %01011010
-.byte %01011010
-.byte %01011010
+.byte %01011110
+.byte %01011011
 .byte %01011011
 .byte %01011010
 .byte %01011010
+.byte %01011111
+.byte %01011011
 .byte %01011110
-.byte %01011010
-.byte %01011010
 .byte %01011110
 .byte %01011010
 .byte %01011010
@@ -598,12 +604,15 @@ wallSpecInterestingBits
 .byte %01011010
 .byte %01011010
 .byte %01111011 ; Untested
-.byte %01011010 ; Untested
+.byte %01011010
 .byte %11111111 ; Untested
 .byte %11011111 ; Untested
-.byte %01011011 ; Untested
-.byte %01011010 ; Untested
-.byte %11111111
+.byte %01011011
+.byte %01011010
+.byte %11011110
+.byte %01011111
+.byte %01011111
+.byte %01011110
 
 
 wallSpecTargetTile
@@ -628,6 +637,10 @@ wallSpecTargetTile
 .byte $17   ; Untested
 .byte $18   ; Untested
 .byte $1c
+.byte $1d
+.byte $1e
+.byte $1f
+.byte $20
 
 
 getTileReplacement      ldx #$00
