@@ -41,22 +41,21 @@ bitMasks  .byte %10000000
 leIndex .byte $00
 
 generateDungeon:
-                        lda #$bf
+                        lda #$bd                ; Set known seed for debug.
                         sta seed
 
-                        ldx seed
+                        ldx seed                ; Print seed as decimal for debug.
                         lda #<$0740
                         sta print_target
                         lda #>$0740
                         sta print_target+1
                         jsr print_decimal
 
-                        lda #$25
+                        lda #$20
                         sta feats
 
                         lda #$0d                ; Solid rock tile
                         sta brushTile           ; Fill entire buffer with rock
-                        sta $d020
                         jsr fillLevel
 
                         lda #$01                ; Set brush tile to floor
@@ -83,22 +82,17 @@ genDungFeatsLoop
                         jsr divide_rndup
                         cmp #$01
                         bcc loopAddRoomFeat
-;                        lda #$02
-;                        sta $0722
                         jsr addCaveCorridor
                         jmp featAdded
-loopAddRoomFeat         ;lda #$01
-                        ;sta $0722
-                        jsr addCaveRoom
+loopAddRoomFeat         jsr addCaveRoom
 featAdded
-                        ldx leIndex
+                        ldx leIndex             ; Disable loose end
                         lda #$ff
                         sta looseEndDir, x
-;                        lda #$03
-;                        sta $0722
+
                         dec feats
                         lda feats
-                        ;sta $0720
+                        sta $0720
                         cmp #$00
                         bne genDungFeatsLoop
 
@@ -136,11 +130,15 @@ featAdded
 ;; +----------------------------------+
 ;; |    CAVE CORRIDOR                 |
 ;; +----------------------------------+
+caveCorrNoSolution      rts
 addCaveCorridor         lda #$00
                         sta attempts
-                        ;sta $0725
+addCaveCorrRetry        inc attempts
+                        lda attempts
+                        sta $0725
+                        cmp #$05
+                        beq caveCorrNoSolution
 
-addCaveCorrRetry
                         ldx leIndex
                         lda looseEndX, x
                         sta brushX
@@ -159,15 +157,12 @@ addCaveCorrRetry
                         sta corrLn
                         sta modVal
 
-;                        lda #$01
-;                        sta $0725
+                        lda #$01
+                        sta $0725
 
                         jsr isTargetOutOfBounds
                         cmp #$01
-                        beq addCaveCorridor
-
-;                        lda #$02
-;                        sta $0725
+                        beq addCaveCorrRetry
 
                         ldx #$00
                         stx iter
@@ -190,9 +185,7 @@ addCaveCorridorDone     jsr randomGenDir
 ;; +----------------------------------+
 ;; |    CAVE ROOM                     |
 ;; +----------------------------------+
-addCaveRoom             lda #$02
-                        sta $d020
-                        lda #$00                ; Begin pushing upwards
+addCaveRoom             lda #$00                ; Begin pushing upwards
                         sta genDir
                         lda brushX              ; Store current brush position as the origin of the cave room
                         sta featOriginX
@@ -215,35 +208,56 @@ centerSweepLoop         jsr stepBrush
                         dec sweepSteps
                         bcs centerSweepLoop
                         jsr genDirLeft
-centered                ldx #$00                ; Set up iteration for sweeping
-                        stx iter
+centered
                         jsr genSweepSteps
+                        jmp checkSweepBounds
+
+tryFewerSweepSteps      dec sweepSteps
+checkSweepBounds        lda sweepSteps
+                        cmp #$01
+                        bmi endCaveSweep2
+                        sta modVal
+                        inc modVal
+                        jsr isTargetOutOfBounds
+                        cmp #$01
+                        beq tryFewerSweepSteps
+                        jsr genDirLeft
+                        jmp checkBrushBounds
+
+tryShorterBrush         dec sweepBrushLn
+checkBrushBounds        lda sweepBrushLn
+                        cmp #$01
+                        bmi endCaveSweep2
+                        sta modVal
+                        inc modVal
+                        jsr isTargetOutOfBounds
+                        cmp #$01
+                        beq tryShorterBrush
+                        jsr genDirRight
+prepSweepLoop           ldx #$00                ; Set up iteration for sweeping
+                        stx iter
+
 sweepNStepsLoop         jsr brushCoordsToPtr
-                        lda brushX              ; Keep coords before modifying them
-                        sta prevCoordX
-                        lda brushY
-                        sta prevCoordY
+                        jsr storeBrushToPrevCoord
                         jsr applySweepBrush     ; Apply the brush
                         inc iter
                         ldx iter
                         cpx sweepSteps
                         beq endCaveSweep        ; End the sweeping if all steps have been performed
 
-                        lda prevCoordX          ; Return brush to previos location...
-                        sta brushX
-                        lda prevCoordY
-                        sta brushY
+                        jsr returnBrushToPrevCoord
                         jsr stepBrush           ; ...and forward one step
                         jmp sweepNStepsLoop
 
 endCaveSweep            jsr addLooseEnd
-
-                        inc genDir              ; Set up next sweep dir
+endCaveSweep2           inc genDir              ; Set up next sweep dir
                         lda genDir
                         cmp #$04
-                        bne addCaveRoomDirLoop
+                        bne sweepNextDir
                         dec genDir
 endAddCaveRoom          rts
+
+sweepNextDir            jmp addCaveRoomDirLoop
 
 ;; +----------------------------------+
 ;; |    SWEEP BRUSH ROUTINES          |
@@ -388,6 +402,18 @@ brushCoordsToPtr        lda #<currentArea
                         sta brushPtr
                         lda $23
                         sta brushPtr+1
+                        rts
+
+returnBrushToPrevCoord  lda prevCoordX          ; Return brush to previous location...
+                        sta brushX
+                        lda prevCoordY
+                        sta brushY
+                        rts
+
+storeBrushToPrevCoord   lda brushX              ; Keep coords before modifying them
+                        sta prevCoordX
+                        lda brushY
+                        sta prevCoordY
                         rts
 
 randomGenDir:           jsr rndNum
@@ -564,13 +590,13 @@ wallSpec
 .byte %01011000
 .byte %01010110
 .byte %01001011
-.byte %01011010
+.byte %01011110
 .byte %01001000
 .byte %01010000
 .byte %00011111
 .byte %00001011
 .byte %00010110
-.byte %01011010
+.byte %01011011
 .byte %00000010
 .byte %01000010
 .byte %00001000
@@ -578,7 +604,7 @@ wallSpec
 .byte %01000000
 .byte %01101010 ; Untested
 .byte %00010000
-.byte %11111010 ; Untested
+.byte %00011010
 .byte %11011011 ; Untested
 .byte %00001010
 .byte %00000000
@@ -591,13 +617,13 @@ wallSpecInterestingBits
 .byte %01011010
 .byte %01011110
 .byte %01011011
-.byte %01011011
+.byte %01011111
 .byte %01011010
 .byte %01011010
 .byte %01011111
 .byte %01011011
 .byte %01011110
-.byte %01011110
+.byte %01011111
 .byte %01011010
 .byte %01011010
 .byte %01011010
@@ -605,7 +631,7 @@ wallSpecInterestingBits
 .byte %01011010
 .byte %01111011 ; Untested
 .byte %01011010
-.byte %11111111 ; Untested
+.byte %00011111
 .byte %11011111 ; Untested
 .byte %01011011
 .byte %01011010
@@ -631,9 +657,9 @@ wallSpecTargetTile
 .byte $11
 .byte $12
 .byte $13
-.byte $14   ; Untested
+.byte $14
 .byte $15   ; Untested
-.byte $16   ; Untested
+.byte $16
 .byte $17   ; Untested
 .byte $18   ; Untested
 .byte $1c
