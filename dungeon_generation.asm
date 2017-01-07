@@ -41,8 +41,8 @@ bitMasks  .byte %10000000
 leIndex .byte $00
 
 generateDungeon:
-                        ;lda #$6b                ; Set known seed for debug.
-                        ;sta seed
+                       ; lda #$03                ; Set known seed for debug.
+                       ; sta seed
 
                         ;ldx seed                ; Print seed as decimal for debug.
                         ;lda #<$0740
@@ -58,7 +58,7 @@ clearLooseEndsLoop      sta looseEndDir, x
                         cpx #$08
                         bne clearLooseEndsLoop
 
-                        lda #$20
+                        lda #$48                ; Number of features/iterations
                         sta feats
 
                         lda #$0d                ; Solid rock tile
@@ -74,13 +74,21 @@ clearLooseEndsLoop      sta looseEndDir, x
                         lda playerY
                         sta brushY
                         sta entryY
+                        jsr randomGenDir        ; Opposite direction of closest border, perhaps?
                         jsr addCaveRoom
 
 genDungFeatsLoop
                         lda #$01                ; Set brush tile to floor
                         sta brushTile
-                        jsr getRandomActiveLE
-                        lda #$07                ; Get a random int, 0-7
+
+                        lda #$0a                ; Randomly decide if to continue with current loose end
+                        sta num3                ; or switch to another
+                        jsr rndInt
+                        cmp #$01
+                        beq useRandomLE
+                        jmp randomFeatType
+useRandomLE             jsr getRandomActiveLE
+randomFeatType          lda #$07                ; Get a random int, 0-7
                         sta num3
                         jsr rndInt
                         cmp #$01
@@ -135,6 +143,8 @@ generationDone          jsr decorateArea
 caveCorrNoSolution      rts
 addCaveCorridor         lda #$00
                         sta attempts
+                        lda genDir
+                        sta entryGenDir
 addCaveCorrRetry        inc attempts
                         lda attempts
                         cmp #$05
@@ -152,7 +162,6 @@ addCaveCorrRetry        inc attempts
                         adc #$03
                         sta corrLn
                         sta modVal
-
                         jsr isTargetOutOfBounds
                         cmp #$01
                         beq addCaveCorrRetry
@@ -166,7 +175,17 @@ addCaveCorridorLoop     cpx corrLn
                         ldy #$00
                         sta ($22), y
                         jsr stepBrush
-                        inc iter
+
+                        lda #$10          ; Get a random corridor length, 0-7 + 3
+                        sta num3
+                        jsr rndInt
+                        cmp #$01
+                        bne nextCorrLoopIter
+                        jsr randomGenDirAheadOrTurn
+                        jsr addLooseEnd
+                        lda entryGenDir
+                        sta genDir
+nextCorrLoopIter        inc iter
                         ldx iter
                         jmp addCaveCorridorLoop
 
@@ -177,7 +196,11 @@ addCaveCorridorDone     jsr randomGenDirAheadOrTurn
 ;; +----------------------------------+
 ;; |    CAVE ROOM                     |
 ;; +----------------------------------+
-addCaveRoom             lda #$00                ; Begin pushing upwards
+entryGenDir .byte $00
+
+addCaveRoom             lda genDir
+                        sta entryGenDir
+                        lda #$00                ; Begin pushing upwards
                         sta genDir
                         lda brushX              ; Store current brush position as the origin of the cave room
                         sta featOriginX
@@ -259,13 +282,25 @@ sweepNStepsLoop         jsr brushCoordsToPtr
 endCaveSweep3           jsr genDirRight
                         jmp endCaveSweep2
 
-endCaveSweep            jsr addLooseEnd
+endCaveSweep            ;jsr addLooseEnd
 endCaveSweep2           inc genDir              ; Set up next sweep dir
                         lda genDir
                         cmp #$04
                         bne sweepNextDir
-                        dec genDir
 
+                        lda featOriginX         ; Return to origin of room for new dir
+                        sta brushX
+                        lda featOriginY
+                        sta brushY
+
+                        lda entryGenDir               ; Store loose end in dir of entry or turn
+                        sta genDir
+                        jsr randomGenDirAheadOrTurn
+                        jsr addLooseEnd
+
+                        jsr genDir180                 ; Store loose end in opposite dir or turn
+                        jsr randomGenDirAheadOrTurn
+                        jsr addLooseEnd
 endAddCaveRoom          rts
 
 sweepNextDir            jmp addCaveRoomDirLoop
@@ -462,6 +497,7 @@ foundLooseEnd:
                 sta looseEndY, x
                 lda genDir
                 sta looseEndDir, x
+                stx leIndex
                 rts
 findRandomActiveLE
                 jsr getRandomActiveLE
@@ -488,22 +524,42 @@ getRandomActiveLERetry
 
 createLooseEndFromRandomFloorSpot
                 stx leIndex
-                lda currentAreaWidth
+                lda #$00
+                sta fraAttempt
+
+cLeRetry        lda currentAreaWidth            ; Random X Pos
                 sta num3
                 dec num3
                 jsr rndInt
                 sta brushX
-                lda currentAreaHeight
+
+                lda currentAreaHeight           ; Random Y Pos
                 sta num3
                 dec num3
                 jsr rndInt
-                ldx leIndex
                 sta brushY
-                ldx brushX
+
+                ldx brushX                      ; Check bounds
                 ldy brushY
                 jsr isOutOfBounds
                 cmp #$01
-                beq createLooseEndFromRandomFloorSpot
+                beq cLeRetry
+
+                inc fraAttempt
+                lda fraAttempt
+                cmp #$30
+                bne cLeCheckCoord
+                lda playerX
+                sta brushX
+                lda playerY
+                sta brushY
+
+cLeCheckCoord   jsr brushCoordsToPtr
+                ldy #$00
+                lda ($22), y
+                cmp #$01
+                bne cLeRetry
+
                 ldx leIndex
                 lda brushX
                 sta looseEndX, x
