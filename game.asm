@@ -183,12 +183,13 @@ mlcont              lda #$15            ; wait for raster retrace
                     cmp #$00
                     beq mainloop
 
+                    lda #$00
+                    sta $c6             ; Clear keyboard buffer
                     jsr updateSprites
                     jsr drawlevel
 
                     lda #$00
                     sta screenDirty
-                    sta $c6             ; Clear keyboard buffer
 
                     jmp mainloop
 
@@ -1977,7 +1978,7 @@ resolveTile
 ;; |    STATUS BAR ROUTINES           |
 ;; |                                  |
 ;; +----------------------------------+
-*=$0940
+*=$0930
 messageLineLength = #24
 
 messageRow1 = $0749
@@ -2017,15 +2018,6 @@ text_PICKED_UP      .byte 10
                     .text "PICKED UP "
 text_NOTHING_TO_PICK_UP .byte 23
                     .text "NOTHING TO PICK UP HERE"
-
-itemname_SCROLL             .byte 06
-                            .text "SCROLL"
-itemname_PIECES_OF_GOLD     .byte 14
-                            .text "PIECES OF GOLD"
-itemname_POTION             .byte 06
-                            .text "POTION"
-itemname_LEATHER_ARMOR      .byte 13
-                            .text "LEATHER ARMOR"
 
 npcname_GIANT_RAT           .byte 09
                             .text "GIANT RAT"
@@ -4190,6 +4182,9 @@ incTrgPtr      lda $22
                inc $23
                jmp memcpyrowloop
 end_memcpy     rts
+
+*=$0d20
+.include "itemdb.asm"
 
 ;; +----------------------------------+
 ;; |                                  |
