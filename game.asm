@@ -2715,6 +2715,11 @@ npcTable
 var_itemModes     = #$00 ; Bit 7 - On/Off
                          ; Bit 6 - Amount On/Off
                          ; Bit 5 - Unidentified object On/Off
+                         ; Bit 4 -
+                         ; Bit 3 -
+                         ; Bit 2 - Is weapon
+                         ; Bit 1 - Is armor
+                         ; Bit 0 - Is identifiable type
 var_itemXPos      = #$01
 var_itemYPos      = #$02
 var_itemTileID    = #$03
@@ -3197,10 +3202,16 @@ tileChar1
      .byte $00   ;; Unused monster  $3e
      .byte $00   ;; Unused monster  $3f
      .byte $c0   ;; Scroll          $40
-     .byte $c2   ;; Potion          $41
+     .byte $c2   ;; Potion (blue)   $41
      .byte $c4   ;; Coins           $42
      .byte $c6   ;; Sword           $43
      .byte $c8   ;; Armor           $44
+     .byte $c2   ;; Potion (red)    $45
+     .byte $c2   ;; Potion (green)  $46
+     .byte $c3   ;; Potion (purple) $47
+     .byte $c5   ;; Shortsword      $48
+     .byte $c6   ;; Longsword       $49
+     .byte $ca   ;; Helmet          $4a
 
 tileChar2
      .byte $48   ;; Nothing/Black   $00
@@ -3274,6 +3285,12 @@ tileChar2
      .byte $20   ;; Coins           $42
      .byte $c7   ;; Sword           $43
      .byte $c9   ;; Armor           $44
+     .byte $c3   ;; Potion (red)    $45
+     .byte $c3   ;; Potion (green)  $46
+     .byte $c3   ;; Potion (purple) $47
+     .byte $c7   ;; Shortsword      $48
+     .byte $c7   ;; Longsword       $49
+     .byte $cb   ;; Helmet          $4a
 
 tileChar3
      .byte $48 	 ;; Nothing/Black   $00
@@ -3347,6 +3364,13 @@ tileChar3
      .byte $e4   ;; Coins           $42
      .byte $e6   ;; Sword           $43
      .byte $e8   ;; Armor           $44
+     .byte $e2   ;; Potion (red)    $45
+     .byte $e2   ;; Potion (green)  $46
+     .byte $e2   ;; Potion (purple) $47
+     .byte $e6   ;; Shortsword      $48
+     .byte $e6   ;; Longsword       $49
+     .byte $ea   ;; Helmet          $4a
+
 
 tileChar4
      .byte $48   ;; Nothing/Black   $00
@@ -3420,6 +3444,12 @@ tileChar4
      .byte $e5   ;; Coins           $42
      .byte $e7   ;; Sword           $43
      .byte $e9   ;; Armor           $44
+     .byte $e3   ;; Potion (red)    $45
+     .byte $e3   ;; Potion (green)  $46
+     .byte $e3   ;; Potion (purple) $47
+     .byte $e7   ;; Shortsword      $48
+     .byte $e7   ;; Longsword       $49
+     .byte $cb   ;; Helmet          $4a
 
 tileCharColor1
      .byte $00   ;; Nothing / Black
@@ -3492,6 +3522,12 @@ tileCharColor1
      .byte $0f   ;; Coins           $42
      .byte $0a   ;; Sword           $43
      .byte $0a   ;; Armor           $44
+     .byte $0a   ;; Potion (red)    $45
+     .byte $0d   ;; Potion (green)  $46
+     .byte $0c   ;; Potion (purple) $47
+     .byte $0a   ;; Shortsword      $48
+     .byte $0a   ;; Longsword       $49
+     .byte $00   ;; Helmet          $4a
 
 tileCharColor2
      .byte $00   ;; Nothing / Black
@@ -3564,6 +3600,12 @@ tileCharColor2
      .byte $0f   ;; Coins           $42
      .byte $0a   ;; Sword           $43
      .byte $0a   ;; Armor           $44
+     .byte $0a   ;; Potion (red)    $45
+     .byte $0d   ;; Potion (green)  $46
+     .byte $0c   ;; Potion (purple) $47
+     .byte $0a   ;; Shortsword      $48
+     .byte $0a   ;; Longsword       $49
+     .byte $00   ;; Helmet          $4a
 
 tileCharColor3
      .byte $00   ;; Nothing / Black
@@ -3636,6 +3678,12 @@ tileCharColor3
      .byte $0f   ;; Coins           $42
      .byte $0a   ;; Sword           $43
      .byte $0a   ;; Armor           $44
+     .byte $0a   ;; Potion (red)    $45
+     .byte $0d   ;; Potion (green)  $46
+     .byte $0c   ;; Potion (purple) $47
+     .byte $0a   ;; Shortsword      $48
+     .byte $0a   ;; Longsword       $49
+     .byte $00   ;; Helmet          $4a
 
 tileCharColor4
      .byte $00   ;; Nothing / Black
@@ -3708,6 +3756,12 @@ tileCharColor4
      .byte $0f   ;; Coins           $42
      .byte $0a   ;; Sword           $43
      .byte $0a   ;; Armor           $44
+     .byte $0a   ;; Potion (red)    $45
+     .byte $0d   ;; Potion (green)  $46
+     .byte $0c   ;; Potion (purple) $47
+     .byte $0a   ;; Shortsword      $48
+     .byte $0a   ;; Longsword       $49
+     .byte $00   ;; Helmet          $4a
 
 tileProps:
      .byte %00000000          ;; Nothing / Black. Not passable.    Block Sight
@@ -3774,6 +3828,11 @@ tileProps:
      .byte %00000000
      .byte %00000000
      .byte %00000000
+     .byte %11000000
+     .byte %11000000
+     .byte %11000000
+     .byte %11000000
+     .byte %11000000
      .byte %11000000
      .byte %11000000
      .byte %11000000
