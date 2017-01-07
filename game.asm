@@ -175,7 +175,7 @@ inventoryirq
 mainloop
                     jsr readKey
 
-mlcont              lda #$15     ; wait for raster retrace
+mlcont              lda #$15            ; wait for raster retrace
                     cmp $d012
                     bne mlcont
 
@@ -183,11 +183,12 @@ mlcont              lda #$15     ; wait for raster retrace
                     cmp #$00
                     beq mainloop
 
-                    lda #$00
-                    sta screenDirty
-
                     jsr updateSprites
                     jsr drawlevel
+
+                    lda #$00
+                    sta screenDirty
+                    sta $c6             ; Clear keyboard buffer
 
                     jmp mainloop
 
