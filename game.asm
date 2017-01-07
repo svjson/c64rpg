@@ -465,7 +465,6 @@ attemptPickUp:
                     sta tmpPtr1+1
 
                     jsr addToInventory      ; Add item to Inventory
-                    lda backpackSize
 
                     lda #<text_PICKED_UP
                     sta $20
@@ -1005,9 +1004,98 @@ npcKilled:
 ;; |                                  |
 ;; +----------------------------------+
 
+currentAreaPtr      .byte $00, $00
+
 ;                   Input
 ;                   Area addr  $20-21
+storeAreaState:
+                    lda $20       ; Store away new area to tmpPtr
+                    sta tmpPtr1
+                    lda $21
+                    sta tmpPtr1+1
+
+                    lda currentAreaPtr
+                    sta $22
+                    lda currentAreaPtr+1
+                    sta $23
+
+                    ldy #$02
+                    lda areaMode
+                    and #%10111111          ; Disable generation, in case we are storing a generated area
+                    sta ($22), y
+
+                    lda #$07                ; Skip to map data
+                    sta inc22ModVal
+                    jsr inc22Ptr
+                    lda currentAreaWidth    ; Copy map data
+                    sta memcpy_rowSize
+                    lda currentAreaHeight
+                    sta memcpy_rows
+
+                    lda #<currentArea
+                    sta $20
+                    lda #>currentArea
+                    sta $21
+                    jsr memcpy
+
+                    lda #$01                ; Further inc of $22-23 will be in increment of 1
+                    sta inc22ModVal
+
+                    ldy #$00
+                    lda triggerTableSize
+                    sta ($22), y
+                    sta memcpy_rows
+                    jsr inc22Ptr
+                    lda triggerTableRowSize
+                    sta memcpy_rowSize
+                    lda #<triggerTable
+                    sta $20
+                    lda #>triggerTable
+                    sta $21
+                    jsr memcpy
+
+                    ldy #$00
+                    lda npcTableSize
+                    sta ($22), y
+                    sta memcpy_rows
+                    jsr inc22Ptr
+                    lda npcTableRowSize
+                    sta memcpy_rowSize
+                    lda #<npcTable
+                    sta $20
+                    lda #>npcTable
+                    sta $21
+                    jsr memcpy
+
+                    ldy #$00
+                    lda itemTableSize
+                    sta ($22), y
+                    sta memcpy_rows
+                    jsr inc22Ptr
+                    lda itemTableRowSize
+                    sta memcpy_rowSize
+                    lda #<itemTable
+                    sta $20
+                    lda #>itemTable
+                    sta $21
+                    jsr memcpy
+
+                    lda tmpPtr1
+                    sta $20
+                    lda tmpPtr1+1
+                    sta $21
+
+                    rts
 enterArea:
+                    lda currentAreaPtr+1
+                    cmp #$00
+                    beq skipToLoad
+                    jsr storeAreaState
+
+skipToLoad          lda $20
+                    sta currentAreaPtr
+                    lda $21
+                    sta currentAreaPtr+1
                     ldy #$00
                     lda ($20), y
                     sta currentAreaWidth
@@ -1179,6 +1267,10 @@ areaLoaded            lda $d018              ; Remap tileset
                       jsr generateDungeon
 
 doEnterArea:
+                      lda triggerTableSize
+                      lda npcTableSize
+                      lda itemTableSize
+
                       ldx playerX
                       stx tmpX
                       ldy playerY
@@ -1320,7 +1412,7 @@ applyItems:
                      cpx itemTableSize
                      beq itemPrepEnd
 itemPosLoop          ldy #$00
-                     lda ($24), y          ; Load npc status flag
+                     lda ($24), y          ; Load item status flag
                      and #%10000000
                      cmp #%10000000
                      bne noItem
@@ -2707,7 +2799,7 @@ itemTable
 ;; |    TEST AREAS                    |
 ;; |                                  |
 ;; +----------------------------------+
-
+*=$7000
 outsidearea
      .byte $28  ; width
      .byte $17  ; height
@@ -2751,6 +2843,7 @@ outsidearea
      .byte $00 ; NPC table size
      ;---
      .byte $00 ; Item table size
+     .fill $46
 
 dungeoncellar
      .byte $21  ; width
@@ -2950,6 +3043,8 @@ dungeoncellar
      .byte $44              ;; Tile ID
      .word itemname_LEATHER_ARMOR;; Name pointer
      .byte $00              ;; Actual Type
+     .fill $46
+
 
 
 houseArea
@@ -2988,6 +3083,8 @@ houseArea
      .byte $00  ; NPC table size
      ;---
      .byte $00  ; Item table size
+     .fill $46
+
 
 rnddungeon1
      .byte $21 ; W
@@ -2999,12 +3096,16 @@ rnddungeon1
      .byte $00 ; No npcs
      .byte $00 ; No ites
 
+.fill $350
+
+
 ;; +----------------------------------+
 ;; |                                  |
 ;; |    CURRENT VIEWPORT BUFFERS      |
 ;; |                                  |
 ;; +----------------------------------+
 
+*=$4000
 fovBuffer
      .byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
      .byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
@@ -3035,7 +3136,7 @@ screenBuffer
 ;; |                                  |
 ;; +----------------------------------+
 
-*=$4000
+
 tileChar1
      .byte $48   ;; Nothing/Black   $00
      .byte $47   ;; Rocks           $01
