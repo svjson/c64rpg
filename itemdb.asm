@@ -20,9 +20,9 @@ itemname_IRON_HELMET        .byte 11
                             .text "IRON HELMET"
 itemname_STEEL_HELMET       .byte 12
                             .text "STEEL HELMET"
-itemname_SMALL_SHIELD       .byte 13
+itemname_SMALL_SHIELD       .byte 12
                             .text "SMALL SHIELD"
-itemname_LARGE_SHIELD       .byte 13
+itemname_LARGE_SHIELD       .byte 12
                             .text "LARGE SHIELD"
 
 itemtype_UNKNOWN            .byte 7
@@ -41,6 +41,10 @@ itemtype_IDENTIFY           .byte 8
                             .text "IDENTIFY"
 itemtype_CLARITY            .byte 7
                             .text "CLARITY"
+itemtype_WATER              .byte 5
+                            .text "WATER"
+itemtype_POISON             .byte 6
+                            .text "POISON"
 
 itemNameLo:
                 .byte <(itemname_SCROLL)              ;00 - Minor Healing
@@ -201,8 +205,8 @@ itemValue       .byte $01                  ;00 - Actual Type - MINOR HEALING
                 .byte $03                  ;12 - Actual Type - MAJOR HEALING
                 .byte $05                  ;13 - Actual Type - CURE POISON
                 .byte $07                  ;14 - Actual Type - CLARITY
-                .byte $00                  ;15 - Unused
-                .byte $00                  ;16 - Unused
+                .byte $08                  ;15 - Actual Type - WATER
+                .byte $09                  ;16 - Actual Type - POISON
                 .byte $00                  ;17 - Unused
                 .byte $00                  ;18 - Unused
                 .byte $00                  ;19 - Unidentified Substitute - Potion
@@ -266,10 +270,10 @@ itemTile        .byte $40                  ;00 - Scroll (yellow)
                 .byte $45                  ;10 - Potion (Red)
                 .byte $45                  ;11 - Potion (Red)
                 .byte $45                  ;12 - Potion (Red)
-                .byte $46                  ;13 - Potion (Green)
+                .byte $4c                  ;13 - Potion (Green)
                 .byte $47                  ;14 - Potion (Purple)
-                .byte $00                  ;15 - Unused
-                .byte $00                  ;16 - Unused
+                .byte $4b                  ;15 - Potion (Turqoise)
+                .byte $46                  ;16 - Potion (Green)
                 .byte $00                  ;17 - Unused
                 .byte $00                  ;18 - Unused
                 .byte $41                  ;19 - Unidentified Substitute - Potion
@@ -311,8 +315,8 @@ itemTile        .byte $40                  ;00 - Scroll (yellow)
                 .byte $00                  ;3d - Unused
                 .byte $00                  ;3e - Unused
                 .byte $00                  ;3f - Unused
-                .byte $00                  ;40 - Small Shield
-                .byte $00                  ;41 - Large Shield
+                .byte $4d                  ;40 - Small Shield
+                .byte $4d                  ;41 - Large Shield
 
 itemAttributes  .byte %10000001            ; 00 - Scroll - Heal Minor
                 .byte %10000001            ; 01 - Scroll - Heal Medium
@@ -375,8 +379,38 @@ itemAttributes  .byte %10000001            ; 00 - Scroll - Heal Minor
                 .byte %10000000            ; 3a - Unused
                 .byte %10000000            ; 3b - Unused
                 .byte %10000000            ; 3c - Unused
-                .byte %10000000            ; 3d - Unused
+                .byte %10000000            ; 3d - Unused             item
                 .byte %10000000            ; 3e - Unused
                 .byte %10000000            ; 3f - Unused
-                .byte %10000010            ; 20 - Small shield
-                .byte %10000010            ; 21 - Large shield
+                .byte %10000010            ; 40 - Small shield
+                .byte %10000010            ; 41 - Large shield
+
+; Tables for random selection/generation of items
+itemSet_size    .byte $0c
+itemSet_type:
+                .byte $30 ; - Leather Armor
+                .byte $21 ; - Long Sword
+                .byte $40 ; - Small shield
+                .byte $37 ; - Leather Helmet
+                .byte $20 ; - Short Sword
+                .byte $00 ; - Scroll of Heal Minor
+                .byte $03 ; - Scroll of Teleport
+                .byte $13 ; - Potion of Cure Poison
+                .byte $10 ; - Potion of Heal Minor
+                .byte $15 ; - Poison
+                .byte $16 ; - Water
+                .byte $1a ; - Pieces of Gold
+
+itemSet_weight:
+                .byte $01 ; - Leather Armor
+                .byte $01 ; - Long Sword
+                .byte $02 ; - Small Shield
+                .byte $02 ; - Leather Helmet
+                .byte $02 ; - Short Sword
+                .byte $03 ; - Scroll of Heal Minor
+                .byte $03 ; - Scroll of Teleport
+                .byte $03 ; - Potion of Cure Poison
+                .byte $03 ; - Potion of Heal Minor
+                .byte $03 ; - Poison
+                .byte $03 ; - Water
+                .byte $10 ; - Pieces of Gold

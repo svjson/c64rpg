@@ -1,5 +1,8 @@
 
-feats .byte $25
+
+areaGen_items .byte $08
+areaGen_feats .byte $25
+areaGen_monsters .byte $08
 
 brushX .byte $00
 brushY .byte $00
@@ -41,8 +44,8 @@ bitMasks  .byte %10000000
 leIndex .byte $00
 
 generateDungeon:
-                       ; lda #$03                ; Set known seed for debug.
-                       ; sta seed
+                        ;lda #$13                 ; Set known seed for debug.
+                        ;sta seed
 
                         ;ldx seed                ; Print seed as decimal for debug.
                         ;lda #<$0740
@@ -59,7 +62,11 @@ clearLooseEndsLoop      sta looseEndDir, x
                         bne clearLooseEndsLoop
 
                         lda #$48                ; Number of features/iterations
-                        sta feats
+                        sta areaGen_feats
+                        lda #$05                ; Number of items
+                        sta areaGen_items
+                        lda #$08
+                        sta areaGen_monsters    ; Number of monsters
 
                         lda #$0d                ; Solid rock tile
                         sta brushTile           ; Fill entire buffer with rock
@@ -101,12 +108,13 @@ featAdded
                         lda #$ff
                         sta looseEndDir, x
 
-                        dec feats
-                        lda feats
+                        dec areaGen_feats
+                        lda areaGen_feats
                         cmp #$00
                         bne genDungFeatsLoop
 
-generationDone          jsr decorateArea
+generationDone          jsr addItemsToArea
+                        jsr decorateArea
 
                         lda entryX              ; Add stairs back up
                         sta brushX
@@ -527,7 +535,40 @@ createLooseEndFromRandomFloorSpot
                 lda #$00
                 sta fraAttempt
 
-cLeRetry        lda currentAreaWidth            ; Random X Pos
+cLeRetry        jsr getRandomFloorTile
+                cmp #$01
+                bne cLeStoreLE
+
+cLeNextAttempt  inc fraAttempt
+                lda fraAttempt
+                cmp #$30
+                bne cLeRetry
+
+                lda playerX
+                sta brushX
+                lda playerY
+                sta brushY
+
+cLeStoreLE      ldx leIndex
+                lda brushX
+                sta looseEndX, x
+                lda brushY
+                sta looseEndY, x
+
+                jsr randomGenDir
+                lda genDir
+                ldx leIndex
+                sta looseEndDir, x
+                jmp getRandomActiveLE
+
+getRandomFloorTileGrnt
+                jsr getRandomFloorTile
+                cmp #$01
+                beq getRandomFloorTileGrnt
+                rts
+
+getRandomFloorTile:
+                lda currentAreaWidth            ; Random X Pos
                 sta num3
                 dec num3
                 jsr rndInt
@@ -543,34 +584,18 @@ cLeRetry        lda currentAreaWidth            ; Random X Pos
                 ldy brushY
                 jsr isOutOfBounds
                 cmp #$01
-                beq cLeRetry
+                beq getRDFTRetOOB
 
-                inc fraAttempt
-                lda fraAttempt
-                cmp #$30
-                bne cLeCheckCoord
-                lda playerX
-                sta brushX
-                lda playerY
-                sta brushY
-
-cLeCheckCoord   jsr brushCoordsToPtr
+                jsr brushCoordsToPtr
                 ldy #$00
                 lda ($22), y
                 cmp #$01
-                bne cLeRetry
+                bne getRDFTRetOOB
+                lda #$00
+                rts
 
-                ldx leIndex
-                lda brushX
-                sta looseEndX, x
-                lda brushY
-                sta looseEndY, x
-
-                jsr randomGenDir
-                lda genDir
-                ldx leIndex
-                sta looseEndDir, x
-                jmp getRandomActiveLE
+getRDFTRetOOB   lda #$01
+                rts
 
 ;; +----------------------------------+
 ;; |    GENERAL AREA MANIPULATION     |
@@ -599,6 +624,83 @@ levelRowFilled          inc iter
                         bcs fillLevelComplete
                         jmp fillLevelRow
 fillLevelComplete       rts
+
+;; +----------------------------------+
+;; |    ITEM GENERATION               |
+;; +----------------------------------+
+
+totalRandWeight .byte $00
+currentWeight   .byte $00
+
+addItemsToArea:
+                        ldx #$00
+                        stx itemTableSize
+                        lda #<itemTable
+                        sta $20
+                        lda #>itemTable
+                        sta $21
+                        lda itemTableRowSize
+                        sta inc20ModVal
+
+                        txa
+                        clc
+calcTotalRandWeight     adc itemSet_weight, x
+                        inx
+                        cpx itemSet_size
+                        bne calcTotalRandWeight
+                        sta totalRandWeight
+                        dec totalRandWeight
+
+addItemLoop
+                        lda totalRandWeight
+                        sta num3
+                        jsr rndInt
+                        sta currentWeight
+                        ldx #$00
+                        lda #$00
+                        clc
+findItemSetIndexLoop    adc itemSet_weight, x
+                        cmp currentWeight
+                        bcs itemSetIndexFound
+                        inx
+                        jmp findItemSetIndexLoop
+itemSetIndexFound
+                        lda itemSet_type, x         ; Look up the selected type
+                        stx tmpX
+                        tax
+
+                        ldy var_itemModes           ; Copy from ItemDB to current items
+                        lda itemAttributes, x
+                        sta ($20), y
+                        ldy var_itemTileID
+                        lda itemTile, x
+                        sta ($20), y
+                        ldy var_itemNamePtrLo
+                        lda itemNameLo, x
+                        sta ($20), y
+                        ldy var_itemNamePtrHi
+                        lda itemNameHi, x
+                        sta ($20), y
+                        ldy var_itemValue
+                        lda itemValue, x
+                        sta ($20), y
+
+                        jsr getRandomFloorTileGrnt  ; Select a random location
+                        ldy var_itemXPos
+                        lda brushX
+                        sta ($20), y
+                        ldy var_itemYPos
+                        lda brushY
+                        sta ($20), y
+
+                        inc itemTableSize
+                        jsr inc20Ptr
+
+                        dec areaGen_items
+                        ldx areaGen_items
+                        cpx #$00
+                        bne addItemLoop
+                        rts
 
 ;; +----------------------------------+
 ;; |    AREA DECORATION               |
@@ -756,10 +858,10 @@ wallSpecTargetTile
 .byte $12
 .byte $13
 .byte $14
-.byte $15   ; Untested
+.byte $15
 .byte $16
 .byte $17   ; Untested
-.byte $18   ; Untested
+.byte $18
 .byte $1c
 .byte $1d
 .byte $1e
@@ -783,7 +885,6 @@ foundTileReplacement    lda wallSpecTargetTile, x
                         rts
 noTileReplacement       lda #$0d
                         rts
-
 
 tileBit .byte $00
 tileBitIter .byte $00
@@ -832,7 +933,6 @@ nextTileBitIter         inc tileBitIter
                         jmp collectTileBitsLoop
 tileBitCollected        rts
 
-
 ;; +----------------------------------+
 ;; |    BOUNDS CHECK                  |
 ;; +----------------------------------+
@@ -875,8 +975,6 @@ isOutOfBounds
                         rts
 outOfBoundsTrue         lda #$01
                         rts
-
-
 
 decorationBuffer
      .byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00

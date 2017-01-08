@@ -406,164 +406,7 @@ executeTrigger      inx
 nextTrigger         iny
                     jmp triggerIterLoop
 
-;; +----------------------------------+
-;; |                                  |
-;; |    ITEM ROUTINES                 |
-;; |                                  |
-;; +----------------------------------+
-
-getItemAt:
-                    ldx #$00
-                    cpx itemTableSize
-                    beq endGetItemAt
-                    jsr prepareItemIter
-getItemAtLoop       lda ($20), y
-                    and #%10000000
-                    cmp #%10000000
-                    bne getItemNextIter
-                    iny
-                    lda ($20), y
-                    cmp tmpX
-                    bne getItemNextIter
-                    iny
-                    lda ($20), y
-                    cmp tmpY
-                    bne getItemNextIter
-                    txa
-                    rts
-getItemNextIter     inx
-                    cpx itemTableSize
-                    beq endGetItemAt
-                    ldy #$00
-                    jsr inc20Ptr
-                    jmp getItemAtLoop
-endGetItemAt        lda #$ff
-                    rts
-
-prepareItemIter:
-                    lda #>itemTable
-                    sta $21
-                    lda #<itemTable
-                    sta $20
-                    lda itemTableRowSize
-                    sta inc20ModVal
-                    ldy #$00
-                    rts
-
-attemptPickUp:
-                    lda playerX             ; Check for item at player Pos
-                    sta tmpX
-                    lda playerY
-                    sta tmpY
-                    jsr getItemAt
-                    cmp #$ff
-                    beq nothingToPickUp
-
-                    ldy var_itemNamePtrLo   ; Store pointer to item name
-                    lda ($20), y
-                    sta tmpPtr1
-                    iny
-                    lda ($20), y
-                    sta tmpPtr1+1
-
-                    jsr addToInventory      ; Add item to Inventory
-
-                    lda #<text_PICKED_UP
-                    sta $20
-                    lda #>text_PICKED_UP
-                    sta $21
-                    jsr addToMessageBuffer
-
-                    ldx goldPickedUp
-                    cpx #$00
-                    beq pickUpNoAmount
-
-                    jsr byte_to_decimal
-                    jsr addToMessageBuffer
-                    lda #$20
-                    jsr addCharToMessageBuffer
-
-pickUpNoAmount      lda tmpPtr1
-                    sta $20
-                    lda tmpPtr1+1
-                    sta $21
-                    jsr addToMessageBuffer
-                    jsr addMessage
-
-                    jmp dummyMove
-
-nothingToPickUp     lda #<text_NOTHING_TO_PICK_UP
-                    sta $20
-                    lda #>text_NOTHING_TO_PICK_UP
-                    sta $21
-                    jsr addToMessageBuffer
-                    jsr addMessage
-                    rts
-
-goldPickedUp .byte $00, $00
-
-addToInventory:     ldy #$00
-                    sty goldPickedUp
-                    lda ($20), y
-                    and #%01000000
-                    cmp #%01000000
-                    bne addToBackpack
-
-                    lda ($20), y
-                    and #%01111111
-                    sta ($20), y
-
-                    ldy var_itemValue
-                    lda ($20), y
-                    sta goldPickedUp
-                    clc
-                    adc playerGoldBalance
-                    sta playerGoldBalance
-                    jsr compactItemTable
-                    rts
-addToBackpack       lda #<backpackTable     ; Set pointer to backpack
-                    sta $22
-                    lda #>backpackTable
-                    sta $23
-
-                    lda backpackSize        ; Forward pointer to end of backpack
-                    sta num1
-                    lda backpackRowSize
-                    sta num2
-                    jsr multiply
-                    sta inc22ModVal
-                    jsr inc22Ptr
-
-                    ldy #$00
-                    lda ($20), y
-                    sta ($22), y
-                    and #%01111111
-                    sta ($20), y
-
-                    ldy var_itemTileID
-                    lda ($20), y
-                    ldy #$01
-                    sta ($22), y
-
-                    ldy var_itemNamePtrLo
-                    lda ($20), y
-                    ldy #$02
-                    sta ($22), y
-
-                    ldy var_itemNamePtrHi
-                    lda ($20), y
-                    ldy #$03
-                    sta ($22), y
-
-                    ldy var_itemValue
-                    lda ($20), y
-                    ldy #$04
-                    sta ($22), y
-
-                    inc backpackSize
-                    jsr compactItemTable
-                    rts
-
+.include "items.asm"
 .include "inventory.asm"
 
 ;; +----------------------------------+
@@ -3212,6 +3055,9 @@ tileChar1
      .byte $c5   ;; Shortsword      $48
      .byte $c6   ;; Longsword       $49
      .byte $ca   ;; Helmet          $4a
+     .byte $c2   ;; Potion (turq)   $4b
+     .byte $c2   ;; Potion (white)  $4c
+     .byte $cc   ;; Round Shield    $4d
 
 tileChar2
      .byte $48   ;; Nothing/Black   $00
@@ -3291,6 +3137,9 @@ tileChar2
      .byte $c7   ;; Shortsword      $48
      .byte $c7   ;; Longsword       $49
      .byte $cb   ;; Helmet          $4a
+     .byte $c3   ;; Potion (turq)   $4b
+     .byte $c3   ;; Potion (white)  $4c
+     .byte $cd   ;; Round Shield    $4d
 
 tileChar3
      .byte $48 	 ;; Nothing/Black   $00
@@ -3370,7 +3219,9 @@ tileChar3
      .byte $e6   ;; Shortsword      $48
      .byte $e6   ;; Longsword       $49
      .byte $ea   ;; Helmet          $4a
-
+     .byte $e2   ;; Potion (turq)   $4b
+     .byte $e2   ;; Potion (white)  $4c
+     .byte $ec   ;; Round Shield    $4d
 
 tileChar4
      .byte $48   ;; Nothing/Black   $00
@@ -3449,7 +3300,10 @@ tileChar4
      .byte $e3   ;; Potion (purple) $47
      .byte $e7   ;; Shortsword      $48
      .byte $e7   ;; Longsword       $49
-     .byte $cb   ;; Helmet          $4a
+     .byte $eb   ;; Helmet          $4a
+     .byte $e3   ;; Potion (turq)   $4b
+     .byte $e3   ;; Potion (white)  $4c
+     .byte $ed   ;; Round Shield    $4d
 
 tileCharColor1
      .byte $00   ;; Nothing / Black
@@ -3527,7 +3381,10 @@ tileCharColor1
      .byte $0c   ;; Potion (purple) $47
      .byte $0a   ;; Shortsword      $48
      .byte $0a   ;; Longsword       $49
-     .byte $00   ;; Helmet          $4a
+     .byte $08   ;; Helmet          $4a
+     .byte $0b   ;; Potion (turq)   $4b
+     .byte $09   ;; Potion (white)  $4c
+     .byte $0a   ;; Round Shield    $4d
 
 tileCharColor2
      .byte $00   ;; Nothing / Black
@@ -3605,7 +3462,10 @@ tileCharColor2
      .byte $0c   ;; Potion (purple) $47
      .byte $0a   ;; Shortsword      $48
      .byte $0a   ;; Longsword       $49
-     .byte $00   ;; Helmet          $4a
+     .byte $08   ;; Helmet          $4a
+     .byte $0b   ;; Potion (turq)   $4b
+     .byte $09   ;; Potion (white)  $4c
+     .byte $0a   ;; Round Shield    $4d
 
 tileCharColor3
      .byte $00   ;; Nothing / Black
@@ -3683,7 +3543,10 @@ tileCharColor3
      .byte $0c   ;; Potion (purple) $47
      .byte $0a   ;; Shortsword      $48
      .byte $0a   ;; Longsword       $49
-     .byte $00   ;; Helmet          $4a
+     .byte $08   ;; Helmet          $4a
+     .byte $0b   ;; Potion (turq)   $4b
+     .byte $09   ;; Potion (white)  $4c
+     .byte $0a   ;; Round Shield    $4d
 
 tileCharColor4
      .byte $00   ;; Nothing / Black
@@ -3761,7 +3624,10 @@ tileCharColor4
      .byte $0c   ;; Potion (purple) $47
      .byte $0a   ;; Shortsword      $48
      .byte $0a   ;; Longsword       $49
-     .byte $00   ;; Helmet          $4a
+     .byte $08   ;; Helmet          $4a
+     .byte $0b   ;; Potion (turq)   $4b
+     .byte $09   ;; Potion (white)  $4c
+     .byte $0a   ;; Round Shield    $4d
 
 tileProps:
      .byte %00000000          ;; Nothing / Black. Not passable.    Block Sight
@@ -3828,6 +3694,9 @@ tileProps:
      .byte %00000000
      .byte %00000000
      .byte %00000000
+     .byte %11000000
+     .byte %11000000
+     .byte %11000000
      .byte %11000000
      .byte %11000000
      .byte %11000000

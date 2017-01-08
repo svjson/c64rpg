@@ -106,6 +106,12 @@ rndDivisorTable:
         .byte $07       ; 38
         .byte $07       ; 39
         .byte $06       ; 40
+        .byte $06       ; 41
+        .byte $06       ; 42
+        .byte $06       ; 43
+        .byte $06       ; 44
+        .byte $06       ; 45
+        .byte $06       ; 46
 
 rndInt:
         ldx num3
