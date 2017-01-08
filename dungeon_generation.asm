@@ -61,13 +61,6 @@ clearLooseEndsLoop      sta looseEndDir, x
                         cpx #$08
                         bne clearLooseEndsLoop
 
-                        lda #$48                ; Number of features/iterations
-                        sta areaGen_feats
-                        lda #$05                ; Number of items
-                        sta areaGen_items
-                        lda #$06
-                        sta areaGen_npcs        ; Number of monsters
-
                         lda #$0d                ; Solid rock tile
                         sta brushTile           ; Fill entire buffer with rock
                         jsr fillLevel

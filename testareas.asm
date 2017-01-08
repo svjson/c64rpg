@@ -97,11 +97,11 @@ dungeoncellar
 
      .byte $1d  ; Trigger X
      .byte $14  ; Trigger Y
-     .byte $02  ; trigger type
+     .byte $04  ; trigger type
      .byte <(rnddungeon1)
      .byte >(rnddungeon1)
-     .byte $12  ; Target X
-     .byte $0a  ; Target Y
+     .byte $00  ; Target Trigger Index
+     .byte $00  ; N/A
 
      ;---
      .byte $0a ; Number of npcs
@@ -306,8 +306,20 @@ rnddungeon1
      .byte %11000000
      .byte %00001010    ; Tile set mask
      .byte $1f, $1c, $1b
-     .byte $00 ; No triggers
-     .byte $00 ; No npcs
-     .byte $00 ; No ites
+     .byte $01             ; npcSetIndex
+     .byte $01             ; itemSetIndex
+     .byte $48             ; Generation Feats #
+     .byte $06             ; # of NPCs
+     .byte $05             ; # of Items
+     ;---
+     .byte $01             ; Exit Triggers To Generate
+     ;---
+     .byte $04             ; Trigger Type
+     .byte $19             ; Trigger Tile #
+     .byte <(dungeoncellar)
+     .byte >(dungeoncellar)
+     .byte $01             ; Target area trigger index
+     .byte $00             ; N/A
+
 
 .fill $350
