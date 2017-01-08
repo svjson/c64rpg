@@ -286,11 +286,11 @@ houseArea
      ;---
      .byte $06  ; Trigger 2 X
      .byte $01  ; Trigger 2 Y
-     .byte $02  ; trigger type
+     .byte $04  ; trigger type
      .byte <(dungeoncellar)
      .byte >(dungeoncellar)
-     .byte $0e  ; Target X
-     .byte $0a  ; Target Y
+     .byte $00  ; Target area trigger index
+     .byte $00  ; N/A
      ;---
      .byte $00  ; NPC table size
      ;---

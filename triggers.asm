@@ -15,7 +15,11 @@ resp_trigger_NO_TRIGGER              = #$00
 resp_trigger_EXIT_TRIGGERED          = #$01
 
 trAction .byte $00
+trTargetIndex .byte $ff
 
+;; +----------------------------------+
+;; |    TRIGGER EVALUATION            |
+;; +----------------------------------+
 ;
 ; Input - playerX - Trigger location X
 ;         playerY - Trigger location Y
@@ -80,10 +84,18 @@ executeExitActivateCoordTrigger:
                     jmp finalizeExitCoordTrigger
 
 executeExitAutoIndexTrigger:
-                    jmp noTriggerResponse
+                    lda trAction
+                    cmp var_triggerAction_WALK_ON
+                    bne noTriggerResponse
+                    jsr evalTriggerTarget
+                    jmp finalizeExitIndexTrigger
 
 executeExitActivateIndexTrigger:
-                    jmp noTriggerResponse
+                    lda trAction
+                    cmp var_triggerAction_MAN_ACTIVATE
+                    bne noTriggerResponse
+                    jsr evalTriggerTarget
+                    jmp finalizeExitIndexTrigger
 
 evalTriggerTarget:
                     inx
@@ -106,6 +118,29 @@ finalizeExitCoordTrigger:
                     inx
                     lda triggerTable, x     ; Target Y coord
                     sta playerY
+                    lda #$ff
+                    sta trTargetIndex
                     lda resp_trigger_EXIT_TRIGGERED
+                    rts
+
+finalizeExitIndexTrigger:
+                    inx
+                    lda triggerTable, x     ; Target Index
+                    sta trTargetIndex
+                    lda resp_trigger_EXIT_TRIGGERED
+
+;; +----------------------------------+
+;; |    TRIGGER LOOKUP                |
+;; +----------------------------------+
+
+forwardTriggerTableToIndexA:
+                    sta rollIterations
+                    lda #<triggerTable
+                    sta $22
+                    lda #>triggerTable
+                    sta $23
+                    lda triggerTableRowSize
+                    sta inc22ModVal
+                    jsr roll22Ptr
                     rts
 

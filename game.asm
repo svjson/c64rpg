@@ -1085,11 +1085,19 @@ areaLoaded            lda $d018              ; Remap tileset
                       jsr generateDungeon
 
 doEnterArea:
-                      lda triggerTableSize
-                      lda npcTableSize
-                      lda itemTableSize
+                      lda trTargetIndex      ; This will be set to an index in the loaded trigger table
+                      cmp #$ff               ; if we entered the area through a trigger exit of type index
+                      beq doEnterCoords
 
-                      ldx playerX
+                      jsr forwardTriggerTableToIndexA
+                      ldy var_triggerXPos
+                      lda ($22), y
+                      sta playerX
+                      iny
+                      lda ($22), y
+                      sta playerY
+
+doEnterCoords         ldx playerX
                       stx tmpX
                       ldy playerY
                       sty tmpY
@@ -2359,6 +2367,9 @@ currentArea
      .byte $0d, $04, $04, $02, $02, $04, $04, $0d, $0e, $0c, $05, $05, $05, $04, $05, $0b, $0f, $10, $04, $04, $05, $04, $05, $04, $04, $0b, $0e, $0d, $05, $06, $04, $0f, $04, $05, $04, $05, $05, $04, $05, $04
      .byte $04, $05, $01, $02, $02, $04, $04, $04, $04, $0d, $04, $04, $04, $11, $04, $0e, $0c, $04, $05, $01, $04, $04, $04, $04, $0b, $0c, $0c, $0e, $04, $05, $04, $04, $04, $04, $05, $04, $05, $04, $04, $04
      .byte $04, $04, $04, $02, $02, $04, $04, $04, $04, $04, $04, $04, $05, $04, $04, $04, $0d, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04
+
+var_triggerXPos     = #$00
+var_triggerYPos     = #$00
 
 triggerTableRowSize = #$07
 triggerTableSize
