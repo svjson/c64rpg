@@ -1,4 +1,5 @@
 
+triggerDefPtr .byte $00, $00
 
 areaGen_items .byte $08
 areaGen_feats .byte $25
@@ -29,6 +30,8 @@ genDirModY .byte $ff, $00, $01, $00
 
 sweepBrushLn .byte $00
 sweepBrush .byte %00000000
+
+triggerTiles .byte $00, $00, $00, $00 ; Limit of four triggers for now
 
 corrLn .byte $00
 
@@ -106,36 +109,10 @@ featAdded
                         cmp #$00
                         bne genDungFeatsLoop
 
-generationDone          jsr addItemsToArea
+generationDone          jsr decorateArea
+                        jsr addExitTriggersToArea
+                        jsr addItemsToArea
                         jsr addNpcsToArea
-                        jsr decorateArea
-
-                        lda entryX              ; Add stairs back up
-                        sta brushX
-                        lda entryY
-                        sta brushY
-                        jsr brushCoordsToPtr
-
-                        lda #$19                ; Add stairs tile
-                        ldy #$00
-                        sta ($22), y
-
-                        lda #$01                ; One trigger for now
-                        sta triggerTableSize
-                        lda var_triggerAction_MAN_ACTIVATE
-                        sta triggerTable+2
-                        lda entryX
-                        sta triggerTable
-                        lda entryY
-                        sta triggerTable+1
-                        lda #<dungeoncellar
-                        sta triggerTable+3
-                        lda #>dungeoncellar
-                        sta triggerTable+4
-                        lda #$1d
-                        sta triggerTable+5
-                        lda #$14
-                        sta triggerTable+6
 
                         rts
 
@@ -583,8 +560,8 @@ getRandomFloorTile:
                 jsr brushCoordsToPtr
                 ldy #$00
                 lda ($22), y
-                cmp #$01
-                bne getRDFTRetOOB
+                cmp #$04
+                bcs getRDFTRetOOB
                 lda #$00
                 rts
 
@@ -598,21 +575,21 @@ fillLevel:
                         ldx #$00
                         stx iter
                         lda #<currentArea
-                        sta $20
+                        sta $22
                         lda #>currentArea
-                        sta $21
+                        sta $23
                         lda currentAreaWidth
-                        sta inc20ModVal
+                        sta inc22ModVal
 
 fillLevelRow            ldy #$00
                         lda brushTile
 fillLevelRowLoop        cpy currentAreaWidth
                         beq levelRowFilled
-                        sta ($20), y
+                        sta ($22), y
                         iny
                         jmp fillLevelRowLoop
 levelRowFilled          inc iter
-                        jsr inc20Ptr
+                        jsr inc22Ptr
                         ldx iter
                         cpx currentAreaHeight
                         bcs fillLevelComplete
@@ -755,7 +732,6 @@ itemSetIndexFound
                         ldy var_itemValue
                         lda itemValue, x
                         sta ($20), y
-
                         jsr getRandomFloorTileGrnt  ; Select a random location
                         ldy var_itemXPos
                         lda brushX
@@ -772,6 +748,127 @@ itemSetIndexFound
                         cpx #$00
                         bne addItemLoop
                         rts
+
+;; +----------------------------------+
+;; |    EXIT TRIGGER GENERATION       |
+;; +----------------------------------+
+
+genTriggerTableRowSize .byte $09
+
+addExitTriggersToArea
+                        lda triggerDefPtr             ; Return pointer to where we were in level header
+                        sta $20
+                        lda triggerDefPtr+1
+                        sta $21
+
+                        ldy #$00                ; Read number of triggers to generate
+                        sty iter
+                        lda ($20), y
+                        sta triggerTableSize
+
+                        lda #$01                ; Safely skip one byte ahead
+                        sta inc20ModVal
+                        jsr inc20Ptr
+
+                        lda #$00
+                        cmp triggerTableSize
+                        bne contGenTriggers
+                        rts
+
+contGenTriggers         lda #<triggerTable
+                        sta $22
+                        lda #>triggerTable
+                        sta $23
+
+                        lda genTriggerTableRowSize
+                        sta inc20ModVal
+
+genTriggerLoop
+                        ldy #$03                    ; Read and set trigger type
+                        lda ($20), y
+                        ldy var_triggerType
+                        sta ($22), y
+
+                        ldy #$04                    ; Read trigger tile
+                        ldx iter
+                        lda ($20), y
+                        sta brushTile
+
+                        ldy #$05                    ; Read and set target area ptr
+                        lda ($20), y
+                        ldy var_triggerTgtAreaLo
+                        sta ($22), y
+                        ldy #$06
+                        lda ($20), y
+                        ldy var_triggerTgtAreaHi
+                        sta ($22), y
+
+                        ldy #$07                    ; Read and set target coords or index
+                        lda ($20), y
+                        ldy var_triggerTgtXPos
+                        sta ($22), y
+                        ldy #$08
+                        lda ($20), y
+                        ldy var_triggerTgtYPos
+                        sta ($22), y
+
+                        ldy #$00                    ; Read placement algorithm type and dispatch
+                        lda ($20), y
+                        cmp #$01
+                        beq genTriggerEntryPlacemnt
+
+                        lda $22                     ; Store away pointer to triggerTablePos
+                        sta tmpPtr1
+                        lda $23
+                        sta tmpPtr1+1
+
+genTriggerRandomPlacmnt jsr getRandomFloorTileGrnt
+                        jmp genTriggerAtBrushCoords
+
+genTriggerEntryPlacemnt lda entryX              ; Add stairs back up
+                        sta brushX
+                        lda entryY
+                        sta brushY
+
+genTriggerAtBrushCoords jsr brushCoordsToPtr
+
+                        lda brushTile
+                        ldy #$00
+                        sta ($22), y
+
+                        lda tmpPtr1             ; Read back trigger table ptr
+                        sta $22
+                        lda tmpPtr1+1
+                        sta $23
+
+                        ldy var_triggerXPos
+                        lda brushX
+                        sta ($22), y
+                        ldy var_triggerYPos
+                        lda brushY
+                        sta ($22), y
+
+                        lda trTargetIndex       ; Set player coords to this trigger if
+                        cmp iter                ; we entered through it
+                        bne genTriggerEndLoop
+
+                        lda brushX
+                        sta playerX
+                        lda brushY
+                        sta playerY
+
+genTriggerEndLoop
+                        lda triggerTableRowSize ; Will have been overwritten by brushCoordsToPtr
+                        sta inc22ModVal
+
+                        jsr inc20Ptr
+                        jsr inc22Ptr
+                        inc iter
+                        lda iter
+                        cmp triggerTableSize
+                        bne genTriggerNextIter
+                        rts
+genTriggerNextIter      jmp genTriggerLoop
 
 ;; +----------------------------------+
 ;; |    AREA DECORATION               |

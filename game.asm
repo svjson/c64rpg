@@ -57,9 +57,9 @@
      lda #%00000001     ; Enable raster interrupt signals
      sta $d01a
 
-     lda #<houseArea
+     lda #<dungeoncellar
      sta $20
-     lda #>houseArea
+     lda #>dungeoncellar
      sta $21
      jsr enterArea
      jmp mainloop
@@ -2030,8 +2030,8 @@ backpackTable:
 currentAreaOffsetX  .byte $00
 currentAreaOffsetY  .byte $04
 
-playerX .byte $02
-playerY .byte $01
+playerX .byte $1d
+playerY .byte $14
 prevPlayerX .byte $00
 prevPlayerY .byte $00
 playerTurnCost .byte $00
@@ -2087,7 +2087,13 @@ currentArea
      .byte $04, $04, $04, $02, $02, $04, $04, $04, $04, $04, $04, $04, $05, $04, $04, $04, $0d, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04
 
 var_triggerXPos     = #$00
-var_triggerYPos     = #$00
+var_triggerYPos     = #$01
+var_triggerType     = #$02
+var_triggerTgtAreaLo = #$03
+var_triggerTgtAreaHi = #$04
+var_triggerTgtXPos = #$05
+var_triggerTgtIndex = #$05
+var_triggerTgtYPos = #$06
 
 triggerTableRowSize = #$07
 triggerTableSize
@@ -3335,7 +3341,7 @@ dungeonTilesetPropsTable:
      .byte %00000000          ;; Dungeon wall     Not passable.    Block sight
      .byte %11100000          ;; Dungeon floor    Stairs up        See-through    Trigger
      .byte %01000000          ;; Barrel           Not passable.    See-through
-     .byte %11100000          ;; Dungeon floor    Stairs up        See-through    Trigger
+     .byte %11100000          ;; Dungeon floor    Stairs down      See-through    Trigger
      .byte %00000000          ;; Stalactite       Not passable.    Block sight
      .byte %00000000          ;; Dungeon wall     Not passable.    Block sight
      .byte %00000000          ;; Dungeon wall     Not passable.    Block sight

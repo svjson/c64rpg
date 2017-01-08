@@ -131,6 +131,15 @@ generateBeforeEnter:
                     lda ($20), y
                     sta areaGen_items
 
+                    lda #$05                ; Safe forward of ptr
+                    sta inc20ModVal
+                    jsr inc20Ptr
+
+                    lda $20                 ; Store pointer to rest of level def,
+                    sta triggerDefPtr       ; We'll want to keep reading later
+                    lda $21
+                    sta triggerDefPtr+1
+
                     jsr doApplyTileSet
 
                     jsr generateDungeon

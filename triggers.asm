@@ -34,7 +34,7 @@ triggerIterLoop     cpy triggerTableSize
                     beq noTriggerResponse
 
                     sty num1
-                    lda #$07
+                    lda triggerTableRowSize
                     sta num2
                     jsr multiply
 
