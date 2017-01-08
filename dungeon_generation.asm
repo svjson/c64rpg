@@ -123,23 +123,23 @@ generationDone          jsr addItemsToArea
                         sta brushY
                         jsr brushCoordsToPtr
 
-                        lda #$19
-                        ldy #$01
+                        lda #$19                ; Add stairs tile
+                        ldy #$00
                         sta ($22), y
 
-                        lda #$01
+                        lda #$01                ; One trigger for now
                         sta triggerTableSize
+                        lda var_triggerAction_MAN_ACTIVATE
                         sta triggerTable+2
                         lda entryX
                         sta triggerTable
-                        inc triggerTable
                         lda entryY
                         sta triggerTable+1
                         lda #<dungeoncellar
                         sta triggerTable+3
                         lda #>dungeoncellar
                         sta triggerTable+4
-                        lda #$1e
+                        lda #$1d
                         sta triggerTable+5
                         lda #$14
                         sta triggerTable+6

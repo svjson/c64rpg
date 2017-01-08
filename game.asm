@@ -57,9 +57,9 @@
      lda #%00000001     ; Enable raster interrupt signals
      sta $d01a
 
-     lda #<dungeoncellar
+     lda #<houseArea
      sta $20
-     lda #>dungeoncellar
+     lda #>houseArea
      sta $21
      jsr enterArea
      jmp mainloop
@@ -199,18 +199,19 @@ mlcont              lda #$15            ; wait for raster retrace
 ;; |                                  |
 ;; +----------------------------------+
 
-key_UP    = #$17      ;; W,
-key_LEFT  = #$01      ;; A
-key_RIGHT = #$04      ;; D
-key_DOWN   = #$18     ;; X
+key_UP    = #$17            ;; W
+key_LEFT  = #$01            ;; A
+key_RIGHT = #$04            ;; D
+key_DOWN   = #$18           ;; X
 
-key_UPLEFT = #$11     ;; Q
-key_UPRIGHT = #$05    ;; E
-key_DOWNLEFT = #$1a   ;; Z
-key_DOWNRIGHT = #$03  ;; C
+key_UPLEFT = #$11           ;; Q
+key_UPRIGHT = #$05          ;; E
+key_DOWNLEFT = #$1a         ;; Z
+key_DOWNRIGHT = #$03        ;; C
 
-key_PICKUP = #$07     ;; G
-key_INVENTORY = #$09  ;; I
+key_PICKUP = #$07           ;; G
+key_INVENTORY = #$09        ;; I
+key_ACTIVATE_TRIGGER = #$14 ;; T
 
 readKey
                     jsr $ffe4
@@ -248,6 +249,9 @@ readKey
 
                     cmp key_INVENTORY
                     beq move_inventory
+
+                    cmp key_ACTIVATE_TRIGGER
+                    beq move_activateTrigger
 
                     cmp #$06
                     beq toggleFOV
@@ -287,6 +291,7 @@ move_downright      inx
 
 move_pickup         jmp attemptPickUp
 move_inventory      jmp enterInventory
+move_activateTrigger jmp attemptActivateTrigger
 
 toggleFOV           lda areaMode
                     eor %10000000
@@ -354,58 +359,26 @@ movePerformed       inc screenDirty
                     beq triggerCheck
                     jsr updateFOVLines
 
-triggerCheck        lda currentTileProps
+triggerCheck        lda currentTileProps        ; Check if tile has trigger flag set
                     and #%00100000
                     cmp #%00100000
-                    beq evalTriggers
+                    beq evalWalkOnTriggers
 moveDone            rts
 
-evalTriggers
-                    ldy #$00
-triggerIterLoop     cpy triggerTableSize
+evalWalkOnTriggers
+                    lda var_triggerAction_WALK_ON
+checkTriggerOfA     sta trAction
+                    jsr evaluateTriggerAt
+                    cmp #$00
                     beq moveDone
-
-                    sty num1
-                    lda #$07
-                    sta num2
-                    jsr multiply
-
-                    tax
-                    lda triggerTable, x
-                    cmp playerX
-                    bne nextTrigger
-
-                    inx
-                    lda triggerTable, x
-                    cmp playerY
-                    bne nextTrigger
-
-executeTrigger      inx
-                    lda triggerTable, x     ; Trigger type. Ignore for now
-
-                    inx
-                    lda triggerTable, x     ; Area addr lo-byte
-                    sta $20
-                    inx
-                    lda triggerTable, x     ; Area addr hi-byte
-                    sta $21
-
-                    lda playerX
-                    sta prevPlayerX
-                    lda playerY
-                    sta prevPlayerY
-
-                    inx
-                    lda triggerTable, x     ; Target X coord
-                    sta playerX
-                    inx
-                    lda triggerTable, x     ; Target Y coord
-                    sta playerY
+                    ; Else it is $01, since we only have exittriggers so far
                     jmp enterArea
 
-nextTrigger         iny
-                    jmp triggerIterLoop
+attemptActivateTrigger:
+                    lda var_triggerAction_MAN_ACTIVATE
+                    jmp checkTriggerOfA
 
+.include "triggers.asm"
 .include "items.asm"
 .include "inventory.asm"
 
@@ -2331,8 +2304,8 @@ backpackTable:
 currentAreaOffsetX  .byte $00
 currentAreaOffsetY  .byte $04
 
-playerX .byte $1d
-playerY .byte $13
+playerX .byte $02
+playerY .byte $01
 prevPlayerX .byte $00
 prevPlayerY .byte $00
 playerTurnCost .byte $00
@@ -2632,304 +2605,7 @@ itemTable
 ;; |                                  |
 ;; +----------------------------------+
 *=$7000
-outsidearea
-     .byte $28  ; width
-     .byte $17  ; height
-     .byte $00  ; area mode
-     .byte %00001110; tileset mask
-     .byte $05, $09, $1d
-     .byte $05, $04, $03, $04, $05, $05, $04, $04, $04, $02, $02, $04, $0e, $0c, $05, $05, $05, $05, $04, $05, $05, $05, $05, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04
-     .byte $05, $05, $0a, $04, $04, $04, $05, $04, $0c, $02, $02, $0d, $04, $04, $04, $04, $04, $01, $05, $05, $04, $05, $04, $04, $04, $04, $04, $05, $04, $04, $04, $05, $0c, $04, $04, $04, $04, $04, $04, $04
-     .byte $04, $04, $03, $05, $04, $04, $11, $05, $04, $02, $02, $04, $0b, $04, $04, $04, $11, $05, $04, $05, $11, $05, $05, $04, $05, $04, $04, $04, $04, $04, $05, $05, $04, $04, $04, $04, $04, $04, $04, $04
-     .byte $05, $04, $0a, $04, $0b, $01, $05, $04, $0e, $02, $02, $02, $04, $0f, $04, $06, $04, $04, $04, $05, $05, $11, $05, $04, $04, $04, $04, $06, $05, $05, $06, $04, $04, $05, $04, $04, $05, $04, $04, $04
-     .byte $04, $04, $0a, $03, $0c, $04, $04, $04, $04, $04, $02, $02, $04, $04, $04, $06, $04, $04, $0d, $0c, $0b, $05, $04, $06, $11, $04, $04, $04, $0d, $0e, $05, $04, $04, $05, $04, $04, $05, $04, $04, $04
-     .byte $05, $04, $04, $0a, $05, $04, $04, $01, $04, $04, $02, $02, $04, $06, $05, $04, $04, $05, $04, $05, $04, $04, $05, $04, $04, $05, $04, $06, $06, $05, $04, $06, $04, $04, $05, $04, $04, $04, $04, $04
-     .byte $04, $04, $04, $03, $0a, $0d, $0e, $04, $0d, $02, $02, $0c, $04, $04, $11, $0e, $04, $04, $04, $05, $05, $05, $05, $04, $0d, $05, $05, $04, $04, $04, $04, $04, $0c, $04, $05, $04, $05, $04, $04, $04
-     .byte $04, $04, $04, $04, $03, $03, $05, $04, $04, $02, $02, $0b, $04, $05, $0b, $0c, $0d, $05, $04, $04, $05, $04, $04, $04, $0c, $04, $05, $04, $04, $04, $0e, $04, $04, $04, $05, $04, $05, $04, $04, $04
-     .byte $05, $04, $04, $04, $04, $0a, $03, $0a, $04, $02, $02, $04, $04, $04, $04, $0b, $04, $04, $0b, $04, $05, $05, $05, $04, $0b, $04, $04, $04, $04, $04, $0d, $05, $0b, $04, $04, $04, $04, $04, $04, $04
-     .byte $04, $04, $05, $04, $04, $04, $04, $0a, $03, $12, $12, $03, $0a, $03, $03, $04, $04, $04, $05, $05, $05, $04, $05, $04, $04, $04, $0b, $04, $0f, $04, $0c, $05, $04, $04, $04, $04, $04, $04, $04, $04
-     .byte $05, $05, $04, $04, $05, $04, $11, $04, $01, $02, $02, $04, $04, $04, $0a, $0a, $03, $0a, $03, $0a, $03, $0a, $03, $03, $04, $04, $0c, $0e, $04, $04, $04, $04, $05, $04, $05, $04, $04, $04, $04, $04
-     .byte $05, $04, $05, $04, $06, $04, $04, $0f, $05, $02, $02, $05, $05, $04, $05, $05, $04, $05, $04, $04, $11, $05, $04, $0a, $03, $04, $0d, $04, $04, $04, $04, $04, $05, $04, $05, $04, $05, $04, $04, $04
-     .byte $04, $0b, $05, $05, $04, $11, $05, $04, $05, $02, $02, $04, $11, $05, $05, $04, $04, $05, $05, $05, $05, $05, $11, $04, $0a, $04, $08, $08, $08, $08, $08, $08, $05, $04, $04, $04, $05, $04, $04, $04
-     .byte $04, $05, $04, $05, $11, $04, $11, $05, $04, $02, $02, $04, $0b, $05, $04, $04, $04, $04, $05, $04, $11, $04, $0b, $04, $03, $04, $08, $08, $08, $08, $08, $08, $04, $04, $0c, $04, $04, $04, $04, $04
-     .byte $0d, $04, $04, $05, $04, $05, $11, $04, $02, $02, $04, $05, $0c, $0b, $11, $04, $04, $0f, $04, $05, $05, $04, $0d, $04, $0a, $04, $08, $08, $08, $08, $08, $08, $04, $0e, $0f, $04, $04, $0a, $0a, $0a
-     .byte $04, $05, $05, $04, $11, $04, $04, $04, $02, $02, $0f, $0c, $0e, $04, $04, $04, $04, $05, $04, $11, $04, $11, $05, $0b, $0a, $04, $08, $08, $08, $08, $08, $08, $04, $0d, $04, $04, $0a, $03, $04, $04
-     .byte $04, $04, $04, $05, $04, $04, $04, $02, $02, $02, $04, $0d, $04, $11, $04, $04, $04, $05, $05, $05, $04, $04, $11, $0c, $03, $04, $07, $07, $07, $09, $07, $07, $04, $04, $04, $04, $0a, $05, $04, $04
-     .byte $04, $04, $04, $04, $04, $02, $02, $02, $02, $04, $05, $04, $06, $05, $05, $04, $04, $04, $04, $04, $05, $05, $04, $04, $0a, $0a, $04, $06, $04, $0a, $04, $05, $04, $04, $0a, $03, $03, $04, $04, $04
-     .byte $0b, $04, $04, $04, $02, $02, $02, $02, $04, $04, $04, $04, $06, $06, $11, $05, $04, $04, $05, $05, $04, $04, $04, $04, $04, $03, $03, $0a, $0a, $03, $03, $0a, $03, $03, $0a, $04, $04, $05, $05, $04
-     .byte $04, $05, $04, $04, $02, $02, $04, $04, $04, $0b, $04, $04, $04, $04, $11, $05, $01, $04, $05, $04, $05, $04, $11, $04, $04, $04, $04, $04, $0f, $04, $04, $04, $04, $04, $04, $05, $05, $04, $05, $04
-     .byte $0d, $04, $04, $02, $02, $04, $04, $0d, $0e, $0c, $05, $05, $05, $04, $05, $0b, $0f, $10, $04, $04, $05, $04, $05, $04, $04, $0b, $0e, $0d, $05, $06, $04, $0f, $04, $05, $04, $05, $05, $04, $05, $04
-     .byte $04, $05, $01, $02, $02, $04, $04, $04, $04, $0d, $04, $04, $04, $11, $04, $0e, $0c, $04, $05, $01, $04, $04, $04, $04, $0b, $0c, $0c, $0e, $04, $05, $04, $04, $04, $04, $05, $04, $05, $04, $04, $04
-     .byte $04, $04, $04, $02, $02, $04, $04, $04, $04, $04, $04, $04, $05, $04, $04, $04, $0d, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04
-     ;---
-     .byte $01 ; - Number of triggers
-     ;---
-     .byte $1d  ; Trigger X
-     .byte $10  ; Trigger Y
-     .byte $01  ; Trigger Type (01 = Teleport to new area)
-     .byte <(houseArea)
-     .byte >(houseArea)
-     .byte $04
-     .byte $06
-     ;---
-     .byte $00 ; NPC table size
-     ;---
-     .byte $00 ; Item table size
-     .fill $46
-
-dungeoncellar
-     .byte $21  ; width
-     .byte $17  ; height
-     .byte %10000000
-     .byte %00001010    ; Tile set mask
-     .byte $1f, $1c, $1b
-     .byte $0d, $0d, $07, $04, $04, $04, $04, $04, $04, $04, $04, $04, $0e, $0d, $0d, $0d, $0d, $07, $04, $04, $04, $04, $04, $04, $0e, $0d, $0d, $07, $04, $04, $0e, $0d, $0d
-     .byte $0d, $0d, $05, $01, $02, $03, $01, $01, $02, $03, $02, $01, $08, $04, $04, $04, $04, $09, $01, $03, $03, $01, $01, $02, $08, $0e, $0d, $05, $01, $02, $08, $0e, $0d
-     .byte $0d, $0d, $05, $03, $02, $0f, $01, $0b, $0a, $0c, $02, $01, $01, $01, $01, $01, $01, $01, $02, $01, $02, $02, $03, $01, $02, $06, $0d, $05, $03, $01, $01, $06, $0d
-     .byte $0d, $07, $09, $01, $03, $10, $01, $06, $0d, $05, $03, $03, $0b, $0a, $0a, $0a, $0c, $03, $0b, $0a, $0a, $0a, $0c, $03, $01, $08, $0e, $07, $15, $02, $03, $08, $0e
-     .byte $0d, $05, $03, $02, $01, $10, $01, $06, $0d, $05, $01, $01, $06, $07, $04, $04, $09, $02, $08, $04, $04, $0e, $05, $01, $02, $01, $06, $05, $01, $03, $01, $01, $06
-     .byte $0d, $05, $01, $0b, $0a, $05, $01, $06, $0d, $05, $02, $01, $06, $05, $01, $03, $02, $01, $01, $1a, $1a, $06, $05, $02, $03, $01, $14, $09, $03, $01, $02, $03, $06
-     .byte $0d, $05, $02, $08, $04, $09, $01, $08, $0e, $05, $02, $03, $06, $05, $03, $02, $01, $01, $01, $02, $1a, $06, $05, $01, $03, $02, $13, $03, $02, $03, $02, $01, $06
-     .byte $07, $09, $03, $01, $01, $01, $01, $02, $06, $05, $03, $01, $06, $05, $01, $02, $03, $02, $01, $03, $03, $06, $05, $01, $0f, $01, $03, $01, $01, $0b, $0a, $0a, $0d
-     .byte $05, $01, $01, $03, $01, $0b, $0a, $0a, $0d, $05, $01, $01, $06, $05, $03, $01, $02, $01, $03, $01, $02, $06, $05, $01, $06, $0c, $01, $01, $02, $08, $04, $04, $0e
-     .byte $0d, $0c, $03, $01, $01, $08, $04, $04, $0e, $05, $02, $02, $06, $05, $03, $01, $01, $02, $01, $03, $01, $06, $07, $12, $04, $09, $01, $03, $03, $01, $01, $01, $06
-     .byte $0d, $05, $02, $02, $01, $01, $03, $01, $06, $05, $01, $01, $06, $05, $19, $02, $03, $02, $01, $02, $02, $06, $05, $01, $01, $01, $01, $03, $0b, $0c, $03, $0b, $0d
-     .byte $0d, $0d, $0c, $01, $03, $01, $03, $01, $06, $05, $03, $02, $06, $05, $02, $01, $01, $01, $02, $01, $03, $06, $05, $03, $02, $03, $02, $18, $04, $09, $02, $08, $0e
-     .byte $0d, $0d, $0d, $0c, $01, $02, $01, $01, $06, $05, $02, $03, $06, $05, $01, $01, $01, $03, $01, $01, $01, $06, $05, $02, $02, $03, $02, $10, $02, $01, $01, $01, $06
-     .byte $0d, $0d, $07, $09, $03, $01, $02, $03, $08, $09, $01, $02, $08, $09, $03, $0b, $0a, $0a, $0a, $0a, $0a, $0d, $05, $01, $01, $01, $01, $10, $01, $0f, $03, $02, $06
-     .byte $0d, $0d, $05, $01, $02, $03, $01, $01, $03, $03, $01, $01, $01, $01, $01, $06, $0d, $07, $04, $0e, $0d, $0d, $05, $02, $03, $02, $0b, $05, $03, $10, $02, $0b, $0d
-     .byte $0d, $0d, $05, $03, $01, $02, $02, $03, $11, $12, $16, $12, $17, $0c, $03, $06, $0d, $05, $02, $06, $0d, $0d, $05, $01, $02, $01, $06, $05, $03, $10, $01, $08, $0e
-     .byte $0d, $07, $09, $02, $03, $01, $01, $01, $01, $02, $10, $03, $08, $09, $01, $08, $04, $09, $03, $08, $04, $04, $09, $02, $02, $03, $14, $09, $02, $10, $02, $03, $06
-     .byte $0d, $05, $02, $01, $01, $03, $02, $02, $01, $02, $06, $0c, $01, $03, $01, $01, $02, $01, $01, $03, $01, $02, $02, $03, $0b, $1e, $09, $01, $02, $14, $15, $02, $06
-     .byte $0d, $05, $01, $02, $01, $01, $01, $01, $0f, $01, $06, $05, $02, $02, $02, $01, $0b, $0a, $0c, $01, $01, $01, $18, $12, $04, $09, $01, $01, $18, $09, $01, $01, $06
-     .byte $0d, $0d, $0c, $01, $03, $03, $01, $01, $10, $03, $06, $05, $03, $01, $03, $01, $06, $0d, $05, $01, $03, $0b, $05, $01, $01, $02, $01, $02, $10, $01, $03, $01, $06
-     .byte $0d, $0d, $05, $01, $02, $03, $01, $01, $10, $01, $08, $09, $01, $0b, $0a, $0a, $0d, $0d, $0d, $0a, $0a, $0d, $0d, $0c, $02, $03, $03, $02, $10, $1b, $03, $02, $06
-     .byte $0d, $0d, $0d, $0a, $0a, $0a, $0c, $01, $10, $01, $03, $01, $02, $06, $0d, $0d, $0d, $0d, $0d, $0d, $0d, $0d, $0d, $0d, $0c, $01, $01, $01, $10, $01, $01, $0b, $0d
-     .byte $0d, $0d, $0d, $0d, $0d, $0d, $0d, $0a, $0d, $0a, $0a, $0a, $0a, $0d, $0d, $0d, $0d, $0d, $0d, $0d, $0d, $0d, $0d, $0d, $0d, $0a, $0a, $0a, $0d, $0a, $0a, $0d, $0d
-     ;---
-     .byte $02 ; - Number of triggers
-     ;---
-     .byte $0e  ; Trigger X
-     .byte $0a  ; Trigger Y
-     .byte $01  ; trigger type
-     .byte <(houseArea)
-     .byte >(houseArea)
-     .byte $05  ; Target X
-     .byte $01  ; Target Y
-
-     .byte $1d  ; Trigger X
-     .byte $14  ; Trigger Y
-     .byte $01  ; trigger type
-     .byte <(rnddungeon1)
-     .byte >(rnddungeon1)
-     .byte $12  ; Target X
-     .byte $0a  ; Target Y
-
-     ;---
-     .byte $0a ; Number of npcs
-
-     .byte %10000000
-     .byte $0f, $08         ;; X and Y pos
-     .byte $30              ;; Tile ID
-     .byte $89              ;; Sprite pointer   $00 = off
-     .word npcname_GIANT_RAT ;; Name pointer
-     .byte $0c              ;; HP
-     .byte $01              ;; Mode
-     .byte 0, 0             ;; Target X and Y pos
-     .byte 15
-     .byte 0
-
-     .byte %10000000
-     .byte $04, $04         ;; X and Y pos
-     .byte $30              ;; Tile ID
-     .byte $89              ;; Sprite pointer   $00 = off
-     .word npcname_GIANT_RAT ;; Name pointer
-     .byte $0c              ;; HP
-     .byte $01              ;; Mode
-     .byte 0, 0             ;; Target X and Y pos
-     .byte 15
-     .byte 0
-
-     .byte %10000000
-     .byte $12, $09         ;; X and Y pos
-     .byte $30              ;; Tile ID
-     .byte $89              ;; Sprite pointer   $00 = off
-     .word npcname_GIANT_RAT ;; Name pointer
-     .byte $0c              ;; HP
-     .byte $01              ;; Mode
-     .byte 0, 0             ;; Target X and Y pos
-     .byte 15
-     .byte 0
-
-     .byte %10000000
-     .byte $0e, $13         ;; X and Y pos
-     .byte $30              ;; Tile ID
-     .byte $89              ;; Sprite pointer   $00 = off
-     .word npcname_GIANT_RAT ;; Name pointer
-     .byte $0c              ;; HP
-     .byte $01              ;; Mode
-     .byte 0, 0             ;; Target X and Y pos
-     .byte 15
-     .byte 0
-
-     .byte %10000000
-     .byte 27, 8            ;; X and Y pos
-     .byte $31              ;; Tile ID
-     .byte $8b              ;; Sprite pointer   $00 = off
-     .word npcname_SKELETON_WARRIOR ;; Name pointer
-     .byte $12              ;; HP
-     .byte $01              ;; Mode
-     .byte 0, 0             ;; Target X and Y pos
-     .byte 20
-     .byte 0
-
-     .byte %10000000
-     .byte 30, 19           ;; X and Y pos
-     .byte $32              ;; Tile ID
-     .byte $8d              ;; Sprite pointer   $00 = off
-     .word npcname_KOBOLD   ;; Name pointer
-     .byte $06              ;; HP
-     .byte $01              ;; Mode
-     .byte 0, 0             ;; Target X and Y pos
-     .byte 11
-     .byte 0
-
-     .byte %10000000
-     .byte 30, 20           ;; X and Y pos
-     .byte $32              ;; Tile ID
-     .byte $8d              ;; Sprite pointer   $00 = off
-     .word npcname_KOBOLD   ;; Name pointer
-     .byte $06              ;; HP
-     .byte $01              ;; Mode
-     .byte 0, 0             ;; Target X and Y pos
-     .byte 11
-     .byte 0
-
-     .byte %10000000
-     .byte 25, 19           ;; X and Y pos
-     .byte $32              ;; Tile ID
-     .byte $8d              ;; Sprite pointer   $00 = off
-     .word npcname_KOBOLD   ;; Name pointer
-     .byte $06              ;; HP
-     .byte $01              ;; Mode
-     .byte 0, 0             ;; Target X and Y pos
-     .byte 11
-     .byte 0
-
-     .byte %10000000
-     .byte $05, $08         ;; X and Y pos
-     .byte $31              ;; Tile ID
-     .byte $8b              ;; Sprite pointer   $00 = off
-     .word npcname_SKELETON_WARRIOR ;; Name pointer
-     .byte $12              ;; HP
-     .byte $01              ;; Mode
-     .byte 0, 0             ;; Target X and Y pos
-     .byte 20
-     .byte 0
-
-     .byte %10000000
-     .byte $15, $03         ;; X and Y pos
-     .byte $33              ;; Tile ID
-     .byte $8f              ;; Sprite pointer   $00 = off
-     .word npcname_ORC ;; Name pointer
-     .byte $20              ;; HP
-     .byte $01              ;; Mode
-     .byte 0, 0             ;; Target X and Y pos
-     .byte 13
-     .byte 0
-     ;---
-     .byte $06 ; Item table size
-
-     .byte %10100000
-     .byte $0e, $05         ;; X and Y pos
-     .byte $40              ;; Tile ID
-     .word itemname_SCROLL  ;; Name pointer
-     .byte $00              ;; Actual Type
-
-     .byte %11000000
-     .byte $17, $13                ;; X and Y pos
-     .byte $42                     ;; Tile ID
-     .word itemname_PIECES_OF_GOLD ;; Name pointer
-     .byte $15                     ;; Amount
-
-     .byte %11000000
-     .byte $18, $13         ;; X and Y pos
-     .byte $42              ;; Tile ID
-     .word itemname_PIECES_OF_GOLD ;; Name pointer
-     .byte $09                     ;; Amount
-
-     .byte %11000000
-     .byte $18, $14         ;; X and Y pos;
-     .byte $42              ;; Tile ID
-     .word itemname_PIECES_OF_GOLD ;; Name pointer
-     .byte $19                     ;; Amount
-
-     .byte %10100000
-     .byte $07, $15         ;; X and Y pos;
-     .byte $41              ;; Tile ID
-     .word itemname_POTION  ;; Name pointer
-     .byte $01              ;; Actual Type
-
-     .byte %10000000
-     .byte $04, $04         ;; X and Y pos;
-     .byte $44              ;; Tile ID
-     .word itemname_LEATHER_ARMOR;; Name pointer
-     .byte $00              ;; Actual Type
-     .fill $46
-
-
-
-houseArea
-     .byte $08 ; Area width
-     .byte $08 ; Area height
-     .byte %10000000
-     .byte %00001100    ; Tile set mask
-     .byte $1f, $08, $09
-     .byte $00, $06, $02, $02, $02, $02, $02, $07
-     .byte $00, $03, $01, $01, $01, $01, $10, $04
-     .byte $00, $03, $01, $01, $01, $01, $01, $04
-     .byte $00, $03, $01, $09, $02, $02, $02, $0c
-     .byte $00, $03, $01, $01, $01, $01, $01, $04
-     .byte $00, $03, $01, $0e, $0d, $0f, $01, $04
-     .byte $00, $03, $01, $01, $01, $01, $01, $04
-     .byte $00, $05, $02, $02, $0b, $02, $02, $08
-     ;---
-     .byte $02  ; Trigger table size
-     ;---
-     .byte $04  ; Trigger 1 X
-     .byte $07  ; Trigger 1 Y
-     .byte $01  ; trigger type
-     .byte <(outsidearea)
-     .byte >(outsidearea)
-     .byte $1d  ; Target X
-     .byte $11  ; Target Y
-     ;---
-     .byte $06  ; Trigger 2 X
-     .byte $01  ; Trigger 2 Y
-     .byte $01  ; trigger type
-     .byte <(dungeoncellar)
-     .byte >(dungeoncellar)
-     .byte $0f  ; Target X
-     .byte $0a  ; Target Y
-     ;---
-     .byte $00  ; NPC table size
-     ;---
-     .byte $00  ; Item table size
-     .fill $46
-
-
-rnddungeon1
-     .byte $21 ; W
-     .byte $17 ; H
-     .byte %11000000
-     .byte %00001010    ; Tile set mask
-     .byte $1f, $1c, $1b
-     .byte $00 ; No triggers
-     .byte $00 ; No npcs
-     .byte $00 ; No ites
-
-.fill $350
-
+.include "testareas.asm"
 
 ;; +----------------------------------+
 ;; |                                  |
