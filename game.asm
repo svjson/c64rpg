@@ -57,9 +57,9 @@
      lda #%00000001     ; Enable raster interrupt signals
      sta $d01a
 
-     lda #<dungeoncellar
+     lda #<outsidearea
      sta $20
-     lda #>dungeoncellar
+     lda #>outsidearea
      sta $21
      jsr enterArea
      jmp mainloop
@@ -2030,8 +2030,8 @@ backpackTable:
 currentAreaOffsetX  .byte $00
 currentAreaOffsetY  .byte $04
 
-playerX .byte $1d
-playerY .byte $14
+playerX .byte $05
+playerY .byte $05
 prevPlayerX .byte $00
 prevPlayerY .byte $00
 playerTurnCost .byte $00
