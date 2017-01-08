@@ -2,7 +2,7 @@
 
 areaGen_items .byte $08
 areaGen_feats .byte $25
-areaGen_monsters .byte $08
+areaGen_npcs .byte $08
 
 brushX .byte $00
 brushY .byte $00
@@ -65,8 +65,8 @@ clearLooseEndsLoop      sta looseEndDir, x
                         sta areaGen_feats
                         lda #$05                ; Number of items
                         sta areaGen_items
-                        lda #$08
-                        sta areaGen_monsters    ; Number of monsters
+                        lda #$06
+                        sta areaGen_npcs        ; Number of monsters
 
                         lda #$0d                ; Solid rock tile
                         sta brushTile           ; Fill entire buffer with rock
@@ -114,6 +114,7 @@ featAdded
                         bne genDungFeatsLoop
 
 generationDone          jsr addItemsToArea
+                        jsr addNpcsToArea
                         jsr decorateArea
 
                         lda entryX              ; Add stairs back up
@@ -629,6 +630,84 @@ fillLevelComplete       rts
 ;; |    ITEM GENERATION               |
 ;; +----------------------------------+
 
+addNpcsToArea:
+                        ldx #$00
+                        stx npcTableSize
+                        lda #<npcTable
+                        sta $20
+                        lda #>npcTable
+                        sta $21
+                        lda npcTableRowSize
+                        sta inc20ModVal
+
+                        txa
+                        clc
+calcTotalNpcRandWgt     adc npcSet_weight, x
+                        inx
+                        cpx npcSet_size
+                        bne calcTotalNpcRandWgt
+                        sta totalRandWeight
+                        dec totalRandWeight
+
+addNpcLoop
+                        lda totalRandWeight
+                        sta num3
+                        jsr rndInt
+                        sta currentWeight
+                        ldx #$00
+                        lda #$00
+                        clc
+findNpcSetIndexLoop     adc npcSet_weight, x
+                        cmp currentWeight
+                        bcs npcSetIndexFound
+                        inx
+                        jmp findNpcSetIndexLoop
+npcSetIndexFound        lda npcSet_type, x
+                        tax
+
+                        ldy var_npcModes
+                        lda npc_attributes, x
+                        sta ($20), y
+                        ldy var_npcTileID
+                        lda npc_tileID, x
+                        sta ($20), y
+                        ldy var_npcSpritePtr
+                        lda npc_spritePtr, x
+                        sta ($20), y
+                        ldy var_npcNamePtrHi
+                        lda npc_nameHi, x
+                        sta ($20), y
+                        ldy var_npcNamePtrLo
+                        lda npc_nameLo, x
+                        sta ($20), y
+                        ldy var_npcCurrentHP
+                        lda npc_maxHP, x
+                        sta ($20), y
+                        ldy var_npcMoveCost
+                        lda npc_moveCost, x
+                        sta ($20), y
+
+                        jsr getRandomFloorTileGrnt  ; Select a random location
+                        ldy var_npcXPos
+                        lda brushX
+                        sta ($20), y
+                        ldy var_npcYPos
+                        lda brushY
+                        sta ($20), y
+
+                        inc npcTableSize
+                        jsr inc20Ptr
+
+                        dec areaGen_npcs
+                        ldx areaGen_npcs
+                        cpx #$00
+                        bne addNpcLoop
+                        rts
+
+;; +----------------------------------+
+;; |    ITEM GENERATION               |
+;; +----------------------------------+
+
 totalRandWeight .byte $00
 currentWeight   .byte $00
 
@@ -666,7 +745,6 @@ findItemSetIndexLoop    adc itemSet_weight, x
                         jmp findItemSetIndexLoop
 itemSetIndexFound
                         lda itemSet_type, x         ; Look up the selected type
-                        stx tmpX
                         tax
 
                         ldy var_itemModes           ; Copy from ItemDB to current items

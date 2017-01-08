@@ -1862,15 +1862,6 @@ text_PICKED_UP      .byte 10
 text_NOTHING_TO_PICK_UP .byte 23
                     .text "NOTHING TO PICK UP HERE"
 
-npcname_GIANT_RAT           .byte 09
-                            .text "GIANT RAT"
-npcname_SKELETON_WARRIOR    .byte 16
-                            .text "SKELETON WARRIOR"
-npcname_KOBOLD              .byte 6
-                            .text "KOBOLD"
-npcname_ORC                 .byte 3
-                            .text "ORC"
-
 messageBufferLength .byte $00
 messageBuffer .text "ABC                                                        "
 linesWritten .byte $00
@@ -3032,8 +3023,8 @@ tileChar1
      .byte $82   ;; Skeleton        $31
      .byte $84   ;; Kobold          $32
      .byte $86   ;; Orc             $33
-     .byte $00   ;; Unused monster  $34
-     .byte $00   ;; Unused monster  $35
+     .byte $8a   ;; Giant Spider    $34
+     .byte $88   ;; Viper           $35
      .byte $00   ;; Unused monster  $36
      .byte $00   ;; Unused monster  $37
      .byte $00   ;; Unused monster  $38
@@ -3113,8 +3104,8 @@ tileChar2
      .byte $83   ;; Skeleton        $31
      .byte $85   ;; Kobold          $32
      .byte $87   ;; Orc             $33
-     .byte $00   ;; Unused monster  $34
-     .byte $00   ;; Unused monster  $35
+     .byte $8b   ;; Giant Spider    $34
+     .byte $89   ;; Viper           $35
      .byte $00   ;; Unused monster  $36
      .byte $00   ;; Unused monster  $37
      .byte $00   ;; Unused monster  $38
@@ -3195,8 +3186,8 @@ tileChar3
      .byte $a2   ;; Skeleton        $31
      .byte $a4   ;; Kobold          $32
      .byte $a6   ;; Orc             $33
-     .byte $00   ;; Unused monster  $34
-     .byte $00   ;; Unused monster  $35
+     .byte $aa   ;; Giant Spider    $34
+     .byte $a8   ;; Viper           $35
      .byte $00   ;; Unused monster  $36
      .byte $00   ;; Unused monster  $37
      .byte $00   ;; Unused monster  $38
@@ -3277,8 +3268,8 @@ tileChar4
      .byte $a3   ;; Skeleton        $31
      .byte $a5   ;; Kobold          $32
      .byte $a7   ;; Orc             $33
-     .byte $00   ;; Unused monster  $34
-     .byte $00   ;; Unused monster  $35
+     .byte $ab   ;; Giant Spider    $34
+     .byte $a9   ;; Viper           $35
      .byte $00   ;; Unused monster  $36
      .byte $00   ;; Unused monster  $37
      .byte $00   ;; Unused monster  $38
@@ -3358,8 +3349,8 @@ tileCharColor1
      .byte $09   ;; Skeleton        $31
      .byte $0d   ;; Kobold          $32
      .byte $1a   ;; Orc             $33
-     .byte $00   ;; Unused monster  $34
-     .byte $00   ;; Unused monster  $35
+     .byte $1a   ;; Giant Spider    $34
+     .byte $0d   ;; Viper           $35
      .byte $00   ;; Unused monster  $36
      .byte $00   ;; Unused monster  $37
      .byte $00   ;; Unused monster  $38
@@ -3439,8 +3430,8 @@ tileCharColor2
      .byte $01   ;; Skeleton        $31
      .byte $0d   ;; Kobold          $32
      .byte $1a   ;; Orc             $33
-     .byte $00   ;; Unused monster  $34
-     .byte $00   ;; Unused monster  $35
+     .byte $1a   ;; Giant Spider    $34
+     .byte $0d   ;; Viper           $35
      .byte $00   ;; Unused monster  $36
      .byte $00   ;; Unused monster  $37
      .byte $00   ;; Unused monster  $38
@@ -3520,8 +3511,8 @@ tileCharColor3
      .byte $09   ;; Skeleton        $31
      .byte $0d   ;; Kobold          $32
      .byte $1a   ;; Orc             $33
-     .byte $00   ;; Unused monster  $34
-     .byte $00   ;; Unused monster  $35
+     .byte $1a   ;; Giant Spider    $34
+     .byte $0d   ;; Viper           $35
      .byte $00   ;; Unused monster  $36
      .byte $00   ;; Unused monster  $37
      .byte $00   ;; Unused monster  $38
@@ -3601,8 +3592,8 @@ tileCharColor4
      .byte $01   ;; Skeleton        $31
      .byte $0d   ;; Kobold          $32
      .byte $1a   ;; Orc             $33
-     .byte $00   ;; Unused monster  $34
-     .byte $00   ;; Unused monster  $35
+     .byte $1a   ;; Giant Spider    $34
+     .byte $0d   ;; Viper           $35
      .byte $00   ;; Unused monster  $36
      .byte $00   ;; Unused monster  $37
      .byte $00   ;; Unused monster  $38
@@ -3682,8 +3673,8 @@ tileProps:
      .byte %11000000
      .byte %11000000
      .byte %11000000
-     .byte %00000000
-     .byte %00000000
+     .byte %11000000
+     .byte %11000000
      .byte %00000000
      .byte %00000000
      .byte %00000000
@@ -4113,6 +4104,9 @@ end_memcpy     rts
 
 *=$0d20
 .include "itemdb.asm"
+
+*=$9000
+.include "npcdb.asm"
 
 ;; +----------------------------------+
 ;; |                                  |
