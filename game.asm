@@ -2784,7 +2784,7 @@ tileCharColor1
      .byte $0c   ;; Potion (purple) $47
      .byte $0a   ;; Shortsword      $48
      .byte $0a   ;; Longsword       $49
-     .byte $08   ;; Helmet          $4a
+     .byte $0a   ;; Helmet          $4a
      .byte $0b   ;; Potion (turq)   $4b
      .byte $09   ;; Potion (white)  $4c
      .byte $0a   ;; Round Shield    $4d
@@ -2865,7 +2865,7 @@ tileCharColor2
      .byte $0c   ;; Potion (purple) $47
      .byte $0a   ;; Shortsword      $48
      .byte $0a   ;; Longsword       $49
-     .byte $08   ;; Helmet          $4a
+     .byte $0a   ;; Helmet          $4a
      .byte $0b   ;; Potion (turq)   $4b
      .byte $09   ;; Potion (white)  $4c
      .byte $0a   ;; Round Shield    $4d
@@ -2946,7 +2946,7 @@ tileCharColor3
      .byte $0c   ;; Potion (purple) $47
      .byte $0a   ;; Shortsword      $48
      .byte $0a   ;; Longsword       $49
-     .byte $08   ;; Helmet          $4a
+     .byte $0a   ;; Helmet          $4a
      .byte $0b   ;; Potion (turq)   $4b
      .byte $09   ;; Potion (white)  $4c
      .byte $0a   ;; Round Shield    $4d
@@ -3027,7 +3027,7 @@ tileCharColor4
      .byte $0c   ;; Potion (purple) $47
      .byte $0a   ;; Shortsword      $48
      .byte $0a   ;; Longsword       $49
-     .byte $08   ;; Helmet          $4a
+     .byte $0a   ;; Helmet          $4a
      .byte $0b   ;; Potion (turq)   $4b
      .byte $09   ;; Potion (white)  $4c
      .byte $0a   ;; Round Shield    $4d
@@ -3097,6 +3097,7 @@ tileProps:
      .byte %00000000
      .byte %00000000
      .byte %00000000
+     .byte %11000000
      .byte %11000000
      .byte %11000000
      .byte %11000000
