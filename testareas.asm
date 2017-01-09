@@ -351,7 +351,7 @@ rnddungeon2
      .byte $06             ; # of NPCs
      .byte $05             ; # of Items
      ;---
-     .byte $01             ; Exit Triggers To Generate
+     .byte $02             ; Exit Triggers To Generate
      ;---
      .byte $02             ; Placement Algorithm
      .byte $01             ; N/A, Algorithm Arg1        (or XPos)
@@ -360,6 +360,45 @@ rnddungeon2
      .byte $19             ; Trigger Tile #
      .byte <(rnddungeon1)
      .byte >(rnddungeon1)
+     .byte $01             ; Target area trigger index  (or XPos)
+     .byte $00             ; N/A                        (or YPos)
+     ;---
+     .byte $02             ; Placement Algorithm
+     .byte $01             ; N/A, Algorithm Arg1        (or XPos)
+     .byte $00             ; N/A, Algorithm Arg2        (or YPos)
+     .byte $04             ; Trigger Type
+     .byte $1b             ; Trigger Tile #
+     .byte <(rnddungeon3)
+     .byte >(rnddungeon3)
+     .byte $00             ; Target area trigger index  (or XPos)
+     .byte $00             ; Placement algorithm #      (or YPos)
+     .fill $450
+
+
+;; +----------------------------------+
+;; |    RND CAVE LVL3                 |
+;; +----------------------------------+
+rnddungeon3
+     .byte $25 ; W
+     .byte $13 ; H
+     .byte %11000000
+     .byte %00001010    ; Tile set mask
+     .byte $1f, $1c, $1b
+     .byte $01             ; npcSetIndex
+     .byte $01             ; itemSetIndex
+     .byte $48             ; Generation Feats #
+     .byte $06             ; # of NPCs
+     .byte $05             ; # of Items
+     ;---
+     .byte $01             ; Exit Triggers To Generate
+     ;---
+     .byte $02             ; Placement Algorithm
+     .byte $01             ; N/A, Algorithm Arg1        (or XPos)
+     .byte $00             ; N/A, Algorithm Arg2        (or YPos)
+     .byte $04             ; Trigger Type
+     .byte $19             ; Trigger Tile #
+     .byte <(rnddungeon2)
+     .byte >(rnddungeon2)
      .byte $01             ; Target area trigger index  (or XPos)
      .byte $00             ; N/A                        (or YPos)
 
