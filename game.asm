@@ -2256,13 +2256,23 @@ npcTable
      .byte 11               ;; AP
 
 var_itemModes     = #$00 ; Bit 7 - On/Off
-                         ; Bit 6 - Amount On/Off
-                         ; Bit 5 - Unidentified object On/Off
-                         ; Bit 4 -
-                         ; Bit 3 -
-                         ; Bit 2 - Is weapon
-                         ; Bit 1 - Is armor
-                         ; Bit 0 - Is identifiable type
+                         ; Bit 6 - Is identified? On/Off
+                         ; Bits 0-5 - Item Category (Int)
+
+;; 00 - xxx00000        - Pieces of Gold
+;; 01 - xxx00001        - Scroll
+;; 02 - xxx00010        - Potion
+;; 03 - xxx00011        - Wand
+;; 04 - xxx00100        - (Unused)
+;; 05 - xxx00101        - (Unused)
+;; 06 - xxx00110        - Melee Weapon
+;; 07 - xxx00111        - Ranged Weapon
+;; 08 - xxx01000        - (Unused)
+;; 09 - xxx01001        - (Unused)
+;; 0a - xxx01010        - Shield
+;; 0b - xxx01011        - Helmet
+;; 0c - xxx01100        - Armor
+
 var_itemXPos      = #$01
 var_itemYPos      = #$02
 var_itemTileID    = #$03

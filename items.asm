@@ -98,8 +98,8 @@ goldPickedUp .byte $00, $00
 addToInventory:     ldy #$00
                     sty goldPickedUp
                     lda ($20), y
-                    and #%01000000
-                    cmp #%01000000
+                    and #%10000000
+                    cmp #%10000000
                     bne addToBackpack
 
                     lda ($20), y

@@ -338,25 +338,25 @@ itemAttributes  .byte %10000001            ; 00 - Scroll - Heal Minor
                 .byte %10000000            ; 0c - Unused
                 .byte %10000000            ; 0d - Unused
                 .byte %10000000            ; 0e - Unused
-                .byte %10000001            ; 0f - Scroll - Unidentifed substitute
-                .byte %10000001            ; 10 - Potion - Heal Minor
-                .byte %10000001            ; 11 - Potion - Heal Medium
-                .byte %10000001            ; 12 - Potion - Heal Major
-                .byte %10000001            ; 13 - Potion - Teleport
-                .byte %10000001            ; 14 - Potion - Clarity
-                .byte %10000000            ; 15 - Unused
-                .byte %10000000            ; 16 - Unused
-                .byte %10000000            ; 17 - Unused
-                .byte %10000000            ; 18 - Unused
-                .byte %10000001            ; 19 - Potion - Unidentifed substitute
-                .byte %11000000            ; 1a - Pieces of Gold
+                .byte %11000001            ; 0f - Scroll - Unidentifed substitute
+                .byte %10000010            ; 10 - Potion - Heal Minor
+                .byte %10000010            ; 11 - Potion - Heal Medium
+                .byte %10000010            ; 12 - Potion - Heal Major
+                .byte %10000010            ; 13 - Potion - Teleport
+                .byte %10000010            ; 14 - Potion - Clarity
+                .byte %10000010            ; 15 - Unused
+                .byte %10000010            ; 16 - Unused
+                .byte %10000010            ; 17 - Unused
+                .byte %10000010            ; 18 - Unused
+                .byte %11000010            ; 19 - Potion - Unidentifed substitute
+                .byte %10000000            ; 1a - Pieces of Gold
                 .byte %10000000            ; 1b - Unused
                 .byte %10000000            ; 1c - Unused
                 .byte %10000000            ; 1d - Unused
                 .byte %10000000            ; 1e - Unused
                 .byte %10000000            ; 1f - Unused
-                .byte %10000100            ; 20 - Short sword
-                .byte %10000100            ; 21 - Long sword
+                .byte %10000110            ; 20 - Short sword
+                .byte %10000110            ; 21 - Long sword
                 .byte %10000000            ; 22 - Unused
                 .byte %10000000            ; 23 - Unused
                 .byte %10000000            ; 24 - Unused
@@ -371,24 +371,24 @@ itemAttributes  .byte %10000001            ; 00 - Scroll - Heal Minor
                 .byte %10000000            ; 2d - Unused
                 .byte %10000000            ; 2e - Unused
                 .byte %10000000            ; 2f - Unused
-                .byte %10000010            ; 30 - Leather armor
+                .byte %10001100            ; 30 - Leather armor
                 .byte %10000000            ; 31 - Unused
                 .byte %10000000            ; 32 - Unused
                 .byte %10000000            ; 33 - Unused
                 .byte %10000000            ; 34 - Unused
                 .byte %10000000            ; 35 - Unused
                 .byte %10000000            ; 36 - Unused
-                .byte %10000010            ; 37 - Leather Helmet
-                .byte %10000010            ; 38 - Iron Helmet
-                .byte %10000010            ; 39 - Steel Helmet
+                .byte %10001011            ; 37 - Leather Helmet
+                .byte %10001011            ; 38 - Iron Helmet
+                .byte %10001011            ; 39 - Steel Helmet
                 .byte %10000000            ; 3a - Unused
                 .byte %10000000            ; 3b - Unused
                 .byte %10000000            ; 3c - Unused
                 .byte %10000000            ; 3d - Unused             item
                 .byte %10000000            ; 3e - Unused
                 .byte %10000000            ; 3f - Unused
-                .byte %10000010            ; 40 - Small shield
-                .byte %10000010            ; 41 - Large shield
+                .byte %10001010            ; 40 - Small shield
+                .byte %10001010            ; 41 - Large shield
 
 ;; +----------------------------------+
 ;; |    ITEM SUBTYPE DEFINITIONS      |
