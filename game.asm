@@ -1561,6 +1561,8 @@ text_PICKED_UP      .byte 10
                     .text "PICKED UP "
 text_NOTHING_TO_PICK_UP .byte 23
                     .text "NOTHING TO PICK UP HERE"
+text_OF             .byte 3
+                    .text "OF "
 
 messageBufferLength .byte $00
 messageBuffer .text "ABC                                                        "

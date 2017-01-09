@@ -57,36 +57,24 @@ attemptPickUp:
                     cmp #$ff
                     beq nothingToPickUp
 
-                    ldy var_itemTypeID      ; Look up item name pointer
+                    ldy var_itemValue      ; Look up and store item specs as arg-vars
                     lda ($20), y
-                    tax
-                    lda itemNameLo, x
-                    sta tmpPtr1
-                    lda itemNameHi, x
-                    sta tmpPtr1+1
+                    sta argItemVal
+                    ldy var_itemModes
+                    lda ($20), y
+                    sta argItemModes
+                    ldy var_itemTypeID
+                    lda ($20), y
+                    sta argItemType
 
                     jsr addToInventory      ; Add item to Inventory
 
-                    lda #<text_PICKED_UP
+                    lda #<text_PICKED_UP    ; Output pick up message
                     sta $20
                     lda #>text_PICKED_UP
                     sta $21
                     jsr addToMessageBuffer
-
-                    ldx goldPickedUp
-                    cpx #$00
-                    beq pickUpNoAmount
-
-                    jsr byte_to_decimal
-                    jsr addToMessageBuffer
-                    lda #$20
-                    jsr addCharToMessageBuffer
-
-pickUpNoAmount      lda tmpPtr1
-                    sta $20
-                    lda tmpPtr1+1
-                    sta $21
-                    jsr addToMessageBuffer
+                    jsr addFullItemDesignationToMessageBuffer
                     jsr addMessage
 
                     jmp dummyMove
@@ -171,7 +159,8 @@ addToBackpack       lda #<backpackTable     ; Set pointer to backpack
 ;; |    RESOLVE ITEM SUB LINE         |
 ;; +----------------------------------+
 argItemVal   .byte $00
-argItemModes .byte $00 
+argItemModes .byte $00
+argItemType  .byte $00
 
 itemSubLineToPrintSource
                     lda argItemModes
@@ -229,4 +218,66 @@ rslvDurLoop         cmp itemDurability_threshold, x
                     cpx #$05
                     bne rslvDurLoop
 rslvDurFound        txa
+                    rts
+
+;; +----------------------------------+
+;; |    FULL ITEM NAME                |
+;; +----------------------------------+
+
+addFullItemDesignationToMessageBuffer
+                    lda argItemModes
+                    and #%00011111      ; Switch off flag bits
+                    sta argItemModes
+
+                    cmp #$00            ; Pieces of Gold
+                    beq amountOfItemToMessageBuffer
+
+                    cmp #$06            ; SubType/Identifiable/Effect
+                    bcc subTypeItemToMessageBuffer
+                    jmp durableItemToMessageBuffer
+
+amountOfItemToMessageBuffer:
+                    ldx argItemVal
+                    jsr byte_to_decimal
+                    jsr addToMessageBuffer
+                    jmp itemNameToMessageBuffer
+subTypeItemToMessageBuffer:
+                    ldx argItemVal
+                    cpx #$00
+                    bne identifiedItemToMessageBuffer
+                    jsr subTypeToMessageBuffer
+                    jmp itemNameToMessageBuffer
+durableItemToMessageBuffer:
+                    jsr resolveItemDurability
+                    lda itemDurability_nameLo, x
+                    sta $20
+                    lda itemDurability_nameHi, x
+                    sta $21
+                    jsr addToMessageBuffer
+itemNameToMessageBuffer:
+                    lda #$20
+                    jsr addCharToMessageBuffer
+itemNameToMBNoPad   ldx argItemType
+                    lda itemNameLo, x
+                    sta $20
+                    lda itemNameHi, x
+                    sta $21
+                    jsr addToMessageBuffer
+                    rts
+identifiedItemToMessageBuffer
+                    jsr itemNameToMBNoPad
+                    lda #$20
+                    jsr addCharToMessageBuffer
+                    lda #<text_OF
+                    sta $20
+                    lda #>text_OF
+                    sta $21
+                    jsr addToMessageBuffer
+subTypeToMessageBuffer
+                    ldx argItemVal
+                    lda itemSubType_nameLo, x
+                    sta $20
+                    lda itemSubType_nameHi, x
+                    sta $21
+                    jsr addToMessageBuffer
                     rts
