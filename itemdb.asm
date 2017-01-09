@@ -1,17 +1,16 @@
-
+;; +----------------------------------+
+;; |    ITEM NAMES                    |
+;; +----------------------------------+
 itemname_SCROLL             .byte 06
                             .text "SCROLL"
 itemname_POTION             .byte 06
                             .text "POTION"
-
 itemname_SHORT_SWORD        .byte 11
                             .text "SHORT SWORD"
 itemname_LONGSWORD          .byte 9
                             .text "LONGSWORD"
-
 itemname_PIECES_OF_GOLD     .byte 14
                             .text "PIECES OF GOLD"
-
 itemname_LEATHER_ARMOR      .byte 13
                             .text "LEATHER ARMOR"
 itemname_LEATHER_HELMET     .byte 14
@@ -25,6 +24,9 @@ itemname_SMALL_SHIELD       .byte 12
 itemname_LARGE_SHIELD       .byte 12
                             .text "LARGE SHIELD"
 
+;; +----------------------------------+
+;; |    ITEM SUBTYPE NAMES            |
+;; +----------------------------------+
 itemtype_UNKNOWN            .byte 7
                             .text "UNKNOWN"
 itemtype_MINOR_HEALING      .byte 13
@@ -46,6 +48,9 @@ itemtype_WATER              .byte 5
 itemtype_POISON             .byte 6
                             .text "POISON"
 
+;; +----------------------------------+
+;; |    ITEM DEFINITIONS              |
+;; +----------------------------------+
 itemNameLo:
                 .byte <(itemname_SCROLL)              ;00 - Minor Healing
                 .byte <(itemname_SCROLL)              ;01 - Medium Healing
@@ -385,6 +390,35 @@ itemAttributes  .byte %10000001            ; 00 - Scroll - Heal Minor
                 .byte %10000010            ; 40 - Small shield
                 .byte %10000010            ; 41 - Large shield
 
+;; +----------------------------------+
+;; |    ITEM SUBTYPE DEFINITIONS      |
+;; +----------------------------------+
+itemSubType_nameLo
+                .byte <(itemtype_UNKNOWN)
+                .byte <(itemtype_MINOR_HEALING)
+                .byte <(itemtype_MEDIUM_HEALING)
+                .byte <(itemtype_MAJOR_HEALING)
+                .byte <(itemtype_TELEPORT)
+                .byte <(itemtype_CURE_POISON)
+                .byte <(itemtype_IDENTIFY)
+                .byte <(itemtype_CLARITY)
+                .byte <(itemtype_WATER)
+                .byte <(itemtype_POISON)
+itemSubType_nameHi
+                .byte >(itemtype_UNKNOWN)
+                .byte >(itemtype_MINOR_HEALING)
+                .byte >(itemtype_MEDIUM_HEALING)
+                .byte >(itemtype_MAJOR_HEALING)
+                .byte >(itemtype_TELEPORT)
+                .byte >(itemtype_CURE_POISON)
+                .byte >(itemtype_IDENTIFY)
+                .byte >(itemtype_CLARITY)
+                .byte >(itemtype_WATER)
+                .byte >(itemtype_POISON)
+
+;; +----------------------------------+
+;; |    ITEM SET FOR RANDOMIZATION    |
+;; +----------------------------------+
 ; Tables for random selection/generation of items
 itemSet_size    .byte $0c
 itemSet_type:

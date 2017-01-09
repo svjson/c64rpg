@@ -51,11 +51,12 @@ attemptPickUp:
                     cmp #$ff
                     beq nothingToPickUp
 
-                    ldy var_itemNamePtrLo   ; Store pointer to item name
+                    ldy var_itemTypeID      ; Look up item name pointer
                     lda ($20), y
+                    tax
+                    lda itemNameLo, x
                     sta tmpPtr1
-                    iny
-                    lda ($20), y
+                    lda itemNameHi, x
                     sta tmpPtr1+1
 
                     jsr addToInventory      ; Add item to Inventory
@@ -138,12 +139,12 @@ addToBackpack       lda #<backpackTable     ; Set pointer to backpack
                     ldy #$01
                     sta ($22), y
 
-                    ldy var_itemNamePtrLo
+                    ldy var_itemTypeID
                     lda ($20), y
                     ldy #$02
                     sta ($22), y
 
-                    ldy var_itemNamePtrHi
+                    ldy var_itemUnusedVar
                     lda ($20), y
                     ldy #$03
                     sta ($22), y

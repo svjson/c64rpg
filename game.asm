@@ -57,9 +57,9 @@
      lda #%00000001     ; Enable raster interrupt signals
      sta $d01a
 
-     lda #<outsidearea
+     lda #<dungeoncellar
      sta $20
-     lda #>outsidearea
+     lda #>dungeoncellar
      sta $21
      jsr enterArea
      jmp mainloop
@@ -2031,8 +2031,8 @@ backpackTable:
 currentAreaOffsetX  .byte $00
 currentAreaOffsetY  .byte $04
 
-playerX .byte $05
-playerY .byte $05
+playerX .byte $07
+playerY .byte $14
 prevPlayerX .byte $00
 prevPlayerY .byte $00
 playerTurnCost .byte $00
@@ -2266,8 +2266,8 @@ var_itemModes     = #$00 ; Bit 7 - On/Off
 var_itemXPos      = #$01
 var_itemYPos      = #$02
 var_itemTileID    = #$03
-var_itemNamePtrLo = #$04
-var_itemNamePtrHi = #$05
+var_itemTypeID    = #$04
+var_itemUnusedVar = #$05
 var_itemValue     = #$06    ; Amount if amount bit set.
                             ; Actual Item ID if unidentified bit set.
 

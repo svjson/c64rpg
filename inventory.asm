@@ -730,11 +730,12 @@ drawItemContLoop    cpx itemSourceSize
                     sta print_target
                     lda $21
                     sta print_target+1
-                    ldy #$02
+                    ldy #$02                    ; Resolve item name from type
                     lda ($22), y
+                    tax
+                    lda itemNameLo, x
                     sta print_source
-                    ldy #$03
-                    lda ($22), y
+                    lda itemNameHi, x
                     sta print_source+1
                     ldy #$00
                     lda (print_source), y
@@ -776,7 +777,27 @@ addItemNameColor    lda $24
                     sta print_target+1
                     jsr apply_text_color
 
-                    jsr incscreenoffset
+                    jsr nextScreenRow
+
+;                    lda $20
+;                    clc
+;                    adc itemContTextOff
+;                    sta print_target
+;                    lda $21
+;                    sta print_target+1
+;                    ldy #$02
+;                    lda ($22), y
+;                    sta print_source
+;                    ldy #$03
+;                    lda ($22), y
+;                    sta print_source+1
+;                    ldy #$00
+;                    lda (print_source), y
+;                    sta print_source_length
+;                    inc print_source
+;                    jsr print_string
+
+drawICNextIter      jsr nextScreenRow
 
                     jsr inc22Ptr
                     inc iter
@@ -810,6 +831,18 @@ drawItemTile:
                     lda tileCharColor4, x
                     sta ($24), y
 
+                    rts
+
+nextScreenRow
+                    lda $20
+                    clc
+                    adc #$28
+                    bcc nSRNoCarry
+                    inc $21
+                    inc $25
+nSRNoCarry
+                    sta $20
+                    sta $24
                     rts
 
 updateItemContainerArrows

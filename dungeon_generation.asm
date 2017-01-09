@@ -726,10 +726,10 @@ itemSetIndexFound
                         ldy var_itemTileID
                         lda itemTile, x
                         sta ($20), y
-                        ldy var_itemNamePtrLo
-                        lda itemNameLo, x
+                        ldy var_itemTypeID
+                        txa
                         sta ($20), y
-                        ldy var_itemNamePtrHi
+                        ldy var_itemUnusedVar
                         lda itemNameHi, x
                         sta ($20), y
                         ldy var_itemValue

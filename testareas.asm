@@ -221,40 +221,46 @@ dungeoncellar
      .byte %10100000
      .byte $0e, $05         ;; X and Y pos
      .byte $40              ;; Tile ID
-     .word itemname_SCROLL  ;; Name pointer
-     .byte $00              ;; Actual Type
+     .byte $0f              ;; Item Type - Unknown Scroll
+     .byte $00              ;; Unused
+     .byte $03              ;; Actual Type - Scroll of Teleport
 
      .byte %11000000
-     .byte $17, $13                ;; X and Y pos
-     .byte $42                     ;; Tile ID
-     .word itemname_PIECES_OF_GOLD ;; Name pointer
-     .byte $15                     ;; Amount
+     .byte $17, $13         ;; X and Y pos
+     .byte $42              ;; Tile ID
+     .byte $1a              ;; Item Type - Pieces of Gold
+     .byte $00              ;; Unused
+     .byte $15              ;; Amount
 
      .byte %11000000
      .byte $18, $13         ;; X and Y pos
      .byte $42              ;; Tile ID
-     .word itemname_PIECES_OF_GOLD ;; Name pointer
-     .byte $09                     ;; Amount
+     .byte $1a              ;; Item Type - Pieces of Gold
+     .byte $00              ;; Unused
+     .byte $09              ;; Amount
 
      .byte %11000000
      .byte $18, $14         ;; X and Y pos;
      .byte $42              ;; Tile ID
-     .word itemname_PIECES_OF_GOLD ;; Name pointer
-     .byte $19                     ;; Amount
+     .byte $1a              ;; Item Type - Pieces of Gold
+     .byte $00              ;; Unused
+     .byte $19              ;; Amount
 
      .byte %10100000
      .byte $07, $15         ;; X and Y pos;
      .byte $41              ;; Tile ID
-     .word itemname_POTION  ;; Name pointer
-     .byte $01              ;; Actual Type
+     .byte $19              ;; Item Type - Unknown Potion
+     .byte $00              ;; Unused
+     .byte $00              ;; Actual Type - Potion of Heal Minor
 
      .byte %10000000
      .byte $04, $04         ;; X and Y pos;
      .byte $44              ;; Tile ID
-     .word itemname_LEATHER_ARMOR;; Name pointer
-     .byte $00              ;; Actual Type
-     .fill $46
+     .byte $30              ;; Item Type - Leather Armor
+     .byte $00              ;; Unused
+     .byte $55              ;; Durability
 
+     .fill $46  ; Padding
 
 ;; +----------------------------------+
 ;; |    FIRST HOUSE INTERIOR          |
