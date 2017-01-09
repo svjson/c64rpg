@@ -597,7 +597,7 @@ levelRowFilled          inc iter
 fillLevelComplete       rts
 
 ;; +----------------------------------+
-;; |    ITEM GENERATION               |
+;; |    NPC GENERATION                |
 ;; +----------------------------------+
 
 addNpcsToArea:
@@ -655,6 +655,9 @@ npcSetIndexFound        lda npcSet_type, x
                         sta ($20), y
                         ldy var_npcMoveCost
                         lda npc_moveCost, x
+                        sta ($20), y
+                        ldy var_npcMode
+                        lda #$01
                         sta ($20), y
 
                         jsr getRandomFloorTileGrnt  ; Select a random location
