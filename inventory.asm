@@ -792,7 +792,7 @@ addItemNameColor    lda $24
                     lda tmpPtr1+1
                     sta $21
                     sta print_target+1
-                    lda #$11
+                    lda #$10
                     sta print_rowsize
                     jsr print_string_right
 
