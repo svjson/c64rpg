@@ -93,6 +93,15 @@ enterMapMode:
      lda #$02           ; Set sprite 2 to multicolor
      sta $d01c
 
+     lda $d018          ; Remap tileset
+     and #%11110001
+     ora tilesetMask
+     sta $d018
+     lda sceneCol1      ; Set character set color
+     sta $d022
+     lda sceneCol2
+     sta $d023
+
      rts
 
 text_HPDUMMY     .text "HP:  012/014"
@@ -829,6 +838,7 @@ npcKilled:
 ;; |                                  |
 ;; +----------------------------------+
 tilesetMask .byte %00000000
+sceneColors:
 sceneColBg  .byte $00
 sceneCol1   .byte $00
 sceneCol2   .byte $00
@@ -1520,7 +1530,7 @@ resolveTile
 ;; |    STATUS BAR ROUTINES           |
 ;; |                                  |
 ;; +----------------------------------+
-*=$0930
+*=$0945
 messageLineLength = #24
 
 messageRow1 = $0749

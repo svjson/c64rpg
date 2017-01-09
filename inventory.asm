@@ -83,6 +83,14 @@ enterInventory:
                     sta $d021
                     jsr clearscreen
 
+                    lda $d018              ; Remap tileset
+                    ora #%00001110
+                    sta $d018
+                    lda #$09               ; Set character set color
+                    sta $d022
+                    lda #$1d
+                    sta $d023
+
                     lda #$82          ; Set cursor sprite pointers
                     sta $07f8
                     lda #$83          ; Set cursor sprite pointers
