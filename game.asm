@@ -1995,6 +1995,13 @@ animatechars
 ;; |                                  |
 ;; +----------------------------------+
 *=$C000
+
+var_backpackItemModes            = #$00
+var_backpackItemTileID           = #$01
+var_backpackItemTypeID           = #$02
+var_backpackItemIdentifyToTypeID = #$03
+var_backpackItemValue            = #$04
+
 playerGoldBalance .byte $00, $00
 backpackRowSize = #$05
 backpackSize .byte $00
@@ -2257,7 +2264,8 @@ npcTable
 
 var_itemModes     = #$00 ; Bit 7 - On/Off
                          ; Bit 6 - Is identified? On/Off
-                         ; Bits 0-5 - Item Category (Int)
+                         ; Bit 5 - Unused
+                         ; Bits 0-4 - Item Category (Int)
 
 ;; 00 - xxx00000        - Pieces of Gold
 ;; 01 - xxx00001        - Scroll
@@ -2273,12 +2281,12 @@ var_itemModes     = #$00 ; Bit 7 - On/Off
 ;; 0b - xxx01011        - Helmet
 ;; 0c - xxx01100        - Armor
 
-var_itemXPos      = #$01
-var_itemYPos      = #$02
-var_itemTileID    = #$03
-var_itemTypeID    = #$04
-var_itemUnusedVar = #$05
-var_itemValue     = #$06    ; Amount if amount bit set.
+var_itemXPos             = #$01
+var_itemYPos             = #$02
+var_itemTileID           = #$03
+var_itemTypeID           = #$04
+var_itemIdentifyToTypeID = #$05
+var_itemValue            = #$06    ; Amount if amount bit set.
                             ; Actual Item ID if unidentified bit set.
 
 itemTableRowSize .byte $07
@@ -3381,6 +3389,14 @@ print_string_loop       lda (print_source), y
                         cpy print_source_length
                         bne print_string_loop
                         rts
+
+pad_printed_string_to_num1
+                        cpy num1
+                        bcs pad_to_num1_done
+                        sta (print_target), y
+                        iny
+                        jmp pad_printed_string_to_num1
+pad_to_num1_done        rts
 
 apply_text_color        ldy #$00
                         lda target_color

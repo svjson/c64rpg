@@ -4,6 +4,9 @@
 ;; |                                  |
 ;; +----------------------------------+
 
+;; +----------------------------------+
+;; |    ITEM AT LOCATION              |
+;; +----------------------------------+
 getItemAt:
                     ldx #$00
                     cpx itemTableSize
@@ -42,6 +45,9 @@ prepareItemIter:
                     ldy #$00
                     rts
 
+;; +----------------------------------+
+;; |    PICK UP ITEM                  |
+;; +----------------------------------+
 attemptPickUp:
                     lda playerX             ; Check for item at player Pos
                     sta tmpX
@@ -95,6 +101,9 @@ nothingToPickUp     lda #<text_NOTHING_TO_PICK_UP
 
 goldPickedUp .byte $00, $00
 
+;; +----------------------------------+
+;; |    ADD TO INVENTORY              |
+;; +----------------------------------+
 addToInventory:     ldy #$00
                     sty goldPickedUp
                     lda ($20), y
@@ -144,7 +153,7 @@ addToBackpack       lda #<backpackTable     ; Set pointer to backpack
                     ldy #$02
                     sta ($22), y
 
-                    ldy var_itemUnusedVar
+                    ldy var_itemIdentifyToTypeID
                     lda ($20), y
                     ldy #$03
                     sta ($22), y
@@ -156,4 +165,68 @@ addToBackpack       lda #<backpackTable     ; Set pointer to backpack
 
                     inc backpackSize
                     jsr compactItemTable
+                    rts
+
+;; +----------------------------------+
+;; |    RESOLVE ITEM SUB LINE         |
+;; +----------------------------------+
+argItemVal   .byte $00
+argItemModes .byte $00 
+
+itemSubLineToPrintSource
+                    lda argItemModes
+                    and #%00011111      ; Switch off flag bits
+                    sta argItemModes
+
+                    cmp #$00            ; Pieces of Gold
+                    beq itemAmountToPrintSource
+
+                    cmp #$06            ; SubType/Identifiable/Effect
+                    bcc itemSubTypeToPrintSource
+
+                    jmp itemDurabilityToPrintSource
+
+itemAmountToPrintSource:
+                    ldx argItemVal
+                    jsr byte_to_decimal
+                    lda $20
+                    sta print_source
+                    lda $21
+                    sta print_source+1
+                    lda #$07
+                    sta target_color
+                    rts
+
+itemSubTypeToPrintSource:
+                    ldx argItemVal
+                    lda itemSubType_nameLo, x
+                    sta print_source
+                    lda itemSubType_nameHi, x
+                    sta print_source+1
+                    lda itemSubType_color, x
+                    sta target_color
+                    rts
+
+itemDurabilityToPrintSource:
+                    jsr resolveItemDurability
+                    lda itemDurability_nameLo, x
+                    sta print_source
+                    lda itemDurability_nameHi, x
+                    sta print_source+1
+                    lda itemDurability_color, x
+                    sta target_color
+                    rts
+
+;; +----------------------------------+
+;; |    RESOLVE ITEM DURABILITY       |
+;; +----------------------------------+
+resolveItemDurability:
+                    ldx #$00
+                    lda argItemVal
+rslvDurLoop         cmp itemDurability_threshold, x
+                    bcs rslvDurFound
+                    inx
+                    cpx #$05
+                    bne rslvDurLoop
+rslvDurFound        txa
                     rts

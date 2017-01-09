@@ -223,7 +223,7 @@ dungeoncellar
      .byte $40              ;; Tile ID
      .byte $0f              ;; Item Type - Unknown Scroll
      .byte $00              ;; Unused
-     .byte $03              ;; Actual Type - Scroll of Teleport
+     .byte $00              ;; Actual Type - Scroll of Teleport
 
      .byte %10000000
      .byte $17, $13         ;; X and Y pos

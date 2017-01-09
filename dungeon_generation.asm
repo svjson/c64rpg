@@ -729,7 +729,7 @@ itemSetIndexFound
                         ldy var_itemTypeID
                         txa
                         sta ($20), y
-                        ldy var_itemUnusedVar
+                        ldy var_itemIdentifyToTypeID
                         lda itemNameHi, x
                         sta ($20), y
                         ldy var_itemValue

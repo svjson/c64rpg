@@ -33,12 +33,12 @@ itemtype_MINOR_HEALING      .byte 13
                             .text "MINOR HEALING"
 itemtype_MEDIUM_HEALING     .byte 14
                             .text "MEDIUM HEALING"
-itemtype_MAJOR_HEALING      .byte 7
+itemtype_MAJOR_HEALING      .byte 13
                             .text "MAJOR HEALING"
 itemtype_TELEPORT           .byte 8
                             .text "TELEPORT"
 itemtype_CURE_POISON        .byte 11
-                            .text "CURE POISION"
+                            .text "CURE POISON"
 itemtype_IDENTIFY           .byte 8
                             .text "IDENTIFY"
 itemtype_CLARITY            .byte 7
@@ -47,6 +47,22 @@ itemtype_WATER              .byte 5
                             .text "WATER"
 itemtype_POISON             .byte 6
                             .text "POISON"
+
+;; +----------------------------------+
+;; |    ITEM DURABILITY LABELS        |
+;; +----------------------------------+
+itemdur_PRISTINE            .byte 8
+                            .text "PRISTINE"
+itemdur_SCRATCHED           .byte 9
+                            .text "SCRATCHED"
+itemdur_WORN                .byte 4
+                            .text "WORN"
+itemdur_DAMAGED             .byte 7
+                            .text "DAMAGED"
+itemdur_BROKEN              .byte 6
+                            .text "BROKEN"
+itemdur_BEYOND_REPAIR       .byte 13
+                            .text "BEYOND REPAIR"
 
 ;; +----------------------------------+
 ;; |    ITEM DEFINITIONS              |
@@ -415,6 +431,52 @@ itemSubType_nameHi
                 .byte >(itemtype_CLARITY)
                 .byte >(itemtype_WATER)
                 .byte >(itemtype_POISON)
+itemSubType_color
+                .byte $06
+                .byte $02
+                .byte $02
+                .byte $02
+                .byte $04
+                .byte $07
+                .byte $04
+                .byte $04
+                .byte $03
+                .byte $05
+
+;; +----------------------------------+
+;; |    ITEM SUBTYPE DEFINITIONS      |
+;; +----------------------------------+
+itemDurability_nameLo:
+                .byte <(itemdur_PRISTINE)
+                .byte <(itemdur_SCRATCHED)
+                .byte <(itemdur_WORN)
+                .byte <(itemdur_DAMAGED)
+                .byte <(itemdur_BROKEN)
+                .byte <(itemdur_BEYOND_REPAIR)
+
+itemDurability_nameHi:
+                .byte >(itemdur_PRISTINE)
+                .byte >(itemdur_SCRATCHED)
+                .byte >(itemdur_WORN)
+                .byte >(itemdur_DAMAGED)
+                .byte >(itemdur_BROKEN)
+                .byte >(itemdur_BEYOND_REPAIR)
+
+itemDurability_color:
+                .byte $05
+                .byte $03
+                .byte $07
+                .byte $02
+                .byte $02
+                .byte $06
+
+itemDurability_threshold:
+                .byte $c0
+                .byte $a0
+                .byte $60
+                .byte $40
+                .byte $10
+                .byte $00
 
 ;; +----------------------------------+
 ;; |    ITEM SET FOR RANDOMIZATION    |

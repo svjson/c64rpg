@@ -603,7 +603,7 @@ updateInventoryContents:
 ;; +----------------------------------+
 ;; |    DRAW BACKPACK CONTENTS        |
 ;; +----------------------------------+
-drawBackPack        lda #$28
+drawBackPack        lda #$3a
                     sta $20
                     sta $24
                     lda #$04
@@ -623,19 +623,15 @@ drawBackPack        lda #$28
                     lda backpackSize
                     sta itemSourceSize
 
-                    lda #$15
-                    sta itemContTextOff
-                    lda #$12
-                    sta itemContTileOff
-                    lda #$24
-                    sta itemContRight
+                    lda #$11
+                    sta itemContTextWidth
 
                     jmp drawItemContainer
 
 ;; +----------------------------------+
 ;; |    DRAW FLOOR CONTENTS           |
 ;; +----------------------------------+
-drawFloor           lda #$20
+drawFloor           lda #$32
                     sta $20
                     sta $24
                     lda #$07
@@ -655,12 +651,8 @@ drawFloor           lda #$20
                     lda floorTableSize
                     sta itemSourceSize
 
-                    lda #$15
-                    sta itemContTextOff
-                    lda #$12
-                    sta itemContTileOff
-                    lda #$24
-                    sta itemContRight
+                    lda #$11
+                    sta itemContTextWidth
 
                     jmp drawItemContainer
 
@@ -671,9 +663,7 @@ drawFloor           lda #$20
 itemContSize        .byte $00
 itemSourceSize      .byte $00
 itemContOffset      .byte $00
-itemContTileOff     .byte $00
-itemContTextOff     .byte $00
-itemContRight       .byte $00
+itemContTextWidth   .byte $00
 itemContID          .byte $00
 
 drawItemContainer:
@@ -690,9 +680,9 @@ drawItemContainer:
                     ldx #$00
                     stx iter
                     jmp drawItemContLoop
-itemContFillRemain  cpx itemContSize
+itemContFillRemain  cpx itemContSize          ; Fill remaining rows in container with black
                     bcs drawItemContDone
-                    ldy itemContTileOff
+                    ldy #$00
 
 fillBLoop           lda #$20
                     sta ($20), y
@@ -706,7 +696,7 @@ fillBLoop           lda #$20
                     sbc #$27
                     tay
                     iny
-                    cpy itemContRight
+                    cpy itemContTextWidth
                     bne fillBLoop
                     jsr incscreenoffset
                     inx
@@ -718,19 +708,19 @@ drawItemContLoop    cpx itemSourceSize
                     cpx itemContSize
                     beq drawItemContDone
 
-                    ldy #$01
+                    ldy var_backpackItemTileID
                     lda ($22), y
                     tax                         ; Item Tile Index in X
-                    ldy itemContTileOff         ; Horiz position of backpack items
+                    ldy #$00         ; Horiz position of backpack items
                     jsr drawItemTile
 
                     lda $20
                     clc
-                    adc itemContTextOff
+                    adc #$03
                     sta print_target
                     lda $21
                     sta print_target+1
-                    ldy #$02                    ; Resolve item name from type
+                    ldy var_backpackItemTypeID  ; Resolve item name from type
                     lda ($22), y
                     tax
                     lda itemNameLo, x
@@ -742,13 +732,11 @@ drawItemContLoop    cpx itemSourceSize
                     sta print_source_length
                     inc print_source
                     jsr print_string
-
+                    lda #$11
+                    sta num1
                     lda #$20
-drawItemBLTextLoop  cpy #$11
-                    bcs drawItemContinue
-                    sta (print_target), y
-                    iny
-                    jmp drawItemBLTextLoop
+                    jsr pad_printed_string_to_num1
+
 
 drawItemContinue
                     ldy invSelArea              ; Check if area contains selection
@@ -771,7 +759,7 @@ drawItemNoSelect    lda #$01
                     sta target_color
 addItemNameColor    lda $24
                     clc
-                    adc itemContTextOff
+                    adc #$03
                     sta print_target
                     lda $25
                     sta print_target+1
@@ -779,23 +767,45 @@ addItemNameColor    lda $24
 
                     jsr nextScreenRow
 
-;                    lda $20
-;                    clc
-;                    adc itemContTextOff
-;                    sta print_target
-;                    lda $21
-;                    sta print_target+1
-;                    ldy #$02
-;                    lda ($22), y
-;                    sta print_source
-;                    ldy #$03
-;                    lda ($22), y
-;                    sta print_source+1
-;                    ldy #$00
-;                    lda (print_source), y
-;                    sta print_source_length
-;                    inc print_source
-;                    jsr print_string
+                    lda $20                 ; Keep pointer
+                    sta tmpPtr1
+                    lda $21
+                    sta tmpPtr1+1
+
+                    ldy var_backpackItemValue
+                    lda ($22), y
+                    sta argItemVal
+                    ldy var_backpackItemModes
+                    lda ($22), y
+                    sta argItemModes
+                    jsr itemSubLineToPrintSource
+                    ldy #$00
+                    lda (print_source), y
+                    sta print_source_length
+                    inc print_source
+
+                    lda tmpPtr1            ; Restore kept pointer
+                    sta $20
+                    clc
+                    adc #$03
+                    sta print_target
+                    lda tmpPtr1+1
+                    sta $21
+                    sta print_target+1
+                    jsr print_string
+
+                    lda #$11
+                    sta num1
+                    lda #$20
+                    jsr pad_printed_string_to_num1
+
+                    lda $24
+                    clc
+                    adc #$03
+                    sta print_target
+                    lda $25
+                    sta print_target+1
+                    jsr apply_text_color
 
 drawICNextIter      jsr nextScreenRow
 
@@ -906,28 +916,28 @@ floorTableLoop      cpx itemTableSize
                     cmp playerY
                     bne floorTableNextIter
 
-                    ldy #$00
+                    ldy var_itemModes
                     lda ($20), y
                     sta ($22), y
 
-                    ldy #$03
+                    ldy var_itemTileID
                     lda ($20), y
-                    ldy #$01
+                    ldy var_backpackItemTileID
                     sta ($22), y
 
-                    ldy #$04
+                    ldy var_itemTypeID
                     lda ($20), y
-                    ldy #$02
+                    ldy var_backpackItemTypeID
                     sta ($22), y
 
-                    ldy #$05
+                    ldy var_itemIdentifyToTypeID
                     lda ($20), y
-                    ldy #$03
+                    ldy var_backpackItemIdentifyToTypeID
                     sta ($22), y
 
-                    ldy #$05
+                    ldy var_itemValue
                     lda ($20), y
-                    ldy #$03
+                    ldy var_backpackItemValue
                     sta ($22), y
 
                     txa
@@ -1018,7 +1028,7 @@ compactBPLoop       ldx iter
                     cpx iterMax
                     bcs endCompactBP
 
-                    ldy #$00
+                    ldy var_backpackItemModes
                     lda ($20), y
 
                     and #%10000000
