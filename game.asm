@@ -116,6 +116,9 @@ enterstatusirq   nop
                  nop
                  lda #$00
                  sta $d021
+                 lda $d018              ; Remap tileset
+                 ora #%00001110
+                 sta $d018
 
                  lda #%00001000 ; Disable multicolor text mode
                  sta $d016
@@ -147,6 +150,10 @@ leavestatusirq   lda sceneColBg
 
                  lda #%00011000 ; Enable multicolor text mode
                  sta $d016
+                 lda $d018          ; Remap tileset
+                 and #%11110001
+                 ora tilesetMask
+                 sta $d018
 
                  lda #<enterstatusirq    ; Interrupt vector
                  sta $0314
@@ -158,22 +165,6 @@ leavestatusirq   lda sceneColBg
 
                  asl $d019
                  jmp $ea81
-
-inventoryirq
-                 lda #$18           ; Char multicolour mode on for entire screen
-                 sta $d016
-
-                 lda #<inventoryirq
-                 sta $0314
-                 lda #>inventoryirq
-                 sta $0315
-
-                 lda #$ff
-                 sta $d012
-
-                 asl $d019
-                 jmp $ea31
-
 
 ;; +----------------------------------+
 ;; |                                  |
@@ -1530,7 +1521,7 @@ resolveTile
 ;; |    STATUS BAR ROUTINES           |
 ;; |                                  |
 ;; +----------------------------------+
-*=$0945
+*=$0940
 messageLineLength = #24
 
 messageRow1 = $0749

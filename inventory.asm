@@ -1002,3 +1002,21 @@ compactBPEntry
 
 endCompactBP
                     rts
+
+;; +----------------------------------+
+;; |    INVENTORY INTERRUPTS          |
+;; +----------------------------------+
+inventoryirq
+                 lda #$18           ; Char multicolour mode on for entire screen
+                 sta $d016
+
+                 lda #<inventoryirq
+                 sta $0314
+                 lda #>inventoryirq
+                 sta $0315
+
+                 lda #$ff
+                 sta $d012
+
+                 asl $d019
+                 jmp $ea31
