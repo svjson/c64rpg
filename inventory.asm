@@ -623,7 +623,7 @@ drawBackPack        lda #$3a
                     lda backpackSize
                     sta itemSourceSize
 
-                    lda #$11
+                    lda #$13
                     sta itemContTextWidth
 
                     jmp drawItemContainer
@@ -651,7 +651,7 @@ drawFloor           lda #$32
                     lda floorTableSize
                     sta itemSourceSize
 
-                    lda #$11
+                    lda #$13
                     sta itemContTextWidth
 
                     jmp drawItemContainer
@@ -792,12 +792,9 @@ addItemNameColor    lda $24
                     lda tmpPtr1+1
                     sta $21
                     sta print_target+1
-                    jsr print_string
-
                     lda #$11
-                    sta num1
-                    lda #$20
-                    jsr pad_printed_string_to_num1
+                    sta print_rowsize
+                    jsr print_string_right
 
                     lda $24
                     clc
@@ -805,6 +802,8 @@ addItemNameColor    lda $24
                     sta print_target
                     lda $25
                     sta print_target+1
+                    lda #$11
+                    sta print_source_length
                     jsr apply_text_color
 
 drawICNextIter      jsr nextScreenRow

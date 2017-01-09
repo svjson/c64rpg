@@ -3379,7 +3379,9 @@ dungeonTilesetPropsTable:
 print_source = $fb
 print_source_length = $02
 print_target = $fd
-target_color = $00
+print_rowsize .byte $00
+print_padding .byte $00
+target_color .byte $00
 
 print_string            ldy #$00
 print_string_loop       lda (print_source), y
@@ -3389,6 +3391,24 @@ print_string_loop       lda (print_source), y
                         cpy print_source_length
                         bne print_string_loop
                         rts
+
+print_string_right      lda print_rowsize
+                        clc
+                        sbc print_source_length
+                        sta print_padding
+                        ldy #$00
+                        lda #$20
+print_pad_loop          sta (print_target), y
+                        iny
+                        cpy print_padding
+                        bne print_pad_loop
+                        lda print_target
+                        clc
+                        adc print_padding
+                        sta print_target
+                        bcc no_pad_carry
+                        inc print_target + 1
+no_pad_carry            jmp print_string
 
 pad_printed_string_to_num1
                         cpy num1
