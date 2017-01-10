@@ -485,23 +485,16 @@ moveSelectedItem
                         jsr moveItemToFloor                         ; Go move to actual area item table if target is floor
                         jmp mvItPostCpy
 
-mvItBetweenConts        ldy var_backpackItemModes                   ; Just copy to target, and set source item to off
+mvItBetweenConts        lda #$01                                    ; Just copy to target
+                        sta memcpy_rows
+                        lda backpackRowSize
+                        sta memcpy_rowSize
+                        jsr memcpy
+                        jsr set20PtrToSelectedItem                  ; And set source item to off
+                        ldy var_backpackItemModes
                         lda ($20), y
-                        sta ($22), y
                         and #%01111111
                         sta ($20), y
-                        ldy var_backpackItemTileID
-                        lda ($20), y
-                        sta ($22), y
-                        ldy var_backpackItemTypeID
-                        lda ($20), y
-                        sta ($22), y
-                        ldy var_backpackItemIdentifyToTypeID
-                        lda ($20), y
-                        sta ($22), y
-                        ldy var_backpackItemValue
-                        lda ($20), y
-                        sta ($22), y
 
                         lda invSelArea                              ; If source was floor, we'll have to go remove it from area item table
                         cmp #$02
