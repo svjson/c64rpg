@@ -64,6 +64,9 @@ num3          .byte $00                ; Math input #3
 ;; | RANDOMIZATION                          |
 ;; +----------------------------------------+
 seed          .byte $01
+              .byte $02
+              .byte $03
+seedPad       .byte $00
 
 rndDivisorTable:
         .byte $ff       ; 1
@@ -122,15 +125,26 @@ rndInt:
         jsr divide_rndup
         rts
 
-rndNum:
-        lda seed
-        beq doEor
-        asl
-        beq noEor ;if the input was $80, skip the EOR
-        bcc noEor
-doEor:  eor #$1d
-noEor:  sta seed
-        rts
+rndNum:     lda seed
+            and #%00000001
+            cmp #%00000001
+            bne rndNmNoShf
+            lda seed+2
+            sta seedPad
+            lda seed+1
+            sta seed+2
+            lda seed
+            sta seed+1
+            lda seedPad
+            sta seed
+rndNmNoShf  lda seed
+            beq doEor
+            asl
+            beq noEor ;if the input was $80, skip the EOR
+            bcc noEor
+doEor:      eor #$1d
+noEor:      sta seed
+            rts
 
 ; num1 - input number
 ; num2 - divide by factor ( X = 256 / num2 )
