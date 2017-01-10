@@ -32,6 +32,10 @@ invBPScrlDn .byte $00
 invBDScrlDn .byte $00
 invFLScrlDn .byte $00
 
+boxTextWidth    .byte $12
+                .byte $0f
+                .byte $12
+
 boxTableLo  .byte <(backpackTable)
             .byte <(bodyTable)
             .byte <(floorTable)
@@ -39,6 +43,18 @@ boxTableLo  .byte <(backpackTable)
 boxTableHi  .byte >(backpackTable)
             .byte >(bodyTable)
             .byte >(floorTable)
+
+boxScreenLo .byte $3a
+            .byte $29
+            .byte $32
+
+boxScreenHi .byte $04
+            .byte $04
+            .byte $07
+
+boxColorHi  .byte $d8
+            .byte $d8
+            .byte $db
 
 boxCrsrTopOffsets
             .byte $37
@@ -645,84 +661,28 @@ updateInventoryContents:
 ;; +----------------------------------+
 ;; |    DRAW BACKPACK CONTENTS        |
 ;; +----------------------------------+
-drawBackPack        lda #$3a
-                    sta $20
-                    sta $24
-                    lda #$04
-                    sta $21
-                    lda #$d8
-                    sta $25
-
-                    lda #<backpackTable
-                    sta $22
-                    lda #>backpackTable
-                    sta $23
-                    lda backpackRowSize
-                    sta inc22ModVal
-
-                    lda #$00
+drawBackPack        lda #$00
                     sta itemContID
                     lda backpackSize
                     sta itemSourceSize
-
-                    lda #$12
-                    sta itemContTextWidth
-
-                    jmp drawItemContainer
-
-;; +----------------------------------+
-;; |    DRAW FLOOR CONTENTS           |
-;; +----------------------------------+
-drawFloor           lda #$32
-                    sta $20
-                    sta $24
-                    lda #$07
-                    sta $21
-                    lda #$db
-                    sta $25
-
-                    lda #<floorTable
-                    sta $22
-                    lda #>floorTable
-                    sta $23
-                    lda backpackRowSize
-                    sta inc22ModVal
-
-                    lda #$02
-                    sta itemContID
-                    lda floorTableSize
-                    sta itemSourceSize
-
-                    lda #$12
-                    sta itemContTextWidth
-
                     jmp drawItemContainer
 
 ;; +----------------------------------+
 ;; |    DRAW BODY CONTENTS            |
 ;; +----------------------------------+
-drawBody            lda #$29
-                    sta $20
-                    sta $24
-                    lda #$04
-                    sta $21
-                    lda #$d8
-                    sta $25
-
-                    lda #<bodyTable
-                    sta $22
-                    lda #>bodyTable
-                    sta $23
-                    lda bodyTableRowSize
-                    sta inc22ModVal
-                    lda #$01
+drawBody            lda #$01
                     sta itemContID
                     lda #$04
                     sta itemSourceSize
+                    jmp drawItemContainer
 
-                    lda #$0f
-                    sta itemContTextWidth
-
+;; +----------------------------------+
+;; |    DRAW FLOOR CONTENTS           |
+;; +----------------------------------+
+drawFloor           lda #$02
+                    sta itemContID
+                    lda floorTableSize
+                    sta itemSourceSize
                     jmp drawItemContainer
 
 ;; +----------------------------------+
@@ -736,12 +696,28 @@ itemContTextWidth   .byte $00
 itemContID          .byte $00
 
 drawItemContainer:
-                    ldx itemContID
+                    ldx itemContID          ; Read container configuration from tables
+                    lda boxTableLo, x       ; Source item table ptr
+                    sta $22
+                    lda boxTableHi, x
+                    sta $23
+                    lda backpackRowSize
+                    sta inc22ModVal
+                    lda boxTextWidth, x     ; Container width
+                    sta itemContTextWidth
 
-                    lda boxSizes, x     ; Look up source container size
+                    lda boxSizes, x         ; Look up source container size
                     sta itemContSize
 
-                    lda boxOffsets, x   ; Roll item ptr to offset
+                    lda boxScreenLo, x      ; Screen ptr
+                    sta $20
+                    sta $24
+                    lda boxScreenHi, x
+                    sta $21
+                    lda boxColorHi, x
+                    sta $25
+
+                    lda boxOffsets, x       ; Roll item ptr to offset
                     sta rollIterations
                     sta itemContOffset
                     jsr roll22Ptr
@@ -749,7 +725,7 @@ drawItemContainer:
                     ldx #$00
                     stx iter
                     jmp drawItemContLoop
-itemContFillRemain  cpx itemContSize          ; Fill remaining rows in container with black
+itemContFillRemain  cpx itemContSize        ; Fill remaining rows in container with black
                     bcs drawItemContDone
                     ldy #$00
 
