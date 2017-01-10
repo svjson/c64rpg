@@ -1563,6 +1563,8 @@ text_NOTHING_TO_PICK_UP .byte 23
                     .text "NOTHING TO PICK UP HERE"
 text_OF             .byte 3
                     .text "OF "
+text_NOTHING        .byte 7
+                    .text "NOTHING"
 
 messageBufferLength .byte $00
 messageBuffer .text "ABC                                                        "
@@ -2005,6 +2007,15 @@ var_backpackItemIdentifyToTypeID = #$03
 var_backpackItemValue            = #$04
 
 playerGoldBalance .byte $00, $00
+bodyTableRowSize = #$05
+bodyTableSize = #$04
+bodyTable:
+.byte $00, $00, $00, $00, $00
+.byte $00, $00, $00, $00, $00
+.byte $00, $00, $00, $00, $00
+.byte $00, $00, $00, $00, $00
+
+
 backpackRowSize = #$05
 backpackSize .byte $00
 backpackTable:
@@ -2040,8 +2051,8 @@ backpackTable:
 currentAreaOffsetX  .byte $00
 currentAreaOffsetY  .byte $04
 
-playerX .byte $07
-playerY .byte $14
+playerX .byte $03
+playerY .byte $04
 prevPlayerX .byte $00
 prevPlayerY .byte $00
 playerTurnCost .byte $00

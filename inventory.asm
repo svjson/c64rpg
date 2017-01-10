@@ -19,7 +19,7 @@ invFLPos    .byte $00           ; Position in Floor
 
 boxSizes:
 invBPSize   .byte $08
-invBDSize   .byte $08
+invBDSize   .byte $04
 invFLSize   .byte $02
 
 boxScrlUp:
@@ -31,6 +31,14 @@ boxScrlDn:
 invBPScrlDn .byte $00
 invBDScrlDn .byte $00
 invFLScrlDn .byte $00
+
+boxTableLo  .byte <(backpackTable)
+            .byte <(bodyTable)
+            .byte <(floorTable)
+
+boxTableHi  .byte >(backpackTable)
+            .byte >(bodyTable)
+            .byte >(floorTable)
 
 boxCrsrTopOffsets
             .byte $37
@@ -142,7 +150,7 @@ enterInventory:
                     lda #$e0
                     sta $d00b
                     
-                    lda #$28            ; Set body part sprite locations
+                    lda #$20            ; Set body part sprite locations
                     sta $d00c
                     sta $d00e
 
@@ -155,15 +163,15 @@ enterInventory:
                     lda #$00
                     sta boxTop
                     sta boxLeft
-                    lda #$0f
+                    lda #$10
                     sta boxWidth
                     lda #$13
                     sta boxHeight
                     jsr drawBox
 
-                    lda #$10
+                    lda #$11
                     sta boxLeft
-                    lda #$17
+                    lda #$16
                     sta boxWidth
                     jsr drawBox
 
@@ -175,7 +183,7 @@ enterInventory:
 
                     lda #$00
                     sta boxLeft
-                    lda #$0f
+                    lda #$10
                     sta boxWidth
                     jsr drawBox
 
@@ -296,18 +304,14 @@ inventoryReadKey:
                     cmp key_INVENTORY_ACTION
                     beq invPerformAction
 
-                    ldx invCrsrArea
-                    cpx #$01
-                    beq invReadBodyAreaKey
-                    jmp invReadItemContainerKey
-
-invReadItemContainerKey
                     cmp key_UP
                     beq moveItemContCrsrUp
                     cmp key_DOWN
                     beq moveItemContCrsrDn
                     cmp key_LEFT
                     beq moveItemContCrsrLeft
+                    cmp key_RIGHT
+                    beq moveItemContCrsrRight
                     dec screenDirty
                     rts
 
@@ -344,8 +348,8 @@ moveItemContCrsrDn  ldx invCrsrArea
 incItemContCursor   inc boxPositions, x
                     rts
 
-leaveContDown       cpx #$00
-                    beq invIntoFloorArea
+leaveContDown       cpx #$02
+                    bcc invIntoFloorArea
                     rts
 
 ; CURSOR LEFT
@@ -355,14 +359,10 @@ moveItemContCrsrLeft:
                     bne moveInvNoAction
                     jmp invIntoBodyArea
 
-; BODY AREA KEYS
-invReadBodyAreaKey:
-                    cmp key_UP
-                    beq moveBDCursorUp
-                    cmp key_DOWN
-                    beq moveBDCursorDown
-                    cmp key_RIGHT
-                    beq moveBDCursorRight
+; CURSOR RIGHT
+moveItemContCrsrRight
+                    cpx #$01 
+                    beq invIntoBackPackArea
                     rts
 
 invIntoBackPackArea:
@@ -382,17 +382,10 @@ invIntoFloorArea:
 invIntoBodyArea:
                     lda #$01
                     sta invCrsrArea
-;                    lda backpackSize
-;                    sta invCrsrAreaContentSize
+                    lda #$04
+                    sta invCrsrAreaContentSize
                     rts
 
-moveBDCursorRight:
-                    jmp invIntoBackPackArea
-moveBDCursorUp:
-                    rts
-moveBDCursorDown:
-                    jsr invIntoFloorArea
-                    jmp invPositionCrsr
 moveInvNoAction     rts
 
 ;; +----------------------------------+
@@ -422,9 +415,11 @@ invPositionRightCol:
                     sta $d010
                     rts
 invPositionBDCrsr:
-                    lda #$1a
+                    sta $d001
+                    sta $d003
+                    lda #$12
                     sta $d000
-                    lda #$80
+                    lda #$90
                     sta $d002
                     lda #%00111100
                     sta $d010
@@ -461,77 +456,69 @@ selectedItemAction:
         sta invSelPos
         inc screenDirty
         rts
-
-moveSelectedItem
-        lda invCrsrArea
-        cmp #$02
-        beq dropItem
-
-        cmp #$00
-        beq pickUpItem
-        rts
-
 rearrangeItem
         rts
+moveSelectedItem
+                        jsr set20PtrToSelectedItem                  ; Set container item pointers
+                        jsr set22PtrToTargetItem
 
-targetPos .byte $00
-pickUpItem:
-        lda #<itemTable
-        sta $20
-        lda #>itemTable
-        sta $21
-        lda itemTableRowSize
-        sta inc20ModVal
+                        lda invCrsrArea                             ; Just move for non-floor targets
+                        cmp #$02
+                        bne mvItBetweenConts
 
-        ldx invFLPos
-        lda floorTableOriginTable, x
-        sta targetPos
+                        jsr moveItemToFloor                         ; Go move to actual area item table if target is floor
+                        jmp mvItPostCpy
 
-        ldx #$00
-pickUpForwardLoop:
-        cpx targetPos
-        beq pickUpForwarded
-        inx
-        jsr inc20Ptr
-        jmp pickUpForwardLoop
-pickUpForwarded:
-        jsr addToInventory
-        jsr populateFloorTable
-        inc screenDirty
-        lda #$ff
-        sta invSelArea
-        rts
+mvItBetweenConts        ldy var_backpackItemModes                   ; Just copy to target, and set source item to off
+                        lda ($20), y
+                        sta ($22), y
+                        and #%01111111
+                        sta ($20), y
+                        ldy var_backpackItemTileID
+                        lda ($20), y
+                        sta ($22), y
+                        ldy var_backpackItemTypeID
+                        lda ($20), y
+                        sta ($22), y
+                        ldy var_backpackItemIdentifyToTypeID
+                        lda ($20), y
+                        sta ($22), y
+                        ldy var_backpackItemValue
+                        lda ($20), y
+                        sta ($22), y
 
-dropItem:
+                        lda invSelArea                              ; If source was floor, we'll have to go remove it from area item table
+                        cmp #$02
+                        bne mvItPostCpy
+                        jsr removeFromFloor
+
+mvItPostCpy             lda invCrsrArea                             ; If target was backpack, we'll have to increase the BP size
+                        cmp #$00
+                        beq mvItToBP
+                        jmp endMvIt
+
+mvItToBP                inc backpackSize
+                        jmp endMvIt
+
+endMvIt                 jsr compactBackpack                         ; Update all containers upon successful move
+                        jsr compactItemTable
+                        jsr populateFloorTable
                         lda #$ff
                         sta invSelArea
+                        inc screenDirty
+                        rts
 
-                        lda #<backpackTable
-                        sta $20
-                        lda #>backpackTable
-                        sta $21
-                        lda backpackRowSize
-                        sta inc20ModVal
-
-                        lda #<itemTable
+moveItemToFloor         lda #<itemTable             ; Set Area Item Table as target
                         sta $22
                         lda #>itemTable
                         sta $23
                         lda itemTableRowSize
                         sta inc22ModVal
-
-                        ldy #$00
-                        ldx #$00
-forwardToItemLoop       cpx invSelPos
-                        beq forwardToEndOfItems
-                        jsr inc20Ptr
-                        inx
-                        jmp forwardToItemLoop
-forwardToEndOfItems     lda itemTableSize
+                        lda itemTableSize           ; Forward to end of table
                         sta rollIterations
                         jsr roll22Ptr
 
-forwardedToEnd          ldy #$00
+                        ldy var_itemModes
                         lda ($20), y
                         sta ($22), y
                         and #%01111111
@@ -544,43 +531,87 @@ forwardedToEnd          ldy #$00
                         lda playerY
                         sta ($22), y
 
-                        ldy #$01
+                        ldy var_backpackItemTileID
                         lda ($20), y
-                        ldy #$03
+                        ldy var_itemTileID
                         sta ($22), y
 
-                        ldy #$02
+                        ldy var_backpackItemTypeID
                         lda ($20), y
-                        ldy #$04
+                        ldy var_itemTypeID
                         sta ($22), y
 
-                        ldy #$03
+                        ldy var_backpackItemIdentifyToTypeID
                         lda ($20), y
-                        ldy #$05
+                        ldy var_itemIdentifyToTypeID
                         sta ($22), y
 
-                        ldy #$04
+                        ldy var_backpackItemValue
                         lda ($20), y
-                        ldy #$06
+                        ldy var_itemValue
                         sta ($22), y
 
                         inc itemTableSize
-itemDropped
-                        jsr compactBackpack
-                        jsr populateFloorTable
-
-                        lda invBPOffset             ; Adjust backpack offset if necessary
-                        cmp #$00
-                        beq itemDroppedNoAdjust
-                        clc
-                        adc #$08
-                        cmp backpackSize
-                        bcc itemDroppedNoAdjust
-                        dec invBPOffset
-
-itemDroppedNoAdjust     inc screenDirty
                         rts
 
+removeFromFloor         ldx boxPositions + 2
+                        lda floorTableOriginTable, x
+                        sta rollIterations
+                        lda #<itemTable
+                        sta $22
+                        lda #>itemTable
+                        sta $23
+                        lda itemTableRowSize
+                        sta inc22ModVal
+                        jsr roll22Ptr
+                        ldy var_itemModes
+                        lda ($22), y
+                        and #%01111111
+                        sta ($22), y
+                        rts
+
+;; +----------------------------------+
+;; |    LOCATE ITEMS IN TABLES        |
+;; +----------------------------------+
+set20PtrToSelectedItem  ldx invSelArea
+                        lda boxTableLo, x
+                        sta $20
+                        lda boxTableHi, x
+                        sta $21
+                        lda backpackRowSize
+                        sta inc20ModVal
+
+                        ldx #$00
+forwardToSelItemLoop    cpx invSelPos
+                        beq forwardedToSelItem
+                        jsr inc20Ptr
+                        inx
+                        jmp forwardToSelItemLoop
+forwardedToSelItem      rts
+
+set22PtrToTargetItem    ldx invCrsrArea
+                        lda boxTableLo, x
+                        sta $22
+                        lda boxTableHi, x
+                        sta $23
+                        lda backpackRowSize
+                        cpx #$00
+                        beq forwardBPPos
+                        cpx #$01
+                        beq forwardBodyPos
+forwardFLPos            lda floorTableSize
+                        jmp doForwardToTargetPos
+forwardBPPos            lda backpackSize
+                        jmp doForwardToTargetPos
+forwardBodyPos          sta inc22ModVal
+                        lda boxPositions, x
+doForwardToTargetPos    sta rollIterations
+                        jsr roll22Ptr
+                        rts
+
+;; +----------------------------------+
+;; |    UPDATE INVENTORY CONTENTS     |
+;; +----------------------------------+
 updateInventoryContents:
                         jsr drawBackPack
                         lda invBPScrlUp
@@ -592,6 +623,7 @@ updateInventoryContents:
                         sta $d02b
                         lda invFLScrlDn
                         sta $d02c
+                        jsr drawBody
 
                         ldx playerGoldBalance
                         jsr byte_to_decimal
@@ -633,7 +665,7 @@ drawBackPack        lda #$3a
                     lda backpackSize
                     sta itemSourceSize
 
-                    lda #$13
+                    lda #$12
                     sta itemContTextWidth
 
                     jmp drawItemContainer
@@ -661,7 +693,34 @@ drawFloor           lda #$32
                     lda floorTableSize
                     sta itemSourceSize
 
-                    lda #$13
+                    lda #$12
+                    sta itemContTextWidth
+
+                    jmp drawItemContainer
+
+;; +----------------------------------+
+;; |    DRAW BODY CONTENTS            |
+;; +----------------------------------+
+drawBody            lda #$29
+                    sta $20
+                    sta $24
+                    lda #$04
+                    sta $21
+                    lda #$d8
+                    sta $25
+
+                    lda #<bodyTable
+                    sta $22
+                    lda #>bodyTable
+                    sta $23
+                    lda bodyTableRowSize
+                    sta inc22ModVal
+                    lda #$01
+                    sta itemContID
+                    lda #$04
+                    sta itemSourceSize
+
+                    lda #$0f
                     sta itemContTextWidth
 
                     jmp drawItemContainer
@@ -718,10 +777,18 @@ drawItemContLoop    cpx itemSourceSize
                     cpx itemContSize
                     beq drawItemContDone
 
-                    ldy var_backpackItemTileID
+                    ldy var_backpackItemModes ; Check if there is an item here (always true for non-body)
+                    lda ($22), y
+                    and #%10000000
+                    sta argItemModes
+                    bne itmContActTile
+                    ldx #$00
+                    jmp itmContDrawTile
+
+itmContActTile      ldy var_backpackItemTileID
                     lda ($22), y
                     tax                         ; Item Tile Index in X
-                    ldy #$00         ; Horiz position of backpack items
+itmContDrawTile     ldy #$00         ; Horiz position of container items
                     jsr drawItemTile
 
                     lda $20
@@ -730,23 +797,39 @@ drawItemContLoop    cpx itemSourceSize
                     sta print_target
                     lda $21
                     sta print_target+1
-                    ldy var_backpackItemTypeID  ; Resolve item name from type
+
+                    lda argItemModes
+                    cmp #%10000000
+                    beq doPrintItemName
+
+doPrintNothing      lda #<text_NOTHING
+                    sta print_source
+                    lda #>text_NOTHING
+                    sta print_source+1
+                    jmp doResolveNameLength
+doPrintItemName     ldy var_backpackItemTypeID  ; Resolve item name from type
                     lda ($22), y
                     tax
                     lda itemNameLo, x
                     sta print_source
                     lda itemNameHi, x
                     sta print_source+1
-                    ldy #$00
+doResolveNameLength ldy #$00
                     lda (print_source), y
                     sta print_source_length
-                    inc print_source
+                    lda itemContTextWidth       ; Check if we need to truncate
+                    clc
+                    sbc #$02
+                    cmp print_source_length
+                    bcs noItemNameTrunc
+                    sta print_source_length
+noItemNameTrunc     inc print_source
                     jsr print_string
-                    lda #$11
+                    lda itemContTextWidth
+                    sbc #$03
                     sta num1
                     lda #$20
                     jsr pad_printed_string_to_num1
-
 
 drawItemContinue
                     ldy invSelArea              ; Check if area contains selection
@@ -777,7 +860,21 @@ addItemNameColor    lda $24
 
                     jsr nextScreenRow
 
-                    lda $20                 ; Keep pointer
+                    lda argItemModes
+                    cmp #%10000000
+                    beq drawItemSubLine
+                    lda $20
+                    sta print_target
+                    lda $21
+                    sta print_target+1
+                    lda itemContTextWidth   ; Clear subline if no item present
+                    sta num1
+                    ldy #$00
+                    lda #$20
+                    jsr pad_printed_string_to_num1
+                    jmp drawICNextIter
+
+drawItemSubLine     lda $20                 ; Keep pointer
                     sta tmpPtr1
                     lda $21
                     sta tmpPtr1+1
@@ -802,7 +899,9 @@ addItemNameColor    lda $24
                     lda tmpPtr1+1
                     sta $21
                     sta print_target+1
-                    lda #$10
+                    lda itemContTextWidth
+                    clc
+                    sbc #$01
                     sta print_rowsize
                     jsr print_string_right
 
@@ -812,10 +911,11 @@ addItemNameColor    lda $24
                     sta print_target
                     lda $25
                     sta print_target+1
-                    lda #$11
+                    lda itemContTextWidth
+                    clc
+                    sbc #$02
                     sta print_source_length
                     jsr apply_text_color
-
 drawICNextIter      jsr nextScreenRow
 
                     jsr inc22Ptr
@@ -1055,6 +1155,7 @@ compactBPEntry
 endCompactBP
                     rts
 
+placeholderMask .byte $00
 ;; +----------------------------------+
 ;; |    INVENTORY INTERRUPTS          |
 ;; +----------------------------------+
@@ -1062,7 +1163,22 @@ inventory_enterupper_irq
                  lda #$18           ; Char multicolour mode on for entire screen
                  sta $d016
 
-                 lda #$39
+                 lda #%00111111     ; Enable inventory sprites
+                 sta placeholderMask
+
+                 lda bodyTable
+                 eor #%10000000
+                 and #%10000000
+                 lsr
+                 ora placeholderMask
+                 sta placeholderMask
+                 lda bodyTable + 5
+                 eor #%10000000
+                 and #%10000000
+                 ora placeholderMask
+                 sta $d015
+
+                 lda #$39           ; Set head and torso sprite positions
                  sta $d00d
                  lda #$49
                  sta $d00f
@@ -1089,6 +1205,21 @@ inventory_leaveupper_irq
                  sta $d00d
                  lda #$69
                  sta $d00f
+
+                 lda #%00111111     ; Enable inventory sprites
+                 sta placeholderMask
+
+                 lda bodyTable + 10
+                 eor #%10000000
+                 and #%10000000
+                 lsr
+                 ora placeholderMask
+                 sta placeholderMask
+                 lda bodyTable + 15
+                 eor #%10000000
+                 and #%10000000
+                 ora placeholderMask
+                 sta $d015
 
                  lda #$9b           ; Set right hand sprite pointer
                  sta $07ff
