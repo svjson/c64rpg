@@ -718,11 +718,13 @@ findItemSetIndexLoop    adc itemSet_weight, x
                         jmp findItemSetIndexLoop
 itemSetIndexFound
                         lda itemSet_type, x         ; Look up the selected type
+                        sta tmpX
                         tax
 
                         ldy var_itemModes           ; Copy from ItemDB to current items
                         lda itemAttributes, x
                         sta ($20), y
+                        sta argItemModes
                         ldy var_itemTileID
                         lda itemTile, x
                         sta ($20), y
@@ -735,6 +737,58 @@ itemSetIndexFound
                         ldy var_itemValue
                         lda itemValue, x
                         sta ($20), y
+
+                        lda argItemModes
+                        and #%00011111      ; Switch off flag bits
+                        cmp #$00
+                        beq addItmSetRndGoldVal
+                        cmp #$06
+                        bcc addItmSetRndIdentified
+addItmSetRndDurability
+                        jsr rndNum
+                        ldy var_itemValue
+                        sta ($20), y
+                        jmp addItemDoAdd
+addItmSetRndGoldVal
+                        lda itemSet_goldRnd
+                        sta num3
+                        jsr rndInt
+                        clc
+                        adc itemSet_goldMod
+                        ldy var_itemValue
+                        sta ($20), y
+                        jmp addItemDoAdd
+addItmSetRndIdentified
+                        lda #$01
+                        sta num3
+                        jsr rndInt
+                        cmp #$01
+                        beq addItemDoAdd
+
+                        ldy var_itemTypeID
+                        lda ($20), y
+                        ldy var_itemIdentifyToTypeID
+                        sta ($20), y
+                        ldy var_itemValue
+                        lda #$00
+                        sta ($20), y
+
+                        ldy var_itemModes
+findSubstituteLoop      inx
+                        lda itemAttributes, x
+                        and #%01000000
+                        cmp #%01000000
+                        bne findSubstituteLoop
+                        lda itemAttributes, x
+                        sta ($20), y
+                        ldy var_itemTileID
+                        lda itemTile, x
+                        sta ($20), y
+                        ldy var_itemTypeID
+                        txa
+                        sta ($20), y
+
+addItemDoAdd
                         jsr getRandomFloorTileGrnt  ; Select a random location
                         ldy var_itemXPos
                         lda brushX
@@ -749,8 +803,9 @@ itemSetIndexFound
                         dec areaGen_items
                         ldx areaGen_items
                         cpx #$00
-                        bne addItemLoop
-                        rts
+                        beq endAddItem
+                        jmp addItemLoop
+endAddItem              rts
 
 ;; +----------------------------------+
 ;; |    EXIT TRIGGER GENERATION       |

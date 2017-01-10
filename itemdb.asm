@@ -344,16 +344,16 @@ itemAttributes  .byte %10000001            ; 00 - Scroll - Heal Minor
                 .byte %10000001            ; 02 - Scroll - Heal Major
                 .byte %10000001            ; 03 - Scroll - Teleport
                 .byte %10000001            ; 04 - Scroll - Identify
-                .byte %10000000            ; 05 - Unused
-                .byte %10000000            ; 06 - Unused
-                .byte %10000000            ; 07 - Unused
-                .byte %10000000            ; 08 - Unused
-                .byte %10000000            ; 09 - Unused
-                .byte %10000000            ; 0a - Unused
-                .byte %10000000            ; 0b - Unused
-                .byte %10000000            ; 0c - Unused
-                .byte %10000000            ; 0d - Unused
-                .byte %10000000            ; 0e - Unused
+                .byte %10000001            ; 05 - Unused
+                .byte %10000001            ; 06 - Unused
+                .byte %10000001            ; 07 - Unused
+                .byte %10000001            ; 08 - Unused
+                .byte %10000001            ; 09 - Unused
+                .byte %10000001            ; 0a - Unused
+                .byte %10000001            ; 0b - Unused
+                .byte %10000001            ; 0c - Unused
+                .byte %10000001            ; 0d - Unused
+                .byte %10000001            ; 0e - Unused
                 .byte %11000001            ; 0f - Scroll - Unidentifed substitute
                 .byte %10000010            ; 10 - Potion - Heal Minor
                 .byte %10000010            ; 11 - Potion - Heal Medium
@@ -483,6 +483,8 @@ itemDurability_threshold:
 ;; +----------------------------------+
 ; Tables for random selection/generation of items
 itemSet_size    .byte $0c
+itemSet_goldRnd .byte $0c
+itemSet_goldMod .byte $02
 itemSet_type:
                 .byte $30 ; - Leather Armor
                 .byte $21 ; - Long Sword
