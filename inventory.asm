@@ -32,9 +32,9 @@ invBPScrlDn .byte $00
 invBDScrlDn .byte $00
 invFLScrlDn .byte $00
 
-boxTextWidth    .byte $12
-                .byte $0f
-                .byte $12
+boxTextWidth    .byte $11
+                .byte $11
+                .byte $11
 
 boxTableLo  .byte <(backpackTable)
             .byte <(bodyTable)
@@ -44,9 +44,9 @@ boxTableHi  .byte >(backpackTable)
             .byte >(bodyTable)
             .byte >(floorTable)
 
-boxScreenLo .byte $3a
+boxScreenLo .byte $3b
             .byte $29
-            .byte $32
+            .byte $33
 
 boxScreenHi .byte $04
             .byte $04
@@ -176,32 +176,42 @@ enterInventory:
                     lda #%11111111     ; Enable inventory sprites
                     sta $d015
 
-                    lda #$00
+                    lda #$00           ; Char/Body box
                     sta boxTop
                     sta boxLeft
-                    lda #$10
+                    lda #$12
                     sta boxWidth
                     lda #$13
                     sta boxHeight
                     jsr drawBox
 
-                    lda #$11
+                    lda #$12           ; BP Box
                     sta boxLeft
-                    lda #$16
+                    lda #$15
                     sta boxWidth
                     jsr drawBox
 
-                    lda #$13
+                    lda #$24
+                    sta $0412
+                    lda #$3c
+                    sta $06e2
+
+                    lda #$13           ; Floor Box
                     sta boxTop
                     lda #$06
                     sta boxHeight
                     jsr drawBox
 
-                    lda #$00
+                    lda #$00           ; Purse box
                     sta boxLeft
-                    lda #$10
+                    lda #$12
                     sta boxWidth
                     jsr drawBox
+
+                    lda #$24
+                    sta $070a
+                    lda #$3c
+                    sta $07d2
 
                     lda #$01
                     sta memcpy_rowSize
@@ -210,7 +220,7 @@ enterInventory:
                     sta $20
                     lda #>text_BACKPACK
                     sta $21
-                    lda #$12
+                    lda #$13
                     sta $22
                     lda #$04
                     sta $23
@@ -220,7 +230,7 @@ enterInventory:
                     sta $20
                     lda #>text_FLOOR
                     sta $21
-                    lda #$0a
+                    lda #$0b
                     sta $22
                     lda #$07
                     sta $23
@@ -230,7 +240,7 @@ enterInventory:
                     sta $20
                     lda #>text_PURSE
                     sta $21
-                    lda #$fa
+                    lda #$f9
                     sta $22
                     lda #$06
                     sta $23
@@ -423,7 +433,7 @@ invPositionCrsr:
 invPositionRightCol:
                     sta $d001
                     sta $d003
-                    lda #$9a
+                    lda #$a2
                     sta $d000
                     lda #$30
                     sta $d002
@@ -435,7 +445,7 @@ invPositionBDCrsr:
                     sta $d003
                     lda #$12
                     sta $d000
-                    lda #$90
+                    lda #$9f
                     sta $d002
                     lda #%00111100
                     sta $d010
