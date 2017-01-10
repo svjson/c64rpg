@@ -74,9 +74,9 @@ enterInventory:
                     lda backpackSize
                     sta invCrsrAreaContentSize
 
-                    lda #<inventoryirq    ; Disable game map interrupts
+                    lda #<inventory_enterupper_irq    ; Disable game map interrupts
                     sta $0314
-                    lda #>inventoryirq
+                    lda #>inventory_enterupper_irq
                     sta $0315
 
                     lda #$00           ; Set screen background color
@@ -112,12 +112,16 @@ enterInventory:
 
                     lda #$0a
                     sta $d025
-                    
+
                     lda #$0b           ; Set nav sprites to dark grey
                     sta $d029
                     sta $d02a
                     sta $d02b
                     sta $d02c
+
+                    lda #$0c           ; Set body part sprites to gray
+                    sta $d02d
+                    sta $d02e
 
                     jsr populateFloorTable
                     jsr invPositionCrsr
@@ -138,10 +142,14 @@ enterInventory:
                     lda #$e0
                     sta $d00b
                     
+                    lda #$28            ; Set body part sprite locations
+                    sta $d00c
+                    sta $d00e
+
                     lda #%00111110     ; Set hi bits for bp nav sprites
                     sta $d010
 
-                    lda #%00111111     ; Enable inventory sprites
+                    lda #%11111111     ; Enable inventory sprites
                     sta $d015
 
                     lda #$00
@@ -258,6 +266,8 @@ ilcont              lda #$15     ; wait for raster retrace
                     jmp inventoryMainLoop
 
 exitInventory:
+                    lda #%00000000     ; Disable all sprites
+                    sta $d015
                     jsr clearscreen
                     lda #<enterstatusirq    ; Interrupt vector
                     sta $0314
@@ -1048,17 +1058,51 @@ endCompactBP
 ;; +----------------------------------+
 ;; |    INVENTORY INTERRUPTS          |
 ;; +----------------------------------+
-inventoryirq
+inventory_enterupper_irq
                  lda #$18           ; Char multicolour mode on for entire screen
                  sta $d016
 
-                 lda #<inventoryirq
+                 lda #$39
+                 sta $d00d
+                 lda #$49
+                 sta $d00f
+
+                 lda #$98           ; Set head and torso sprite pointers
+                 sta $07fe
+                 lda #$99
+                 sta $07ff
+
+                 lda #<inventory_leaveupper_irq
                  sta $0314
-                 lda #>inventoryirq
+                 lda #>inventory_leaveupper_irq
+                 sta $0315
+
+                 lda #$58
+                 sta $d012
+
+                 asl $d019
+                 jmp $ea31
+
+inventory_leaveupper_irq
+
+                 lda #$59
+                 sta $d00d
+                 lda #$69
+                 sta $d00f
+
+                 lda #$9b           ; Set right hand sprite pointer
+                 sta $07ff
+
+                 lda #<inventory_enterupper_irq
+                 sta $0314
+                 lda #>inventory_enterupper_irq
                  sta $0315
 
                  lda #$ff
                  sta $d012
 
+                 lda #$9a           ; Set left hand sprite pointer
+                 sta $07fe
+
                  asl $d019
-                 jmp $ea31
+                 jmp $ea81
