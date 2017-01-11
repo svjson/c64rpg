@@ -456,15 +456,23 @@ invPositionBDCrsr:
 ;; +----------------------------------+
 
 selectItem:
-        lda invCrsrArea
-        sta invSelArea
-        tax
-        lda boxPositions, x
-        clc
-        adc boxOffsets, x
-        sta invSelPos
-        inc screenDirty
-        rts
+                lda invCrsrArea
+                sta invSelArea
+                tax
+                lda boxPositions, x
+                clc
+                adc boxOffsets, x
+                sta invSelPos
+                jsr set20PtrToSelectedItem
+                ldy var_backpackItemModes
+                lda ($20), y
+                and #%10000000
+                cmp #%10000000
+                beq endSelectItem
+                lda #$ff
+                sta invSelArea
+endSelectItem   inc screenDirty
+                rts
 selectedItemAction:
         lda invCrsrArea                 ; branch to move item if origin and target area differ
         cmp invSelArea
