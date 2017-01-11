@@ -3574,6 +3574,19 @@ incTrgPtr      lda $22
                jmp memcpyrowloop
 end_memcpy     rts
 
+memswitch_row:
+               ldy #$00
+memswitchloop  lda ($20), y
+               tax
+               lda ($22), y
+               sta ($20), y
+               txa
+               sta ($22), y
+               iny
+               cpy memcpy_rowSize
+               beq end_memcpy
+               jmp memswitchloop
+
 *=$0d20
 .include "itemdb.asm"
 

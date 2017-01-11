@@ -484,6 +484,7 @@ selectedItemAction:
         rts
 rearrangeItem
         rts
+
 moveSelectedItem
                         jsr set20PtrToSelectedItem                  ; Set container item pointers
                         jsr set22PtrToTargetItem
@@ -495,21 +496,34 @@ moveSelectedItem
                         jsr moveItemToFloor                         ; Go move to actual area item table if target is floor
                         jmp mvItPostCpy
 
-mvItBetweenConts        lda #$01                                    ; Just copy to target
+mvItBetweenConts
+                        lda #$01                                    ; Just copy to target
                         sta memcpy_rows
                         lda backpackRowSize
                         sta memcpy_rowSize
-                        jsr memcpy
+                        jsr memswitch_row
+                        lda invSelArea                              ; If source was floor, we'll have to go remove it from area item table
+                        cmp #$01
+                        bne notFromBD
                         jsr set20PtrToSelectedItem                  ; And set source item to off
                         ldy var_backpackItemModes
                         lda ($20), y
                         and #%01111111
                         sta ($20), y
 
-                        lda invSelArea                              ; If source was floor, we'll have to go remove it from area item table
+notFromBD               lda invSelArea                              ; If source was floor, we'll have to go remove it from area item table
                         cmp #$02
                         bne mvItPostCpy
                         jsr removeFromFloor
+                        lda invCrsrArea
+                        cmp #$01
+                        bne mvItPostCpy
+                        ldy var_backpackItemModes
+                        lda ($20), y
+                        and #%10000000
+                        cmp #%10000000
+                        bne mvItPostCpy
+                        jsr moveItemToFloor
 
 mvItPostCpy             lda invCrsrArea                             ; If target was backpack, we'll have to increase the BP size
                         cmp #$00
@@ -573,7 +587,7 @@ moveItemToFloor         lda #<itemTable             ; Set Area Item Table as tar
                         inc itemTableSize
                         rts
 
-removeFromFloor         ldx boxPositions + 2
+removeFromFloor         ldx invSelPos
                         lda floorTableOriginTable, x
                         sta rollIterations
                         lda #<itemTable
