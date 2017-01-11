@@ -262,6 +262,26 @@ enterInventory:
                     sta $23
                     jsr memcpy_readRowsByte
 
+                    lda #<text_WC
+                    sta $20
+                    lda #>text_WC
+                    sta $21
+                    lda #$92
+                    sta $22
+                    lda #$05
+                    sta $23
+                    jsr memcpy_readRowsByte
+
+                    lda #<text_AC
+                    sta $20
+                    lda #>text_AC
+                    sta $21
+                    lda #$ba
+                    sta $22
+                    lda #$05
+                    sta $23
+                    jsr memcpy_readRowsByte
+
                     lda #<$0749
                     sta $20
                     lda #>$0749
@@ -702,7 +722,6 @@ updateInventoryContents:
 
                         ldx playerGoldBalance
                         jsr byte_to_decimal
-
                         lda #<decBuffer
                         sta $20
                         lda #>decBuffer
@@ -713,6 +732,24 @@ updateInventoryContents:
                         sta $23
                         lda #$01
                         sta memcpy_rowSize
+                        jsr memcpy_readRowsByte
+
+                        jsr calcPlayerWC
+                        ldx playerWC
+                        jsr byte_to_decimal
+                        lda #$96
+                        sta $22
+                        lda #$05
+                        sta $23
+                        jsr memcpy_readRowsByte
+
+                        jsr calcPlayerAC
+                        ldx playerAC
+                        jsr byte_to_decimal
+                        lda #$be
+                        sta $22
+                        lda #$05
+                        sta $23
                         jsr memcpy_readRowsByte
 
                         rts
@@ -1188,6 +1225,66 @@ compactBPEntry
                     jmp compactBPLoop
 
 endCompactBP
+                    rts
+
+;; +----------------------------------+
+;; |    AC/WC CALCULATIONS            |
+;; +----------------------------------+
+calcPlayerWC        lda #<bodyTable
+                    sta $22
+                    lda #>bodyTable
+                    sta $23
+                    lda bodyTableRowSize
+                    sta inc22ModVal
+                    lda #$02
+                    sta rollIterations
+                    jsr roll22Ptr
+                    ldy var_backpackItemModes
+                    lda ($22), y
+                    and #%10000000
+                    cmp #%10000000
+                    bne calcPlayerWCNoWeapon
+                    ldy var_backpackItemTypeID
+                    lda ($22), y
+                    tax
+                    lda itemModifier, x
+                    sta playerWC
+                    rts
+calcPlayerWCNoWeapon lda #$00
+                     sta playerWC
+                     rts
+
+armorPositions .byte $00, $01, $03
+
+calcPlayerAC        lda #$00            ; Reset AC
+                    sta playerAC
+                    sta iter
+                    lda bodyTableRowSize
+                    sta inc22ModVal
+calcPlACLoop        lda #<bodyTable
+                    sta $22
+                    lda #>bodyTable
+                    sta $23
+                    ldx iter
+                    lda armorPositions, x
+                    sta rollIterations
+                    jsr roll22Ptr
+                    ldy var_backpackItemModes
+                    lda ($22), y
+                    and #%10000000
+                    cmp #%10000000
+                    bne calcPlACNoArmor
+                    ldy var_backpackItemTypeID
+                    lda ($22), y
+                    tay
+                    lda itemModifier, y
+                    clc
+                    adc playerAC
+                    sta playerAC
+calcPlACNoArmor     inc iter
+                    ldx iter
+                    cpx #$03
+                    bne calcPlACLoop
                     rts
 
 placeholderMask .byte $00

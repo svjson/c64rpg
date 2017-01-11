@@ -1565,6 +1565,10 @@ text_OF             .byte 3
                     .text "OF "
 text_NOTHING        .byte 7
                     .text "NOTHING"
+text_WC             .byte 3
+                    .text "WC:"
+text_AC             .byte 3
+                    .text "AC:"
 
 messageBufferLength .byte $00
 messageBuffer .text "ABC                                                        "
@@ -2007,6 +2011,9 @@ var_backpackItemIdentifyToTypeID = #$03
 var_backpackItemValue            = #$04
 
 playerGoldBalance .byte $00, $00
+playerAC          .byte $00
+playerWC          .byte $00
+
 bodyTableRowSize = #$05
 bodyTableSize = #$04
 bodyTable:
@@ -2371,7 +2378,7 @@ itemTable
 ;; |    TEST AREAS                    |
 ;; |                                  |
 ;; +----------------------------------+
-*=$7000
+*=$7300
 .include "testareas.asm"
 
 ;; +----------------------------------+

@@ -272,6 +272,73 @@ itemValue       .byte $01                  ;00 - Actual Type - MINOR HEALING
                 .byte $00                  ;40 - N/A - Small Shield
                 .byte $00                  ;41 - N/A - Large Shield
 
+itemModifier    .byte $03                  ;00 - Scroll (yellow) - Heal modifier - 03
+                .byte $08                  ;01 - Scroll (yellow) - Heal modifier - 08
+                .byte $20                  ;02 - Scroll (yellow) - Heal modifier - 20
+                .byte $00                  ;03 - Scroll (yellow)
+                .byte $00                  ;04 - Scroll (yellow)
+                .byte $00                  ;05 - Unused
+                .byte $00                  ;06 - Unused
+                .byte $00                  ;07 - Unused
+                .byte $00                  ;08 - Unused
+                .byte $00                  ;09 - Unused
+                .byte $00                  ;0a - Unused
+                .byte $00                  ;0b - Unused
+                .byte $00                  ;0c - Unused
+                .byte $00                  ;0d - Unused
+                .byte $00                  ;0e - Unused
+                .byte $00                  ;0f - Unidentified Substitute - Scroll - N/A
+                .byte $03                  ;10 - Potion (Red) - Heal modifier - 03
+                .byte $08                  ;11 - Potion (Red) - Heal modifier - 08
+                .byte $20                  ;12 - Potion (Red) - Heal modifier - 20
+                .byte $00                  ;13 - Potion (Green) - N/A
+                .byte $00                  ;14 - Potion (Purple) - N/A
+                .byte $00                  ;15 - Potion (Turqoise) - N/A
+                .byte $00                  ;16 - Potion (Green) - N/A
+                .byte $00                  ;17 - Unused
+                .byte $00                  ;18 - Unused
+                .byte $00                  ;19 - Unidentified Substitute - Potion
+                .byte $00                  ;1a - Pieces of Gold
+                .byte $00                  ;1b - Unused
+                .byte $00                  ;1c - Unused
+                .byte $00                  ;1d - Unused
+                .byte $00                  ;1e - Unused
+                .byte $00                  ;1f - Unused
+                .byte $04                  ;20 - Short sword    - WC 04
+                .byte $08                  ;21 - Longsword      - WC 08
+                .byte $00                  ;22 - Unused
+                .byte $00                  ;23 - Unused
+                .byte $00                  ;24 - Unused
+                .byte $00                  ;25 - Unused
+                .byte $00                  ;26 - Unused
+                .byte $00                  ;27 - Unused
+                .byte $00                  ;28 - Unused
+                .byte $00                  ;29 - Unused
+                .byte $00                  ;2a - Unused
+                .byte $00                  ;2b - Unused
+                .byte $00                  ;2c - Unused
+                .byte $00                  ;2d - Unused
+                .byte $00                  ;2e - Unused
+                .byte $00                  ;2f - Unused
+                .byte $06                  ;30 - Leather armor - AC 06
+                .byte $00                  ;31 - Unused
+                .byte $00                  ;32 - Unused
+                .byte $00                  ;33 - Unused
+                .byte $00                  ;34 - Unused
+                .byte $00                  ;35 - Unused
+                .byte $00                  ;36 - Unused
+                .byte $03                  ;37 - Leather Helmet - AC 03
+                .byte $06                  ;38 - Iron Helmet    - AC 06
+                .byte $09                  ;39 - Steel Helmet   - AC 09
+                .byte $00                  ;3a - Unused
+                .byte $00                  ;3b - Unused
+                .byte $00                  ;3c - Unused
+                .byte $00                  ;3d - Unused
+                .byte $00                  ;3e - Unused
+                .byte $00                  ;3f - Unused
+                .byte $03                  ;40 - Small Shield   - AC 03
+                .byte $08                  ;41 - Large Shield   - AC 08
+
 itemTile        .byte $40                  ;00 - Scroll (yellow)
                 .byte $40                  ;01 - Scroll (yellow)
                 .byte $40                  ;02 - Scroll (yellow)
