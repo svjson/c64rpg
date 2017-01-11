@@ -62,6 +62,12 @@ boxCrsrTopOffsets
             .byte $cf
             .byte $cf
 
+bodyPosTypes .byte $0b  ; - Helmet
+             .byte $0c  ; - Armor
+             .byte $06  ; - Melee
+             .byte $0a  ; - Shield
+
+
 floorTableOriginTable:
 .byte $00
 .byte $00
@@ -503,13 +509,18 @@ moveSelectedItem
                         jsr set20PtrToSelectedItem                  ; Set container item pointers
                         jsr set22PtrToTargetItem
 
-                        lda invCrsrArea                             ; Just move for non-floor targets
-                        cmp #$02
+                        lda invCrsrArea
+                        cmp #$01                                    ; Determine validity of move, if it's a wear/wield
+                        beq preAttemptWield
+                        cmp #$02                                    ; Just move for non-floor targets
                         bne mvItBetweenConts
 
                         jsr moveItemToFloor                         ; Go move to actual area item table if target is floor
                         jmp mvItPostCpy
-
+preAttemptWield         jsr attemptWield
+                        cmp #$01
+                        beq mvItBetweenConts
+                        rts
 mvItBetweenConts
                         lda #$01                                    ; Just copy to target
                         sta memcpy_rows
@@ -619,6 +630,22 @@ removeFromFloor         ldx invSelPos
                         rts
 
 ;; +----------------------------------+
+;; |    WEAR/WIELD CHECKS             |
+;; +----------------------------------+
+attemptWield            ldy var_backpackItemModes
+                        lda ($20), y
+                        and #%00011111
+                        sta argItemModes
+                        ldy boxPositions+1
+                        lda bodyPosTypes, y
+                        cmp argItemModes
+                        bne attemptWieldFalse
+                        lda #$01
+                        rts
+attemptWieldFalse       lda #$00
+                        rts
+
+;; +----------------------------------+
 ;; |    LOCATE ITEMS IN TABLES        |
 ;; +----------------------------------+
 set20PtrToSelectedItem  ldx invSelArea
@@ -661,6 +688,7 @@ doForwardToTargetPos    sta rollIterations
 ;; |    UPDATE INVENTORY CONTENTS     |
 ;; +----------------------------------+
 updateInventoryContents:
+                        jsr drawBody
                         jsr drawBackPack
                         lda invBPScrlUp
                         sta $d029
@@ -671,7 +699,6 @@ updateInventoryContents:
                         sta $d02b
                         lda invFLScrlDn
                         sta $d02c
-                        jsr drawBody
 
                         ldx playerGoldBalance
                         jsr byte_to_decimal
