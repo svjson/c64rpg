@@ -382,28 +382,36 @@ leaveContDown       cpx #$02
 moveItemContCrsrLeft:
                     lda invCrsrArea
                     cmp #$00
-                    bne moveInvNoAction
-                    jmp invIntoBodyArea
+                    beq invIntoBodyArea
+                    rts
 
 ; CURSOR RIGHT
 moveItemContCrsrRight
                     cpx #$01 
                     beq invIntoBackPackArea
-                    rts
+moveInvNoAction     rts
+
+updCrsrAreaState:
+                    lda invCrsrArea
+                    cmp #$00
+                    beq invIntoBackPackArea
+                    cmp #$01
+                    beq invIntoBodyArea
+                    jmp invIntoFloorArea
 
 invIntoBackPackArea:
                     lda #$00
                     sta invCrsrArea
                     lda backpackSize
                     sta invCrsrAreaContentSize
-                    jmp invPositionCrsr
+                    rts
 
 invIntoFloorArea:
                     lda #$02
                     sta invCrsrArea
                     lda floorTableSize
                     sta invCrsrAreaContentSize
-                    jmp invPositionCrsr
+                    rts
 
 invIntoBodyArea:
                     lda #$01
@@ -411,8 +419,6 @@ invIntoBodyArea:
                     lda #$04
                     sta invCrsrAreaContentSize
                     rts
-
-moveInvNoAction     rts
 
 ;; +----------------------------------+
 ;; |    CURSOR POSITIONING            |
@@ -510,7 +516,7 @@ mvItBetweenConts
                         lda backpackRowSize
                         sta memcpy_rowSize
                         jsr memswitch_row
-                        lda invSelArea                              ; If source was floor, we'll have to go remove it from area item table
+                        lda invSelArea                              ; If source was body, we can just flip the item mode of source pointer to 0
                         cmp #$01
                         bne notFromBD
                         jsr set20PtrToSelectedItem                  ; And set source item to off
@@ -544,6 +550,7 @@ mvItToBP                inc backpackSize
 endMvIt                 jsr compactBackpack                         ; Update all containers upon successful move
                         jsr compactItemTable
                         jsr populateFloorTable
+                        jsr updCrsrAreaState
                         lda #$ff
                         sta invSelArea
                         inc screenDirty
